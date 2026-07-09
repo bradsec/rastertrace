@@ -223,6 +223,10 @@ input[type="radio"], input[type="checkbox"] { accent-color: var(--accent); width
 
 .preview svg, .preview img { max-width: 100%; height: auto; display: block; }
 
+/* result img has no src until the first trace lands; hide it rather than
+   show the broken-image icon behind the tracing veil */
+#result-view:not([src]) { display: none; }
+
 .tracing-veil {
   position: absolute;
   inset: 0;
