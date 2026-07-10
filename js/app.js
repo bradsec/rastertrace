@@ -1,12 +1,12 @@
 // UI wiring: state, controls, preview, download.
-import { capBitmap, decodeImage, rasterize, Tracer } from "./pipeline.js?v=11";
+import { capBitmap, decodeImage, rasterize, rotateBitmap, Tracer } from "./pipeline.js?v=12";
 import {
   countPaths,
   fitTraceScale,
   parseHexColor,
   PRESETS,
   toHexColor,
-} from "./preprocess.js?v=11";
+} from "./preprocess.js?v=12";
 
 const $ = (id) => document.getElementById(id);
 
@@ -17,6 +17,7 @@ const els = {
   pickFile: $("pick-file"),
   fileInput: $("file-input"),
   replaceImage: $("replace-image"),
+  rotateImage: $("rotate-image"),
   preset: $("preset"),
   colors: $("colors"),
   colorsOut: $("colors-out"),
@@ -69,7 +70,7 @@ const state = {
   loadToken: 0, // guards against overlapping loads (drop while decoding)
 };
 
-const tracer = new Tracer(new URL("./worker.js?v=11", import.meta.url));
+const tracer = new Tracer(new URL("./worker.js?v=12", import.meta.url));
 
 function currentSettings() {
   return {
@@ -240,6 +241,34 @@ function setView(view) {
 
 els.pickFile.addEventListener("click", () => els.fileInput.click());
 els.replaceImage.addEventListener("click", () => els.fileInput.click());
+
+// Rotation replaces the working bitmap, so the source view is re-rendered
+// from it: eyedropper coordinates and the preview stay consistent.
+async function updateSourceView() {
+  const canvas = new OffscreenCanvas(state.bitmap.width, state.bitmap.height);
+  canvas.getContext("2d").drawImage(state.bitmap, 0, 0);
+  const blob = await canvas.convertToBlob({ type: "image/png" });
+  if (state.sourceUrl) URL.revokeObjectURL(state.sourceUrl);
+  state.sourceUrl = URL.createObjectURL(blob);
+  els.sourceView.src = state.sourceUrl;
+}
+
+els.rotateImage.addEventListener("click", async () => {
+  if (!state.bitmap || els.rotateImage.disabled) return;
+  els.rotateImage.disabled = true; // rotation closes the bitmap mid-flight
+  try {
+    state.bitmap = await rotateBitmap(state.bitmap);
+    [state.sourceWidth, state.sourceHeight] = [state.sourceHeight, state.sourceWidth];
+    state.raster = null;
+    await updateSourceView();
+    resetView();
+    retrace();
+  } catch (err) {
+    showError(err.message || "Could not rotate the image.");
+  } finally {
+    els.rotateImage.disabled = false;
+  }
+});
 els.fileInput.addEventListener("change", () => {
   const file = els.fileInput.files[0];
   // Clear so picking the same file again still fires a change event
