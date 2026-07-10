@@ -1,5 +1,5 @@
 // Browser-side pipeline: decode, premultiplied upscale, worker round-trip.
-import { assertRasterBudget } from "./preprocess.js?v=7";
+import { assertRasterBudget, MAX_TRACE_SIDE } from "./preprocess.js?v=8";
 
 /**
  * Decode a File/Blob into an ImageBitmap. Throws a readable error for
@@ -11,6 +11,27 @@ export async function decodeImage(file) {
   } catch {
     throw new Error(`Cannot read "${file.name}" as an image.`);
   }
+}
+
+/**
+ * Cap a decoded bitmap at MAX_TRACE_SIDE on its longest side, closing the
+ * original. Tracing never uses more pixels than that, and the bitmap is
+ * retained for the app lifetime: without the cap a 100 MP panorama would
+ * hold ~400 MB, enough to kill an iOS tab on its own. Returns the bitmap
+ * unchanged when it already fits.
+ */
+export async function capBitmap(bitmap) {
+  const scale = MAX_TRACE_SIDE / Math.max(bitmap.width, bitmap.height);
+  if (scale >= 1) return bitmap;
+  const width = Math.max(1, Math.round(bitmap.width * scale));
+  const height = Math.max(1, Math.round(bitmap.height * scale));
+  const canvas = new OffscreenCanvas(width, height);
+  const ctx = canvas.getContext("2d");
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = "high";
+  ctx.drawImage(bitmap, 0, 0, width, height);
+  bitmap.close();
+  return createImageBitmap(canvas);
 }
 
 /**

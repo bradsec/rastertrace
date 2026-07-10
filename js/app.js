@@ -1,12 +1,12 @@
 // UI wiring: state, controls, preview, download.
-import { decodeImage, rasterize, Tracer } from "./pipeline.js?v=7";
+import { capBitmap, decodeImage, rasterize, Tracer } from "./pipeline.js?v=8";
 import {
   countPaths,
   fitTraceScale,
   parseHexColor,
   PRESETS,
   toHexColor,
-} from "./preprocess.js?v=7";
+} from "./preprocess.js?v=8";
 
 const $ = (id) => document.getElementById(id);
 
@@ -56,7 +56,9 @@ const els = {
 };
 
 const state = {
-  bitmap: null,
+  bitmap: null, // capped at MAX_TRACE_SIDE; source dims kept separately
+  sourceWidth: 0,
+  sourceHeight: 0,
   fileName: "image",
   sourceUrl: null,
   svg: null,
@@ -67,7 +69,7 @@ const state = {
   loadToken: 0, // guards against overlapping loads (drop while decoding)
 };
 
-const tracer = new Tracer(new URL("./worker.js?v=7", import.meta.url));
+const tracer = new Tracer(new URL("./worker.js?v=8", import.meta.url));
 
 function currentSettings() {
   return {
@@ -147,7 +149,7 @@ async function retrace() {
     if (!state.raster || state.raster.scale !== scale) {
       state.raster = { scale, imageData: rasterize(state.bitmap, scale) };
     }
-    const result = await tracer.trace(state.raster.imageData, settings, state.bitmap.width, state.bitmap.height);
+    const result = await tracer.trace(state.raster.imageData, settings, state.sourceWidth, state.sourceHeight);
     if (!result) return; // superseded by a newer request
     state.svg = result.svg;
 
@@ -165,8 +167,11 @@ async function retrace() {
     let statusText = result.knockedOut
       ? `Traced ${paths.toLocaleString()} paths. Removed background rgb(${result.knockedOut.join(", ")}).`
       : `Traced ${paths.toLocaleString()} paths.`;
-    if (scale < settings.upscale) {
-      const { width, height } = state.raster.imageData;
+    // Report whenever the trace ran below the requested size, whether the
+    // bitmap was capped at load or the upscale was clamped.
+    const { width, height } = state.raster.imageData;
+    const requestedSide = settings.upscale * Math.max(state.sourceWidth, state.sourceHeight);
+    if (Math.max(width, height) < requestedSide) {
       statusText += ` Image resized to ${width}×${height} px for tracing.`;
     }
     els.status.textContent = statusText;
@@ -193,13 +198,20 @@ async function loadFile(file) {
   showError("");
   const token = ++state.loadToken;
   try {
-    const bitmap = await decodeImage(file);
+    const decoded = await decodeImage(file);
+    const sourceWidth = decoded.width;
+    const sourceHeight = decoded.height;
+    // Shrink oversized bitmaps right away: only the capped copy is
+    // retained, so a huge photo does not hold its full decode in memory.
+    const bitmap = await capBitmap(decoded);
     if (token !== state.loadToken) {
       bitmap.close(); // a newer load started while this one decoded
       return;
     }
     state.bitmap?.close();
     state.bitmap = bitmap;
+    state.sourceWidth = sourceWidth;
+    state.sourceHeight = sourceHeight;
     state.raster = null;
     state.fileName = file.name || "image";
     if (state.sourceUrl) URL.revokeObjectURL(state.sourceUrl);
