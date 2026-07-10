@@ -1,13 +1,12 @@
 // UI wiring: state, controls, preview, download.
-import { decodeImage, rasterize, Tracer } from "./pipeline.js?v=6";
+import { decodeImage, rasterize, Tracer } from "./pipeline.js?v=7";
 import {
   countPaths,
   fitTraceScale,
-  MAX_TRACE_SIDE,
   parseHexColor,
   PRESETS,
   toHexColor,
-} from "./preprocess.js?v=6";
+} from "./preprocess.js?v=7";
 
 const $ = (id) => document.getElementById(id);
 
@@ -68,7 +67,7 @@ const state = {
   loadToken: 0, // guards against overlapping loads (drop while decoding)
 };
 
-const tracer = new Tracer(new URL("./worker.js?v=6", import.meta.url));
+const tracer = new Tracer(new URL("./worker.js?v=7", import.meta.url));
 
 function currentSettings() {
   return {
@@ -167,7 +166,8 @@ async function retrace() {
       ? `Traced ${paths.toLocaleString()} paths. Removed background rgb(${result.knockedOut.join(", ")}).`
       : `Traced ${paths.toLocaleString()} paths.`;
     if (scale < settings.upscale) {
-      statusText += ` Traced at ${scale.toFixed(2)}x (longest side capped at ${MAX_TRACE_SIDE} px).`;
+      const { width, height } = state.raster.imageData;
+      statusText += ` Image resized to ${width}×${height} px for tracing.`;
     }
     els.status.textContent = statusText;
 
