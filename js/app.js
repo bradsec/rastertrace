@@ -1,12 +1,12 @@
 // UI wiring: state, controls, preview, download.
-import { capBitmap, decodeImage, rasterize, Tracer } from "./pipeline.js?v=9";
+import { capBitmap, decodeImage, rasterize, Tracer } from "./pipeline.js?v=10";
 import {
   countPaths,
   fitTraceScale,
   parseHexColor,
   PRESETS,
   toHexColor,
-} from "./preprocess.js?v=9";
+} from "./preprocess.js?v=10";
 
 const $ = (id) => document.getElementById(id);
 
@@ -69,7 +69,7 @@ const state = {
   loadToken: 0, // guards against overlapping loads (drop while decoding)
 };
 
-const tracer = new Tracer(new URL("./worker.js?v=9", import.meta.url));
+const tracer = new Tracer(new URL("./worker.js?v=10", import.meta.url));
 
 function currentSettings() {
   return {
@@ -454,7 +454,11 @@ els.preview.addEventListener("pointermove", (e) => {
 for (const type of ["pointerup", "pointercancel"]) {
   els.preview.addEventListener(type, (e) => {
     if (!pointers.delete(e.pointerId)) return;
-    if (pointers.size === 1) {
+    if (pointers.size === 2) {
+      // Back down to two fingers (from 3+): restart the pinch from the
+      // current positions, or the stale snapshot would cause a jump.
+      gesture = pinchState();
+    } else if (pointers.size === 1) {
       // Pinch ended with one finger still down: continue as a pan.
       const [p] = pointers.values();
       gesture = { x: p.x, y: p.y };
