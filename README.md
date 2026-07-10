@@ -11,7 +11,7 @@ Convert raster images to clean, scalable SVG vectors entirely in your browser. [
 - Median-cut + k-means color quantization with transparent-area backfill
 - 3x3 majority filter to clean quantization dither
 - Optional denoise blur for photographic sources
-- Background removal: auto-detect from corners, hex color, or eyedropper pick from the image
+- Background removal: auto-detect from corners, hex color, or eyedropper pick from the image; edge trim chokes the cutout to remove leftover fringe
 - Color-count presets from 2 to 256 with matched cleanup levels: fewer colors get more aggressive speckle and layer cleanup for flat print-style output
 - Live re-trace on setting changes, SVG download and clipboard copy
 - Zoomable preview: pinch, scroll wheel, or buttons; drag to pan

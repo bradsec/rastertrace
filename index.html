@@ -153,6 +153,10 @@
             <label for="fuzz" title="How closely pixels must match the removed color. 0 is exact; raise for JPEG noise or gradients">Match tolerance <output id="fuzz-out" for="fuzz">16</output></label>
             <input type="range" id="fuzz" min="0" max="255" step="1" value="16">
           </div>
+          <div class="subfield" id="edge-trim-field" hidden>
+            <label for="edge-trim" title="Peels this many pixels off the cutout boundary to remove leftover fringe. Thin details shrink by the same amount">Edge trim <output id="edge-trim-out" for="edge-trim">2</output></label>
+            <input type="range" id="edge-trim" min="0" max="16" step="1" value="2">
+          </div>
         </fieldset>
       </aside>
 
@@ -204,6 +208,6 @@
     </a>
   </footer>
 
-  <script type="module" src="js/app.js?v=13"></script>
+  <script type="module" src="js/app.js?v=14"></script>
 </body>
 </html>

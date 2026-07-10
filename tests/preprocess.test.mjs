@@ -7,6 +7,7 @@ import {
   countPaths,
   detectBackgroundColor,
   dominantOpaqueColor,
+  erodeAlpha,
   finalizeSvg,
   fitTraceScale,
   MAX_TRACE_SIDE,
@@ -228,6 +229,40 @@ test("resolveSettings: explicit beats preset beats defaults", () => {
   assert.equal(d.colors, 256);
   assert.equal(d.speckle, 8);
   assert.equal(d.layerDiff, 16);
+});
+
+test("erodeAlpha peels one boundary ring per pass", () => {
+  // 5x5 opaque block inside a transparent 7x7 frame.
+  const img = makeImage(7, 7, [0, 0, 0, 0]);
+  for (let y = 1; y < 6; y++) for (let x = 1; x < 6; x++) setPixel(img, x, y, [10, 10, 10, 255]);
+  erodeAlpha(img, 1);
+  assert.equal(getPixel(img, 1, 1)[3], 0); // ring peeled
+  assert.equal(getPixel(img, 3, 1)[3], 0);
+  assert.equal(getPixel(img, 2, 2)[3], 255); // interior survives
+  assert.equal(getPixel(img, 3, 3)[3], 255);
+  erodeAlpha(img, 1);
+  assert.equal(getPixel(img, 2, 2)[3], 0); // next ring on second pass
+  assert.equal(getPixel(img, 3, 3)[3], 255); // 1px core remains
+});
+
+test("erodeAlpha grows interior holes too", () => {
+  const img = makeImage(5, 5, [10, 10, 10, 255]);
+  setPixel(img, 2, 2, [0, 0, 0, 0]); // hole
+  erodeAlpha(img, 1);
+  assert.equal(getPixel(img, 2, 1)[3], 0); // hole neighbors peeled
+  assert.equal(getPixel(img, 1, 2)[3], 0);
+  assert.equal(getPixel(img, 1, 1)[3], 255); // diagonal not 4-adjacent, kept
+  assert.equal(getPixel(img, 0, 0)[3], 255); // image border is not a boundary
+});
+
+test("erodeAlpha zero passes is a no-op and full erase terminates", () => {
+  const img = makeImage(3, 3, [10, 10, 10, 255]);
+  setPixel(img, 0, 0, [0, 0, 0, 0]);
+  const before = [...img.data];
+  erodeAlpha(img, 0);
+  assert.deepEqual([...img.data], before);
+  erodeAlpha(img, 50); // more passes than pixels: must stop cleanly
+  assert.equal(getPixel(img, 2, 2)[3], 0);
 });
 
 test("removeBackground honors fuzz after palette snap (halo regression)", () => {

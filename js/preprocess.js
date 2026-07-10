@@ -230,6 +230,37 @@ export function removeBackground(img, transparent, fuzz, quantized) {
 }
 
 /**
+ * Matte choke: peel `passes` one-pixel rings off the opaque region,
+ * clearing the alpha of opaque pixels 4-adjacent to transparency. Eats
+ * the background-blend fringe left along subject boundaries after a
+ * knockout, whatever color the fringe is; thin features shrink by the
+ * same amount, so the amount is user-controlled. Mutates img in place.
+ */
+export function erodeAlpha(img, passes) {
+  const { data, width, height } = img;
+  for (let pass = 0; pass < passes; pass++) {
+    const peel = [];
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        const p = y * width + x;
+        if (data[p * 4 + 3] < ALPHA_THRESHOLD) continue;
+        if (
+          (x > 0 && data[(p - 1) * 4 + 3] < ALPHA_THRESHOLD) ||
+          (x < width - 1 && data[(p + 1) * 4 + 3] < ALPHA_THRESHOLD) ||
+          (y > 0 && data[(p - width) * 4 + 3] < ALPHA_THRESHOLD) ||
+          (y < height - 1 && data[(p + width) * 4 + 3] < ALPHA_THRESHOLD)
+        ) {
+          peel.push(p);
+        }
+      }
+    }
+    if (peel.length === 0) break;
+    for (const p of peel) data[p * 4 + 3] = 0;
+  }
+  return img;
+}
+
+/**
  * Threshold alpha to 0 or 255 so anti-aliased edge fringe cannot fragment
  * the trace into junk paths. Mutates img in place.
  */

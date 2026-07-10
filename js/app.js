@@ -1,12 +1,12 @@
 // UI wiring: state, controls, preview, download.
-import { capBitmap, decodeImage, rasterize, rotateBitmap, Tracer } from "./pipeline.js?v=13";
+import { capBitmap, decodeImage, rasterize, rotateBitmap, Tracer } from "./pipeline.js?v=14";
 import {
   countPaths,
   fitTraceScale,
   parseHexColor,
   PRESETS,
   toHexColor,
-} from "./preprocess.js?v=13";
+} from "./preprocess.js?v=14";
 
 const $ = (id) => document.getElementById(id);
 
@@ -35,6 +35,9 @@ const els = {
   fuzzField: $("fuzz-field"),
   fuzz: $("fuzz"),
   fuzzOut: $("fuzz-out"),
+  edgeTrimField: $("edge-trim-field"),
+  edgeTrim: $("edge-trim"),
+  edgeTrimOut: $("edge-trim-out"),
   showResult: $("show-result"),
   showSource: $("show-source"),
   status: $("status"),
@@ -70,7 +73,7 @@ const state = {
   loadToken: 0, // guards against overlapping loads (drop while decoding)
 };
 
-const tracer = new Tracer(new URL("./worker.js?v=13", import.meta.url));
+const tracer = new Tracer(new URL("./worker.js?v=14", import.meta.url));
 
 function currentSettings() {
   return {
@@ -88,6 +91,7 @@ function currentSettings() {
           ? parseHexColor(els.knockoutColor.value)
           : null,
     fuzz: Number(els.fuzz.value),
+    edgeTrim: Number(els.edgeTrim.value),
   };
 }
 
@@ -97,6 +101,7 @@ function updateOutputs() {
   els.speckleOut.textContent = els.speckle.value;
   els.layerDiffOut.textContent = els.layerDiff.value;
   els.fuzzOut.textContent = els.fuzz.value;
+  els.edgeTrimOut.textContent = els.edgeTrim.value;
 }
 
 function applyPreset(name) {
@@ -307,15 +312,18 @@ for (const input of [els.colors, els.speckle, els.layerDiff]) {
   });
 }
 
-els.fuzz.addEventListener("input", () => {
-  updateOutputs();
-  scheduleRetrace();
-});
+for (const input of [els.fuzz, els.edgeTrim]) {
+  input.addEventListener("input", () => {
+    updateOutputs();
+    scheduleRetrace();
+  });
+}
 
 els.transparent.addEventListener("change", () => {
   const mode = els.transparent.value;
   els.knockoutColorField.hidden = mode !== "custom";
   els.fuzzField.hidden = mode === "";
+  els.edgeTrimField.hidden = mode === "";
   scheduleRetrace();
 });
 

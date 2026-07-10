@@ -1,14 +1,15 @@
 // Web Worker: runs preprocessing + wasm tracing off the main thread.
-import init, { trace } from "../pkg/img2svg_wasm.js?v=13";
+import init, { trace } from "../pkg/img2svg_wasm.js?v=14";
 import {
   binarizeAlpha,
   boxBlur,
+  erodeAlpha,
   finalizeSvg,
   modeFilter,
   quantize,
   removeBackground,
   toGrayscale,
-} from "./preprocess.js?v=13";
+} from "./preprocess.js?v=14";
 
 const ready = init();
 
@@ -52,6 +53,12 @@ self.onmessage = async (event) => {
     if (settings.transparent) {
       stage("Removing background…");
       knockedOut = removeBackground(img, settings.transparent, settings.fuzz, quantized);
+      // Choke the matte: the knockout leaves a fringe of background-blend
+      // colors along the boundary that no color tolerance can catch.
+      if (knockedOut && settings.edgeTrim > 0) {
+        stage("Trimming edges…");
+        erodeAlpha(img, settings.edgeTrim);
+      }
     }
 
     stage("Tracing vectors…");
