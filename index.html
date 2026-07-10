@@ -76,10 +76,15 @@
     <section id="workspace" class="workspace" hidden>
       <aside class="controls" aria-label="Conversion settings">
         <button type="button" id="replace-image" class="button button-secondary">Replace image…</button>
-        <button type="button" id="rotate-image" class="button button-secondary" title="Rotate the image 90 degrees clockwise">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
-          Rotate 90&deg;
-        </button>
+        <div class="button-row" role="group" aria-label="Rotate image">
+          <span class="button-row-label">Rotate</span>
+          <button type="button" id="rotate-left" class="button button-secondary icon-button" title="Rotate 90 degrees counter-clockwise" aria-label="Rotate 90 degrees counter-clockwise">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+          </button>
+          <button type="button" id="rotate-right" class="button button-secondary icon-button" title="Rotate 90 degrees clockwise" aria-label="Rotate 90 degrees clockwise">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+          </button>
+        </div>
 
         <div class="field">
           <label for="preset" title="Quick setting: target color count with matched cleanup levels">Preset</label>
@@ -211,6 +216,6 @@
     </a>
   </footer>
 
-  <script type="module" src="js/app.js?v=14"></script>
+  <script type="module" src="js/app.js?v=15"></script>
 </body>
 </html>

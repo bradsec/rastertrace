@@ -158,6 +158,10 @@ main {
   min-height: 24px;
 }
 
+.button-row { display: flex; gap: 8px; align-items: center; }
+.button-row-label { font-size: 13px; font-weight: 600; margin-right: auto; }
+.icon-button { min-height: 32px; min-width: 44px; padding: 0 10px; }
+
 .subfield { display: grid; gap: 4px; }
 .color-row { display: flex; gap: 8px; align-items: stretch; }
 .color-row input[type="color"] { width: 56px; flex-shrink: 0; }

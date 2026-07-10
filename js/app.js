@@ -1,12 +1,12 @@
 // UI wiring: state, controls, preview, download.
-import { capBitmap, decodeImage, rasterize, rotateBitmap, Tracer } from "./pipeline.js?v=14";
+import { capBitmap, decodeImage, rasterize, rotateBitmap, Tracer } from "./pipeline.js?v=15";
 import {
   countPaths,
   fitTraceScale,
   parseHexColor,
   PRESETS,
   toHexColor,
-} from "./preprocess.js?v=14";
+} from "./preprocess.js?v=15";
 
 const $ = (id) => document.getElementById(id);
 
@@ -17,7 +17,8 @@ const els = {
   pickFile: $("pick-file"),
   fileInput: $("file-input"),
   replaceImage: $("replace-image"),
-  rotateImage: $("rotate-image"),
+  rotateLeft: $("rotate-left"),
+  rotateRight: $("rotate-right"),
   preset: $("preset"),
   colors: $("colors"),
   colorsOut: $("colors-out"),
@@ -73,7 +74,7 @@ const state = {
   loadToken: 0, // guards against overlapping loads (drop while decoding)
 };
 
-const tracer = new Tracer(new URL("./worker.js?v=14", import.meta.url));
+const tracer = new Tracer(new URL("./worker.js?v=15", import.meta.url));
 
 function currentSettings() {
   return {
@@ -258,11 +259,12 @@ async function updateSourceView() {
   els.sourceView.src = state.sourceUrl;
 }
 
-els.rotateImage.addEventListener("click", async () => {
-  if (!state.bitmap || els.rotateImage.disabled) return;
-  els.rotateImage.disabled = true; // rotation closes the bitmap mid-flight
+async function rotate(clockwise) {
+  if (!state.bitmap || els.rotateLeft.disabled) return;
+  els.rotateLeft.disabled = true; // rotation closes the bitmap mid-flight
+  els.rotateRight.disabled = true;
   try {
-    state.bitmap = await rotateBitmap(state.bitmap);
+    state.bitmap = await rotateBitmap(state.bitmap, clockwise);
     [state.sourceWidth, state.sourceHeight] = [state.sourceHeight, state.sourceWidth];
     state.raster = null;
     await updateSourceView();
@@ -271,9 +273,13 @@ els.rotateImage.addEventListener("click", async () => {
   } catch (err) {
     showError(err.message || "Could not rotate the image.");
   } finally {
-    els.rotateImage.disabled = false;
+    els.rotateLeft.disabled = false;
+    els.rotateRight.disabled = false;
   }
-});
+}
+
+els.rotateLeft.addEventListener("click", () => rotate(false));
+els.rotateRight.addEventListener("click", () => rotate(true));
 els.fileInput.addEventListener("change", () => {
   const file = els.fileInput.files[0];
   // Clear so picking the same file again still fires a change event

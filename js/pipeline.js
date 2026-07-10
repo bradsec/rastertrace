@@ -1,5 +1,5 @@
 // Browser-side pipeline: decode, premultiplied upscale, worker round-trip.
-import { assertRasterBudget, MAX_TRACE_SIDE } from "./preprocess.js?v=14";
+import { assertRasterBudget, MAX_TRACE_SIDE } from "./preprocess.js?v=15";
 
 /**
  * Decode a File/Blob into an ImageBitmap. Throws a readable error for
@@ -35,13 +35,18 @@ export async function capBitmap(bitmap) {
 }
 
 /**
- * Rotate a bitmap 90 degrees clockwise, closing the original.
+ * Rotate a bitmap 90 degrees, closing the original.
  */
-export async function rotateBitmap(bitmap) {
+export async function rotateBitmap(bitmap, clockwise = true) {
   const canvas = new OffscreenCanvas(bitmap.height, bitmap.width);
   const ctx = canvas.getContext("2d");
-  ctx.translate(bitmap.height, 0);
-  ctx.rotate(Math.PI / 2);
+  if (clockwise) {
+    ctx.translate(bitmap.height, 0);
+    ctx.rotate(Math.PI / 2);
+  } else {
+    ctx.translate(0, bitmap.width);
+    ctx.rotate(-Math.PI / 2);
+  }
   ctx.drawImage(bitmap, 0, 0);
   bitmap.close();
   return createImageBitmap(canvas);
