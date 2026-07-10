@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
+  analyzeFlatness,
   assertRasterBudget,
   MAX_TRACE_PIXELS,
   binarizeAlpha,
@@ -330,4 +331,38 @@ test("knockOutEdges returns null when corners already transparent", async () => 
   const { knockOutEdges } = await import("../js/preprocess.js");
   const img = makeImage(4, 4, [255, 255, 255, 0]);
   assert.equal(knockOutEdges(img, 16), null);
+});
+
+test("analyzeFlatness flags flat image with anti-aliased fringe", () => {
+  // 100x100: top half red, bottom half blue, plus a fringe row of 100
+  // unique blend colors (1% of pixels) like anti-aliased edges produce.
+  const img = makeImage(100, 100, [255, 0, 0, 255]);
+  for (let y = 50; y < 100; y++) {
+    for (let x = 0; x < 100; x++) setPixel(img, x, y, [0, 0, 255, 255]);
+  }
+  for (let x = 0; x < 100; x++) setPixel(img, x, 50, [155 - x, 0, 100 + x, 255]);
+  const result = analyzeFlatness(img);
+  assert.equal(result.flat, true);
+  assert.equal(result.colorCount, 2);
+});
+
+test("analyzeFlatness rejects gradients", () => {
+  // 256x100 horizontal gradient: 256 colors, ~0.4% coverage each.
+  const img = makeImage(256, 100);
+  for (let y = 0; y < 100; y++) {
+    for (let x = 0; x < 256; x++) setPixel(img, x, y, [x, 128, 128, 255]);
+  }
+  assert.equal(analyzeFlatness(img).flat, false);
+});
+
+test("analyzeFlatness rejects fully transparent images", () => {
+  const img = makeImage(10, 10, [50, 50, 50, 0]);
+  assert.equal(analyzeFlatness(img).flat, false);
+});
+
+test("analyzeFlatness clamps colorCount to at least 2", () => {
+  const img = makeImage(10, 10, [10, 20, 30, 255]);
+  const result = analyzeFlatness(img);
+  assert.equal(result.flat, true);
+  assert.equal(result.colorCount, 2);
 });

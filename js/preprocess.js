@@ -305,6 +305,53 @@ export function dominantOpaqueColor(img) {
 }
 
 /**
+ * Coverage-based flatness heuristic. Flat-color sources (logos, text,
+ * screenshots, pixel art) concentrate almost all pixels in a handful of
+ * colors even when anti-aliasing adds thousands of rare fringe colors, so
+ * coverage is tested instead of unique counts: flat when the 16 most
+ * common sampled colors cover >= 90% of opaque samples. colorCount is the
+ * number of colors needed for 95% coverage, clamped to [2, 32] to line up
+ * with the colors control. Transparent pixels are ignored; a fully
+ * transparent image is not flat.
+ */
+export function analyzeFlatness(img) {
+  const { data } = img;
+  const pixelCount = data.length / 4;
+  // Odd pixel stride so sampling does not lock to even image widths and
+  // hit the same columns every row.
+  let stride = Math.max(1, Math.ceil(pixelCount / 200_000));
+  if (stride % 2 === 0) stride += 1;
+  const counts = new Map();
+  let total = 0;
+  for (let p = 0; p < pixelCount; p += stride) {
+    const i = p * 4;
+    if (data[i + 3] < ALPHA_THRESHOLD) continue;
+    const key = (data[i] << 16) | (data[i + 1] << 8) | data[i + 2];
+    counts.set(key, (counts.get(key) || 0) + 1);
+    total += 1;
+  }
+  if (total === 0) return { flat: false, colorCount: 256 };
+  const sorted = [...counts.values()].sort((a, b) => b - a);
+  let covered = 0;
+  let topCoverage = 0;
+  let colorCount = sorted.length;
+  let counted = false;
+  for (let i = 0; i < sorted.length; i++) {
+    covered += sorted[i];
+    if (i < 16) topCoverage = covered / total;
+    if (!counted && covered / total >= 0.95) {
+      colorCount = i + 1;
+      counted = true;
+    }
+    if (counted && i >= 16) break;
+  }
+  return {
+    flat: topCoverage >= 0.9,
+    colorCount: Math.min(32, Math.max(2, colorCount)),
+  };
+}
+
+/**
  * Median-cut color quantization to at most `colors` colors. Transparent
  * areas are backfilled with the dominant opaque color before the palette
  * is computed so hidden pixels do not pollute it; alpha is untouched.
