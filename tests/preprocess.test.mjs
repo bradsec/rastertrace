@@ -213,6 +213,8 @@ test("fitTraceScale defaults to MAX_TRACE_SIDE", () => {
 test("color-count presets resolve, cleanup scales inversely", () => {
   const two = resolveSettings("2", {});
   assert.deepEqual([two.colors, two.speckle, two.layerDiff], [2, 16, 48]);
+  const six = resolveSettings("6", {});
+  assert.deepEqual([six.colors, six.speckle, six.layerDiff], [6, 10, 26]);
   const many = resolveSettings("128", {});
   assert.deepEqual([many.colors, many.speckle, many.layerDiff], [128, 2, 8]);
 });

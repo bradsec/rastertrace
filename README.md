@@ -12,7 +12,7 @@ Convert raster images to clean, scalable SVG vectors entirely in your browser. [
 - 3x3 majority filter to clean quantization dither
 - Optional denoise blur for photographic sources
 - Background removal: auto-detect from corners, hex color, or eyedropper pick from the image
-- Presets matched to print practice: T-shirt 5 colors (screen-print spot-color sweet spot), Poster 6, Detailed 8, Simple 3, Logo 2 (two-color marks, stencils)
+- Color-count presets from 2 to 256 with matched cleanup levels: fewer colors get more aggressive speckle and layer cleanup for flat print-style output
 - Live re-trace on setting changes, SVG download and clipboard copy
 - Zoomable preview: pinch, scroll wheel, or buttons; drag to pan
 - Rotate the loaded image in 90 degree steps

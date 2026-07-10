@@ -57,6 +57,7 @@ export const PRESETS = Object.freeze({
   2: { colors: 2, speckle: 16, layerDiff: 48 },
   3: { colors: 3, speckle: 16, layerDiff: 32 },
   4: { colors: 4, speckle: 12, layerDiff: 28 },
+  6: { colors: 6, speckle: 10, layerDiff: 26 },
   8: { colors: 8, speckle: 8, layerDiff: 24 },
   16: { colors: 16, speckle: 8, layerDiff: 16 },
   32: { colors: 32, speckle: 4, layerDiff: 16 },
