@@ -70,7 +70,7 @@ self.onmessage = async (event) => {
       settings.speckle,
       8, // color_precision: colors already reduced above, like the CLI
       settings.layerDiff,
-      60, // corner_threshold
+      settings.crisp ? 30 : 60, // corner_threshold: crisp keeps text/logo corners sharp
       4.0, // length_threshold
       10, // max_iterations
       45, // splice_threshold

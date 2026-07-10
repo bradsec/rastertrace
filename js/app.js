@@ -28,6 +28,7 @@ const els = {
   layerDiffOut: $("layer-diff-out"),
   upscale: $("upscale"),
   grayscale: $("grayscale"),
+  crisp: $("crisp"),
   transparent: $("transparent"),
   knockoutColorField: $("knockout-color-field"),
   knockoutColor: $("knockout-color"),
@@ -85,6 +86,7 @@ function currentSettings() {
     mode: document.querySelector('input[name="mode"]:checked').value,
     grayscale: els.grayscale.checked,
     denoise: els.denoise.checked,
+    crisp: els.crisp.checked,
     transparent:
       els.transparent.value === "auto" || els.transparent.value === "edges"
         ? els.transparent.value
@@ -153,8 +155,8 @@ async function retrace() {
   try {
     const settings = currentSettings();
     const scale = fitTraceScale(state.bitmap.width, state.bitmap.height, settings.upscale);
-    if (!state.raster || state.raster.scale !== scale) {
-      state.raster = { scale, imageData: rasterize(state.bitmap, scale) };
+    if (!state.raster || state.raster.scale !== scale || state.raster.crisp !== settings.crisp) {
+      state.raster = { scale, crisp: settings.crisp, imageData: rasterize(state.bitmap, scale, settings.crisp) };
     }
     const result = await tracer.trace(state.raster.imageData, settings, state.sourceWidth, state.sourceHeight);
     if (!result) return; // superseded by a newer request
@@ -337,6 +339,7 @@ els.knockoutColor.addEventListener("input", scheduleRetrace);
 els.upscale.addEventListener("change", scheduleRetrace);
 els.grayscale.addEventListener("change", scheduleRetrace);
 els.denoise.addEventListener("change", scheduleRetrace);
+els.crisp.addEventListener("change", scheduleRetrace);
 
 // -- Eyedropper: arm, click the source image to sample, Esc cancels ----
 
