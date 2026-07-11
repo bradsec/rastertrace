@@ -1,5 +1,5 @@
 // UI wiring: state, controls, preview, download.
-import { capBitmap, decodeImage, rasterize, rotateBitmap, Tracer } from "./pipeline.js?v=21";
+import { capBitmap, decodeImage, rasterize, rotateBitmap, Tracer } from "./pipeline.js?v=22";
 import {
   analyzeFlatness,
   countPaths,
@@ -8,7 +8,7 @@ import {
   parseHexColor,
   PRESETS,
   toHexColor,
-} from "./preprocess.js?v=21";
+} from "./preprocess.js?v=22";
 
 const $ = (id) => document.getElementById(id);
 
@@ -28,6 +28,9 @@ const els = {
   speckleOut: $("speckle-out"),
   layerDiff: $("layer-diff"),
   layerDiffOut: $("layer-diff-out"),
+  cornerThreshold: $("corner-threshold"),
+  cornerThresholdOut: $("corner-threshold-out"),
+  hierarchical: $("hierarchical"),
   upscale: $("upscale"),
   grayscale: $("grayscale"),
   crisp: $("crisp"),
@@ -79,13 +82,15 @@ const state = {
   flatNote: null, // status prefix when load-time detection fired
 };
 
-const tracer = new Tracer(new URL("./worker.js?v=21", import.meta.url));
+const tracer = new Tracer(new URL("./worker.js?v=22", import.meta.url));
 
 function currentSettings() {
   return {
     colors: Number(els.colors.value),
     speckle: Number(els.speckle.value),
     layerDiff: Number(els.layerDiff.value),
+    cornerThreshold: Number(els.cornerThreshold.value),
+    hierarchical: els.hierarchical.value,
     upscale: Number(els.upscale.value),
     mode: document.querySelector('input[name="mode"]:checked').value,
     grayscale: els.grayscale.checked,
@@ -107,6 +112,7 @@ function updateOutputs() {
   els.colorsOut.textContent = colors >= 256 ? "All" : String(colors);
   els.speckleOut.textContent = els.speckle.value;
   els.layerDiffOut.textContent = els.layerDiff.value;
+  els.cornerThresholdOut.textContent = els.cornerThreshold.value;
   els.fuzzOut.textContent = els.fuzz.value;
   els.edgeTrimOut.textContent = els.edgeTrim.value;
 }
@@ -132,6 +138,8 @@ function resetSettings() {
   els.colors.value = String(DEFAULTS.colors);
   els.speckle.value = String(DEFAULTS.speckle);
   els.layerDiff.value = String(DEFAULTS.layerDiff);
+  els.cornerThreshold.value = String(DEFAULTS.cornerThreshold);
+  els.hierarchical.value = DEFAULTS.hierarchical;
   els.upscale.value = String(DEFAULTS.upscale);
   document.querySelector(`input[name="mode"][value="${DEFAULTS.mode}"]`).checked = true;
   els.grayscale.checked = DEFAULTS.grayscale;
@@ -399,7 +407,18 @@ els.knockoutColor.addEventListener("input", scheduleRetrace);
 els.upscale.addEventListener("change", scheduleRetrace);
 els.grayscale.addEventListener("change", scheduleRetrace);
 els.denoise.addEventListener("change", scheduleRetrace);
-els.crisp.addEventListener("change", scheduleRetrace);
+els.hierarchical.addEventListener("change", scheduleRetrace);
+els.cornerThreshold.addEventListener("input", () => {
+  updateOutputs();
+  scheduleRetrace();
+});
+// Crisp nudges corner rounding in the open (like presets); the slider
+// stays fully user-editable afterwards.
+els.crisp.addEventListener("change", () => {
+  els.cornerThreshold.value = els.crisp.checked ? "30" : "60";
+  updateOutputs();
+  scheduleRetrace();
+});
 
 // -- Eyedropper: arm, click the source image to sample, Esc cancels ----
 

@@ -132,12 +132,26 @@
           <legend title="How traced outlines are drawn">Path mode</legend>
           <label class="choice"><input type="radio" name="mode" value="spline" checked> <span title="Smooth flowing curves; best for most artwork">Spline (smooth)</span></label>
           <label class="choice"><input type="radio" name="mode" value="polygon"> <span title="Straight line segments; best for hard-edged geometric art">Polygon</span></label>
+          <label class="choice"><input type="radio" name="mode" value="none"> <span title="Exact pixel outlines with no smoothing; best for pixel art">Pixel (exact)</span></label>
         </fieldset>
+
+        <div class="field">
+          <label for="corner-threshold" title="Angles smoother than this many degrees trace as curves. Lower keeps text and logo corners sharp; raise for flowing curves">Corner rounding <output id="corner-threshold-out" for="corner-threshold">60</output></label>
+          <input type="range" id="corner-threshold" min="0" max="120" step="1" value="60">
+        </div>
+
+        <div class="field">
+          <label for="hierarchical" title="Stacked: shapes layer on top of each other (smallest files). Cutout: non-overlapping shapes that tile edge to edge; best for laser cutting, vinyl, and CNC">Layering</label>
+          <select id="hierarchical">
+            <option value="stacked">Stacked (default)</option>
+            <option value="cutout">Cutout (for cutting machines)</option>
+          </select>
+        </div>
 
         <div class="field">
           <label class="choice"><input type="checkbox" id="grayscale"> <span title="Convert to shades of gray before tracing">Grayscale</span></label>
           <label class="choice"><input type="checkbox" id="denoise"> <span title="Smooths photo noise before color reduction. Softens pixel art and fine texture">Denoise (photos; softens pixel art)</span></label>
-          <label class="choice"><input type="checkbox" id="crisp"> <span title="Nearest-neighbor resize and sharper corners. Best for text, logos, and pixel art">Crisp edges (text &amp; logos)</span></label>
+          <label class="choice"><input type="checkbox" id="crisp"> <span title="Nearest-neighbor resize and sharper corner rounding. Best for text, logos, and pixel art">Crisp edges (text &amp; logos)</span></label>
         </div>
 
         <fieldset class="field">
@@ -219,6 +233,6 @@
     <span class="app-version" id="app-version"></span>
   </footer>
 
-  <script type="module" src="js/app.js?v=21"></script>
+  <script type="module" src="js/app.js?v=22"></script>
 </body>
 </html>

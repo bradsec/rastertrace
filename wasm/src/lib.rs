@@ -10,8 +10,10 @@ use wasm_bindgen::prelude::*;
 /// Trace an RGBA pixel buffer into an SVG document string.
 ///
 /// `pixels` is tightly packed RGBA, `width * height * 4` bytes.
-/// `mode` is "spline" or "polygon". Remaining parameters match the
-/// vtracer `Config` fields of the same names.
+/// `mode` is "spline", "polygon", or "none" (pixel-perfect).
+/// `hierarchical` is "stacked" (shapes layered on top of each other) or
+/// "cutout" (non-overlapping adjacent shapes). Remaining parameters match
+/// the vtracer `Config` fields of the same names.
 #[wasm_bindgen]
 #[allow(clippy::too_many_arguments)]
 pub fn trace(
@@ -19,6 +21,7 @@ pub fn trace(
     width: usize,
     height: usize,
     mode: &str,
+    hierarchical: &str,
     filter_speckle: usize,
     color_precision: i32,
     layer_difference: i32,
@@ -48,7 +51,14 @@ pub fn trace(
     let mode = match mode {
         "spline" => PathSimplifyMode::Spline,
         "polygon" => PathSimplifyMode::Polygon,
+        "none" => PathSimplifyMode::None,
         other => return Err(JsError::new(&format!("unknown mode: {other}"))),
+    };
+
+    let hierarchical = match hierarchical {
+        "stacked" => Hierarchical::Stacked,
+        "cutout" => Hierarchical::Cutout,
+        other => return Err(JsError::new(&format!("unknown hierarchical: {other}"))),
     };
 
     let img = ColorImage {
@@ -58,7 +68,7 @@ pub fn trace(
     };
     let config = Config {
         color_mode: ColorMode::Color,
-        hierarchical: Hierarchical::Stacked,
+        hierarchical,
         mode,
         filter_speckle,
         color_precision,

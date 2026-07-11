@@ -244,6 +244,8 @@ test("defaults match initial and per-image reset settings", () => {
       mode: DEFAULTS.mode,
       speckle: DEFAULTS.speckle,
       layerDiff: DEFAULTS.layerDiff,
+      cornerThreshold: DEFAULTS.cornerThreshold,
+      hierarchical: DEFAULTS.hierarchical,
     },
     {
       edgeTrim: 0,
@@ -254,6 +256,8 @@ test("defaults match initial and per-image reset settings", () => {
       mode: "spline",
       speckle: 8,
       layerDiff: 16,
+      cornerThreshold: 60,
+      hierarchical: "stacked",
     },
   );
 });

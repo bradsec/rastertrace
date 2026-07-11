@@ -4,12 +4,15 @@
  * Trace an RGBA pixel buffer into an SVG document string.
  *
  * `pixels` is tightly packed RGBA, `width * height * 4` bytes.
- * `mode` is "spline" or "polygon". Remaining parameters match the
- * vtracer `Config` fields of the same names.
+ * `mode` is "spline", "polygon", or "none" (pixel-perfect).
+ * `hierarchical` is "stacked" (shapes layered on top of each other) or
+ * "cutout" (non-overlapping adjacent shapes). Remaining parameters match
+ * the vtracer `Config` fields of the same names.
  * @param {Uint8Array} pixels
  * @param {number} width
  * @param {number} height
  * @param {string} mode
+ * @param {string} hierarchical
  * @param {number} filter_speckle
  * @param {number} color_precision
  * @param {number} layer_difference
@@ -20,26 +23,28 @@
  * @param {number} path_precision
  * @returns {string}
  */
-export function trace(pixels, width, height, mode, filter_speckle, color_precision, layer_difference, corner_threshold, length_threshold, max_iterations, splice_threshold, path_precision) {
-    let deferred4_0;
-    let deferred4_1;
+export function trace(pixels, width, height, mode, hierarchical, filter_speckle, color_precision, layer_difference, corner_threshold, length_threshold, max_iterations, splice_threshold, path_precision) {
+    let deferred5_0;
+    let deferred5_1;
     try {
         const ptr0 = passArray8ToWasm0(pixels, wasm.__wbindgen_malloc);
         const len0 = WASM_VECTOR_LEN;
         const ptr1 = passStringToWasm0(mode, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
         const len1 = WASM_VECTOR_LEN;
-        const ret = wasm.trace(ptr0, len0, width, height, ptr1, len1, filter_speckle, color_precision, layer_difference, corner_threshold, length_threshold, max_iterations, splice_threshold, path_precision);
-        var ptr3 = ret[0];
-        var len3 = ret[1];
+        const ptr2 = passStringToWasm0(hierarchical, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len2 = WASM_VECTOR_LEN;
+        const ret = wasm.trace(ptr0, len0, width, height, ptr1, len1, ptr2, len2, filter_speckle, color_precision, layer_difference, corner_threshold, length_threshold, max_iterations, splice_threshold, path_precision);
+        var ptr4 = ret[0];
+        var len4 = ret[1];
         if (ret[3]) {
-            ptr3 = 0; len3 = 0;
+            ptr4 = 0; len4 = 0;
             throw takeFromExternrefTable0(ret[2]);
         }
-        deferred4_0 = ptr3;
-        deferred4_1 = len3;
-        return getStringFromWasm0(ptr3, len3);
+        deferred5_0 = ptr4;
+        deferred5_1 = len4;
+        return getStringFromWasm0(ptr4, len4);
     } finally {
-        wasm.__wbindgen_free(deferred4_0, deferred4_1, 1);
+        wasm.__wbindgen_free(deferred5_0, deferred5_1, 1);
     }
 }
 function __wbg_get_imports() {

@@ -46,6 +46,8 @@ export const DEFAULTS = Object.freeze({
   layerDiff: 16,
   upscale: 2,
   mode: "spline",
+  cornerThreshold: 60,
+  hierarchical: "stacked",
   grayscale: false,
   denoise: false,
   crisp: false,

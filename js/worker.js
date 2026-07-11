@@ -1,5 +1,5 @@
 // Web Worker: runs preprocessing + wasm tracing off the main thread.
-import init, { trace } from "../pkg/rastertrace_wasm.js?v=21";
+import init, { trace } from "../pkg/rastertrace_wasm.js?v=22";
 import {
   binarizeAlpha,
   boxBlur,
@@ -9,7 +9,7 @@ import {
   quantize,
   removeBackground,
   toGrayscale,
-} from "./preprocess.js?v=21";
+} from "./preprocess.js?v=22";
 
 const ready = init();
 
@@ -67,10 +67,11 @@ self.onmessage = async (event) => {
       img.width,
       img.height,
       settings.mode,
+      settings.hierarchical || "stacked", // stacked layers vs cutout tiles
       settings.speckle,
       8, // color_precision: colors already reduced above, like the CLI
       settings.layerDiff,
-      settings.crisp ? 30 : 60, // corner_threshold: crisp keeps text/logo corners sharp
+      settings.cornerThreshold ?? 60, // degrees; lower keeps corners sharper
       4.0, // length_threshold
       10, // max_iterations
       45, // splice_threshold
