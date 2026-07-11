@@ -1,5 +1,5 @@
 // Web Worker: runs preprocessing + wasm tracing off the main thread.
-import init, { trace } from "../pkg/img2svg_wasm.js?v=17";
+import init, { trace } from "../pkg/img2svg_wasm.js?v=18";
 import {
   binarizeAlpha,
   boxBlur,
@@ -9,7 +9,7 @@ import {
   quantize,
   removeBackground,
   toGrayscale,
-} from "./preprocess.js?v=17";
+} from "./preprocess.js?v=18";
 
 const ready = init();
 
