@@ -140,6 +140,51 @@ export function fillTransparent(img, [r, g, b]) {
   }
 }
 
+// Validators for persisted settings. localStorage is untrusted input:
+// each entry admits one control's value range and nothing else.
+const SETTING_CHECKS = {
+  profile: (v) => v === "" || v in EXPORT_PROFILES,
+  preset: (v) => typeof v === "string",
+  colors: (v) => Number.isFinite(v) && v >= 2 && v <= 256,
+  speckle: (v) => Number.isFinite(v) && v >= 0 && v <= 32,
+  layerDiff: (v) => Number.isFinite(v) && v >= 0 && v <= 128,
+  cornerThreshold: (v) => Number.isFinite(v) && v >= 0 && v <= 120,
+  hierarchical: (v) => v === "stacked" || v === "cutout",
+  upscale: (v) => [1, 2, 3, 4, "auto", "ultra"].includes(v),
+  mode: (v) => ["spline", "polygon", "none"].includes(v),
+  grayscale: (v) => typeof v === "boolean",
+  denoise: (v) => typeof v === "boolean",
+  crisp: (v) => typeof v === "boolean",
+  stencil: (v) => typeof v === "boolean",
+  transparent: (v) => ["", "edges", "auto", "custom"].includes(v),
+  knockoutColor: (v) => typeof v === "string" && /^#[0-9a-fA-F]{6}$/.test(v),
+  fuzz: (v) => Number.isFinite(v) && v >= 0 && v <= 255,
+  edgeTrim: (v) => Number.isFinite(v) && v >= 0 && v <= 16,
+  defringe: (v) => Number.isFinite(v) && v >= 0 && v <= 8,
+  pathPrecision: (v) => Number.isFinite(v) && v >= 1 && v <= 4,
+  lengthThreshold: (v) => Number.isFinite(v) && v >= 3.5 && v <= 10,
+  spliceThreshold: (v) => Number.isFinite(v) && v >= 10 && v <= 90,
+  exportSize: (v) => v === "px" || v === "physical",
+  physicalWidth: (v) => Number.isFinite(v) && v > 0 && v <= 100000,
+  physicalUnit: (v) => ["mm", "cm", "in"].includes(v),
+  minify: (v) => typeof v === "boolean",
+};
+
+/**
+ * Reduce a parsed settings snapshot (e.g. from localStorage) to known
+ * keys with in-range values. Anything unknown or invalid is dropped.
+ */
+export function sanitizeSettings(raw) {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {};
+  const out = {};
+  for (const [key, check] of Object.entries(SETTING_CHECKS)) {
+    if (Object.prototype.hasOwnProperty.call(raw, key) && check(raw[key])) {
+      out[key] = raw[key];
+    }
+  }
+  return out;
+}
+
 /** Parse "#RRGGBB" or "RRGGBB" into [r, g, b], or null. */
 export function parseHexColor(value) {
   const m = /^#?([0-9a-fA-F]{6})$/.exec(String(value).trim());

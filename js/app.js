@@ -1,5 +1,5 @@
 // UI wiring: state, controls, preview, download.
-import { capBitmap, decodeImage, rasterize, rotateBitmap, Tracer } from "./pipeline.js?v=25";
+import { capBitmap, decodeImage, rasterize, rotateBitmap, Tracer } from "./pipeline.js?v=26";
 import {
   analyzeFlatness,
   applyExportOptions,
@@ -11,8 +11,9 @@ import {
   MAX_TRACE_SIDE_ULTRA,
   parseHexColor,
   PRESETS,
+  sanitizeSettings,
   toHexColor,
-} from "./preprocess.js?v=25";
+} from "./preprocess.js?v=26";
 
 const $ = (id) => document.getElementById(id);
 
@@ -81,7 +82,9 @@ const els = {
   statSize: $("stat-size"),
   statTime: $("stat-time"),
   copySvg: $("copy-svg"),
+  downloadPng: $("download-png"),
   download: $("download"),
+  resetSettingsBtn: $("reset-settings"),
   panStage: $("pan-stage"),
   zoomIn: $("zoom-in"),
   zoomOut: $("zoom-out"),
@@ -107,7 +110,7 @@ const state = {
   flatNote: null, // status prefix when load-time detection fired
 };
 
-const tracer = new Tracer(new URL("./worker.js?v=25", import.meta.url));
+const tracer = new Tracer(new URL("./worker.js?v=26", import.meta.url));
 
 function currentSettings() {
   return {
@@ -178,6 +181,100 @@ function applyExportProfile(name) {
 
 function clearProfile() {
   els.exportProfile.value = "";
+}
+
+// -- Settings persistence: survive reloads, keep tuned values ----------
+
+const SETTINGS_KEY = "rastertrace-settings";
+
+function snapshotSettings() {
+  return {
+    profile: els.exportProfile.value,
+    preset: els.preset.value,
+    colors: Number(els.colors.value),
+    speckle: Number(els.speckle.value),
+    layerDiff: Number(els.layerDiff.value),
+    cornerThreshold: Number(els.cornerThreshold.value),
+    hierarchical: els.hierarchical.value,
+    upscale: els.upscale.value === "auto" || els.upscale.value === "ultra"
+      ? els.upscale.value
+      : Number(els.upscale.value),
+    mode: document.querySelector('input[name="mode"]:checked').value,
+    grayscale: els.grayscale.checked,
+    denoise: els.denoise.checked,
+    crisp: els.crisp.checked,
+    stencil: els.stencil.checked,
+    transparent: els.transparent.value,
+    knockoutColor: els.knockoutColor.value,
+    fuzz: Number(els.fuzz.value),
+    edgeTrim: Number(els.edgeTrim.value),
+    defringe: Number(els.defringe.value),
+    pathPrecision: Number(els.pathPrecision.value),
+    lengthThreshold: Number(els.lengthThreshold.value),
+    spliceThreshold: Number(els.spliceThreshold.value),
+    exportSize: els.exportSize.value,
+    physicalWidth: Number(els.physicalWidth.value),
+    physicalUnit: els.physicalUnit.value,
+    minify: els.minify.checked,
+  };
+}
+
+let saveTimer = 0;
+
+function saveSettings() {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => {
+    try {
+      localStorage.setItem(SETTINGS_KEY, JSON.stringify(snapshotSettings()));
+    } catch {
+      // storage full or blocked (private mode): persistence is optional
+    }
+  }, 250);
+}
+
+function restoreSettings() {
+  let saved;
+  try {
+    saved = sanitizeSettings(JSON.parse(localStorage.getItem(SETTINGS_KEY)));
+  } catch {
+    return;
+  }
+  const set = (el, key) => {
+    if (saved[key] !== undefined) el.value = String(saved[key]);
+  };
+  const check = (el, key) => {
+    if (saved[key] !== undefined) el.checked = saved[key];
+  };
+  set(els.exportProfile, "profile");
+  set(els.preset, "preset");
+  set(els.colors, "colors");
+  set(els.speckle, "speckle");
+  set(els.layerDiff, "layerDiff");
+  set(els.cornerThreshold, "cornerThreshold");
+  set(els.hierarchical, "hierarchical");
+  set(els.upscale, "upscale");
+  if (saved.mode) {
+    document.querySelector(`input[name="mode"][value="${saved.mode}"]`).checked = true;
+  }
+  check(els.grayscale, "grayscale");
+  check(els.denoise, "denoise");
+  check(els.crisp, "crisp");
+  check(els.stencil, "stencil");
+  set(els.transparent, "transparent");
+  set(els.knockoutColor, "knockoutColor");
+  set(els.fuzz, "fuzz");
+  set(els.edgeTrim, "edgeTrim");
+  set(els.defringe, "defringe");
+  set(els.pathPrecision, "pathPrecision");
+  set(els.lengthThreshold, "lengthThreshold");
+  set(els.spliceThreshold, "spliceThreshold");
+  set(els.exportSize, "exportSize");
+  set(els.physicalWidth, "physicalWidth");
+  set(els.physicalUnit, "physicalUnit");
+  check(els.minify, "minify");
+  updateTransparencyFields();
+  updateExportFields();
+  updateOutputs();
 }
 
 function applyPreset(name) {
@@ -261,6 +358,7 @@ function showError(message) {
 
 function setResultActions(enabled) {
   els.copySvg.disabled = !enabled;
+  els.downloadPng.disabled = !enabled;
   els.download.setAttribute("aria-disabled", String(!enabled));
   if (!enabled) els.download.removeAttribute("href");
 }
@@ -421,7 +519,8 @@ async function loadFile(file) {
       bitmap.close(); // a newer load started while this one decoded
       return;
     }
-    resetSettings();
+    // Settings survive image replacement (batch workflows tune once,
+    // convert many); flat-image detection below still adjusts colors.
     state.bitmap?.close();
     state.bitmap = bitmap;
     state.file = file;
@@ -439,6 +538,7 @@ async function loadFile(file) {
     els.workspace.hidden = false;
     resetView();
     setView("result");
+    if (els.upscale.value === "ultra") await ensureUltraBitmap();
     await retrace();
     els.preview.focus({ preventScroll: false });
   } catch (err) {
@@ -848,7 +948,59 @@ els.copySvg.addEventListener("click", async () => {
   }
 });
 
-updateOutputs();
+// PNG render at the trace resolution (viewBox), not the display size:
+// engraving and upload tools that reject SVG get the full detail.
+els.downloadPng.addEventListener("click", async () => {
+  if (!state.svg || els.downloadPng.disabled) return;
+  els.downloadPng.disabled = true;
+  try {
+    const img = new Image();
+    img.src = state.downloadUrl;
+    await img.decode();
+    const m = state.svg.match(/viewBox="0 0 (\d+) (\d+)"/);
+    const width = m ? Number(m[1]) : img.naturalWidth;
+    const height = m ? Number(m[2]) : img.naturalHeight;
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    canvas.getContext("2d").drawImage(img, 0, 0, width, height);
+    const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${state.fileName.replace(/\.[^.]+$/, "")}.png`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    els.status.textContent = `PNG exported at ${width}×${height} px.`;
+  } catch (err) {
+    showError(err.message || "PNG export failed.");
+  } finally {
+    els.downloadPng.disabled = false;
+  }
+});
+
+els.resetSettingsBtn.addEventListener("click", () => {
+  resetSettings();
+  saveSettings();
+  scheduleRetrace();
+  els.status.textContent = "Settings reset to defaults.";
+});
+
+// Persist on any control interaction; one delegated listener covers
+// every current and future input in the column.
+{
+  const controlsRoot = document.querySelector(".controls");
+  controlsRoot.addEventListener("input", saveSettings);
+  controlsRoot.addEventListener("change", saveSettings);
+}
+
+restoreSettings();
+
+// Offline support: static app, versioned assets. Registration failure
+// (http, old browser) is harmless.
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("sw.js").catch(() => {});
+}
 
 // Footer version: package.json is the single version source and is served
 // alongside the app. Silent on failure so the footer never breaks.

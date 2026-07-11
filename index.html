@@ -43,7 +43,7 @@
     }
   </script>
 
-  <link rel="stylesheet" href="css/styles.css?v=25">
+  <link rel="stylesheet" href="css/styles.css?v=26">
 </head>
 <body>
   <header class="topbar">
@@ -76,6 +76,7 @@
     <section id="workspace" class="workspace" hidden>
       <aside class="controls" aria-label="Conversion settings">
         <button type="button" id="replace-image" class="button button-secondary">Replace image…</button>
+        <button type="button" id="reset-settings" class="button button-secondary" title="Restore every control to its default value">Reset settings</button>
         <div class="button-row" role="group" aria-label="Rotate image">
           <span class="button-row-label">Rotate</span>
           <button type="button" id="rotate-left" class="button button-secondary icon-button" title="Rotate 90 degrees counter-clockwise" aria-label="Rotate 90 degrees counter-clockwise">
@@ -292,6 +293,7 @@
           </dl>
           <div class="action-buttons">
             <button type="button" id="copy-svg" class="button button-secondary" disabled title="Copy the SVG markup to the clipboard">Copy SVG</button>
+            <button type="button" id="download-png" class="button button-secondary" disabled title="Render the traced result to a PNG at the trace resolution">Download PNG</button>
             <a id="download" class="button button-primary" aria-disabled="true" download>Download SVG</a>
           </div>
         </div>
@@ -331,6 +333,6 @@
     <span class="app-version" id="app-version"></span>
   </footer>
 
-  <script type="module" src="js/app.js?v=25"></script>
+  <script type="module" src="js/app.js?v=26"></script>
 </body>
 </html>

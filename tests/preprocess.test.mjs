@@ -27,6 +27,7 @@ import {
   srgbToOklab,
   removeBackground,
   resolveSettings,
+  sanitizeSettings,
   snapToImageColor,
   toGrayscale,
   toHexColor,
@@ -377,6 +378,55 @@ test("EXPORT_PROFILES cover expected keys with sane values", () => {
   }
   assert.equal(EXPORT_PROFILES.laser.stencil, true);
   assert.equal(EXPORT_PROFILES.web.minify, true);
+});
+
+test("sanitizeSettings keeps only known keys with valid values", () => {
+  const out = sanitizeSettings({
+    colors: 16,
+    speckle: 8,
+    upscale: "auto",
+    mode: "polygon",
+    stencil: true,
+    minify: false,
+    physicalUnit: "mm",
+    physicalWidth: 120.5,
+    knockoutColor: "#aabbcc",
+    bogusKey: "x",
+    __proto__: { evil: 1 },
+  });
+  assert.deepEqual(out, {
+    colors: 16,
+    speckle: 8,
+    upscale: "auto",
+    mode: "polygon",
+    stencil: true,
+    minify: false,
+    physicalUnit: "mm",
+    physicalWidth: 120.5,
+    knockoutColor: "#aabbcc",
+  });
+});
+
+test("sanitizeSettings drops out-of-range and wrong-type values", () => {
+  const out = sanitizeSettings({
+    colors: 9999,
+    speckle: -1,
+    upscale: "huge",
+    mode: 42,
+    hierarchical: "sideways",
+    stencil: "yes",
+    physicalWidth: -5,
+    knockoutColor: "javascript:alert(1)",
+    pathPrecision: 7,
+    transparent: "weird",
+  });
+  assert.deepEqual(out, {});
+});
+
+test("sanitizeSettings handles junk input", () => {
+  assert.deepEqual(sanitizeSettings(null), {});
+  assert.deepEqual(sanitizeSettings("nope"), {});
+  assert.deepEqual(sanitizeSettings([1, 2]), {});
 });
 
 test("countPaths counts path elements", () => {
