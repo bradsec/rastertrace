@@ -11,5 +11,6 @@ node_modules/
 
 # Local scratch / tooling artifacts
 _diag.png
+.superpowers/
 .playwright-mcp/
 .claude/
