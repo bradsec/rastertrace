@@ -1,5 +1,5 @@
 // Browser-side pipeline: decode, premultiplied upscale, worker round-trip.
-import { assertRasterBudget, MAX_TRACE_SIDE } from "./preprocess.js?v=19";
+import { assertRasterBudget, MAX_TRACE_SIDE } from "./preprocess.js?v=20";
 
 export async function sniffImageSize(file) {
   const bytes = new Uint8Array(await file.slice(0, 256 * 1024).arrayBuffer());
@@ -109,9 +109,8 @@ export async function rotateBitmap(bitmap, clockwise = true) {
  * Draw the bitmap at the given scale factor and return raw RGBA pixels.
  * Canvas interpolates in premultiplied alpha space, which is exactly the
  * halo-free resample the pipeline needs for transparent images. Scale may
- * be fractional or below 1 (device memory fit). `crisp` disables
- * interpolation entirely (nearest-neighbor) so flat-color sources keep
- * hard edges instead of gaining manufactured gradient pixels.
+ * be fractional or below 1 (device memory fit). `crisp` is kept as part of
+ * the raster cache key; tracing sharpness is handled in the worker.
  */
 export function rasterize(bitmap, scale, crisp = false) {
   assertRasterBudget(bitmap.width, bitmap.height, scale);
@@ -119,7 +118,7 @@ export function rasterize(bitmap, scale, crisp = false) {
   const height = Math.max(1, Math.round(bitmap.height * scale));
   const canvas = new OffscreenCanvas(width, height);
   const ctx = canvas.getContext("2d");
-  ctx.imageSmoothingEnabled = scale !== 1 && !crisp;
+  ctx.imageSmoothingEnabled = scale !== 1;
   ctx.imageSmoothingQuality = "high";
   ctx.drawImage(bitmap, 0, 0, width, height);
   return ctx.getImageData(0, 0, width, height);

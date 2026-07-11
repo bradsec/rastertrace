@@ -21,7 +21,6 @@ import {
   snapToImageColor,
   toGrayscale,
   toHexColor,
-  traceMode,
 } from "../js/preprocess.js";
 
 function makeImage(width, height, fill = [0, 0, 0, 0]) {
@@ -231,11 +230,6 @@ test("resolveSettings: explicit beats preset beats defaults", () => {
   assert.equal(d.colors, 256);
   assert.equal(d.speckle, 8);
   assert.equal(d.layerDiff, 16);
-});
-
-test("traceMode uses polygon simplification for crisp edges", () => {
-  assert.equal(traceMode({ mode: "spline", crisp: false }), "spline");
-  assert.equal(traceMode({ mode: "spline", crisp: true }), "polygon");
 });
 
 test("erodeAlpha peels one boundary ring per pass", () => {
