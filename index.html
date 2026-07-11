@@ -180,6 +180,10 @@
             <label for="edge-trim" title="Peels this many pixels off the cutout boundary to remove leftover fringe. Thin details shrink by the same amount">Edge trim <output id="edge-trim-out" for="edge-trim">0</output></label>
             <input type="range" id="edge-trim" min="0" max="16" step="1" value="0">
           </div>
+          <div class="subfield" id="defringe-field" hidden>
+            <label for="defringe" title="Repaints this many pixels of the cutout boundary with interior colors to hide leftover fringe. Keeps thin details at full size">Defringe <output id="defringe-out" for="defringe">0</output></label>
+            <input type="range" id="defringe" min="0" max="8" step="1" value="0">
+          </div>
         </fieldset>
       </aside>
 
@@ -233,6 +237,6 @@
     <span class="app-version" id="app-version"></span>
   </footer>
 
-  <script type="module" src="js/app.js?v=22"></script>
+  <script type="module" src="js/app.js?v=23"></script>
 </body>
 </html>

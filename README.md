@@ -8,10 +8,10 @@ Convert raster images to clean, scalable SVG vectors entirely in your browser. [
 
 - PNG, JPEG, WebP, GIF, BMP input (anything the browser decodes)
 - Premultiplied-alpha upscaling (no edge halos), binary alpha (no fringe fragmentation)
-- Median-cut + k-means color quantization with transparent-area backfill
+- Median-cut + k-means color quantization in perceptual Oklab space with transparent-area backfill
 - 3x3 majority filter to clean quantization dither
-- Optional denoise blur for photographic sources
-- Background removal: auto-detect from corners, hex color, or eyedropper pick from the image; edge trim chokes the cutout to remove leftover fringe
+- Optional edge-preserving median denoise for photographic sources
+- Background removal: auto-detect from border sampling, hex color, or eyedropper pick from the image; perceptual match tolerance; edge trim chokes the cutout and defringe repaints leftover fringe without shrinking thin details
 - Color-count presets from 2 to 256 with matched cleanup levels: fewer colors get more aggressive speckle and layer cleanup for flat print-style output
 - Flat-image detection: logos, text, and pixel art are detected at load; the color count snaps to the image, with every control still editable.
 - Crisp edges toggle: nearest-neighbor upscaling plus sharper corner tracing for hard-edged sources, available manually for any image.

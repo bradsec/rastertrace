@@ -7,6 +7,7 @@ import {
   MAX_TRACE_PIXELS,
   binarizeAlpha,
   countPaths,
+  defringeAlpha,
   detectBackgroundColor,
   dominantOpaqueColor,
   erodeAlpha,
@@ -14,9 +15,12 @@ import {
   fitTraceScale,
   MAX_TRACE_SIDE,
   knockOutColor,
+  medianFilter,
   modeFilter,
+  oklabToSrgb,
   parseHexColor,
   quantize,
+  srgbToOklab,
   removeBackground,
   resolveSettings,
   snapToImageColor,
@@ -62,12 +66,48 @@ test("detectBackgroundColor returns null for transparent corners", () => {
   assert.equal(detectBackgroundColor(img), null);
 });
 
+test("detectBackgroundColor survives a corner artifact", () => {
+  // JPEG-noisy background: every corner pixel differs slightly and one
+  // corner holds a watermark-like artifact. Sampling only the 4 corner
+  // pixels picks the artifact; patch + border sampling must not.
+  const img = makeImage(12, 12, [10, 20, 30, 255]);
+  setPixel(img, 11, 0, [11, 21, 29, 255]);
+  setPixel(img, 0, 11, [9, 19, 31, 255]);
+  setPixel(img, 11, 11, [12, 19, 30, 255]);
+  setPixel(img, 0, 0, [40, 60, 80, 255]); // artifact
+  const detected = detectBackgroundColor(img);
+  assert.ok(detected, "expected a detection");
+  for (let c = 0; c < 3; c++) {
+    assert.ok(Math.abs(detected[c] - [10, 20, 30][c]) <= 4, `channel ${c}: ${detected}`);
+  }
+});
+
+test("detectBackgroundColor returns null when the border is mostly transparent", () => {
+  // Subject touches one corner of an otherwise transparent canvas: that
+  // corner color is the subject, not a background to remove.
+  const img = makeImage(10, 10, [0, 0, 0, 0]);
+  for (let y = 0; y < 3; y++) {
+    for (let x = 0; x < 3; x++) setPixel(img, x, y, [200, 40, 40, 255]);
+  }
+  assert.equal(detectBackgroundColor(img), null);
+});
+
 test("knockOutColor zeroes alpha within fuzz only", () => {
   const img = makeImage(2, 1, [100, 100, 100, 255]);
   setPixel(img, 1, 0, [130, 100, 100, 255]);
   knockOutColor(img, [100, 100, 100], 16);
   assert.equal(getPixel(img, 0, 0)[3], 0); // exact match removed
-  assert.equal(getPixel(img, 1, 0)[3], 255); // 30 > fuzz, kept
+  assert.equal(getPixel(img, 1, 0)[3], 255); // hue shift beyond fuzz, kept
+});
+
+test("knockOutColor fuzz is perceptual: catches lightness noise, spares hue shifts", () => {
+  // White background with a light JPEG shadow: per-channel distance 20
+  // misses it at fuzz 16, but perceptually it is background.
+  const img = makeImage(2, 1, [255, 255, 255, 255]);
+  setPixel(img, 1, 0, [235, 235, 235, 255]);
+  knockOutColor(img, [255, 255, 255], 16);
+  assert.equal(getPixel(img, 0, 0)[3], 0);
+  assert.equal(getPixel(img, 1, 0)[3], 0); // shadow removed with the background
 });
 
 test("binarizeAlpha thresholds at 128", () => {
@@ -101,6 +141,50 @@ test("dominantOpaqueColor falls back to white when fully transparent", () => {
   assert.deepEqual(dominantOpaqueColor(img), [255, 255, 255]);
 });
 
+test("srgbToOklab/oklabToSrgb round-trip within 1 per channel", () => {
+  const samples = [
+    [0, 0, 0],
+    [255, 255, 255],
+    [128, 128, 128],
+    [255, 0, 0],
+    [0, 255, 0],
+    [0, 0, 255],
+    [30, 30, 120],
+    [255, 240, 80],
+    [200, 120, 40],
+  ];
+  for (const rgb of samples) {
+    const back = oklabToSrgb(srgbToOklab(rgb));
+    for (let c = 0; c < 3; c++) {
+      assert.ok(Math.abs(back[c] - rgb[c]) <= 1, `${rgb} -> ${back}`);
+    }
+  }
+});
+
+test("srgbToOklab orders grays by lightness with near-zero chroma", () => {
+  const dark = srgbToOklab([40, 40, 40]);
+  const light = srgbToOklab([220, 220, 220]);
+  assert.ok(light[0] > dark[0]);
+  for (const lab of [dark, light]) {
+    assert.ok(Math.abs(lab[1]) < 0.001 && Math.abs(lab[2]) < 0.001, `chroma ${lab}`);
+  }
+});
+
+test("quantize to 2 keeps navy and yellow hues distinct", () => {
+  // Half navy shades, half yellow shades: the two palette entries must
+  // land on opposite hues rather than merging into muddy midpoints.
+  const img = makeImage(8, 2);
+  for (let x = 0; x < 8; x++) {
+    setPixel(img, x, 0, [28 + x, 30, 118 + x * 2, 255]);
+    setPixel(img, x, 1, [250 - x, 238, 78 + x, 255]);
+  }
+  quantize(img, 2);
+  const top = getPixel(img, 0, 0);
+  const bottom = getPixel(img, 0, 1);
+  assert.ok(top[2] > top[0], `navy stayed blue-ish: ${top}`);
+  assert.ok(bottom[0] > bottom[2], `yellow stayed warm: ${bottom}`);
+});
+
 test("quantize reduces distinct colors and leaves alpha untouched", () => {
   const img = makeImage(16, 1);
   for (let x = 0; x < 16; x++) setPixel(img, x, 0, [x * 16, 255 - x * 16, 128, 255]);
@@ -128,6 +212,36 @@ test("quantize is a no-op when colors already fit", () => {
   const before = [...img.data];
   quantize(img, 8);
   assert.deepEqual([...img.data], before);
+});
+
+test("medianFilter removes single-pixel noise", () => {
+  const img = makeImage(5, 5, [100, 100, 100, 255]);
+  setPixel(img, 2, 2, [255, 0, 0, 255]); // salt noise
+  medianFilter(img);
+  assert.deepEqual(getPixel(img, 2, 2).slice(0, 3), [100, 100, 100]);
+});
+
+test("medianFilter preserves hard edges", () => {
+  // Left half black, right half white: a box blur would gray the
+  // boundary columns; the median must keep both sides exact.
+  const img = makeImage(6, 6);
+  for (let y = 0; y < 6; y++) {
+    for (let x = 0; x < 6; x++) setPixel(img, x, y, x < 3 ? [0, 0, 0, 255] : [255, 255, 255, 255]);
+  }
+  medianFilter(img);
+  for (let y = 0; y < 6; y++) {
+    assert.deepEqual(getPixel(img, 2, y).slice(0, 3), [0, 0, 0]);
+    assert.deepEqual(getPixel(img, 3, y).slice(0, 3), [255, 255, 255]);
+  }
+});
+
+test("medianFilter leaves alpha untouched and skips transparent neighbors", () => {
+  const img = makeImage(3, 3, [40, 40, 40, 0]);
+  setPixel(img, 1, 1, [200, 10, 10, 255]); // lone opaque pixel
+  medianFilter(img);
+  assert.deepEqual(getPixel(img, 1, 1), [200, 10, 10, 255]); // only itself in window
+  assert.equal(getPixel(img, 0, 0)[3], 0);
+  assert.deepEqual(getPixel(img, 0, 0).slice(0, 3), [40, 40, 40]); // transparent RGB untouched
 });
 
 test("modeFilter removes isolated speck, keeps solid regions", () => {
@@ -237,6 +351,7 @@ test("defaults match initial and per-image reset settings", () => {
   assert.deepEqual(
     {
       edgeTrim: DEFAULTS.edgeTrim,
+      defringe: DEFAULTS.defringe,
       fuzz: DEFAULTS.fuzz,
       crisp: DEFAULTS.crisp,
       denoise: DEFAULTS.denoise,
@@ -249,6 +364,7 @@ test("defaults match initial and per-image reset settings", () => {
     },
     {
       edgeTrim: 0,
+      defringe: 0,
       fuzz: 16,
       crisp: false,
       denoise: false,
@@ -294,6 +410,40 @@ test("erodeAlpha zero passes is a no-op and full erase terminates", () => {
   assert.deepEqual([...img.data], before);
   erodeAlpha(img, 50); // more passes than pixels: must stop cleanly
   assert.equal(getPixel(img, 2, 2)[3], 0);
+});
+
+test("defringeAlpha recolors the boundary ring from the interior", () => {
+  // 5x5 opaque block in a transparent frame: interior dark, boundary
+  // ring carrying light background-blend fringe.
+  const img = makeImage(7, 7, [0, 0, 0, 0]);
+  for (let y = 1; y < 6; y++) {
+    for (let x = 1; x < 6; x++) setPixel(img, x, y, [200, 200, 200, 255]);
+  }
+  for (let y = 2; y < 5; y++) {
+    for (let x = 2; x < 5; x++) setPixel(img, x, y, [10, 10, 10, 255]);
+  }
+  defringeAlpha(img, 1);
+  assert.deepEqual(getPixel(img, 1, 1), [10, 10, 10, 255]); // fringe recolored
+  assert.deepEqual(getPixel(img, 3, 1), [10, 10, 10, 255]);
+  assert.deepEqual(getPixel(img, 3, 3), [10, 10, 10, 255]); // interior unchanged
+  assert.equal(getPixel(img, 0, 0)[3], 0); // transparency untouched
+});
+
+test("defringeAlpha keeps thin features instead of erasing them", () => {
+  // 1px line: erodeAlpha would delete it; defringe must leave it opaque
+  // with its original color (no interior to pull from).
+  const img = makeImage(5, 3, [0, 0, 0, 0]);
+  for (let x = 0; x < 5; x++) setPixel(img, x, 1, [90, 30, 30, 255]);
+  defringeAlpha(img, 2);
+  for (let x = 0; x < 5; x++) assert.deepEqual(getPixel(img, x, 1), [90, 30, 30, 255]);
+});
+
+test("defringeAlpha zero depth is a no-op", () => {
+  const img = makeImage(3, 3, [10, 10, 10, 255]);
+  setPixel(img, 0, 0, [0, 0, 0, 0]);
+  const before = [...img.data];
+  defringeAlpha(img, 0);
+  assert.deepEqual([...img.data], before);
 });
 
 test("removeBackground honors fuzz after palette snap (halo regression)", () => {

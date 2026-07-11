@@ -1,5 +1,5 @@
 // UI wiring: state, controls, preview, download.
-import { capBitmap, decodeImage, rasterize, rotateBitmap, Tracer } from "./pipeline.js?v=22";
+import { capBitmap, decodeImage, rasterize, rotateBitmap, Tracer } from "./pipeline.js?v=23";
 import {
   analyzeFlatness,
   countPaths,
@@ -8,7 +8,7 @@ import {
   parseHexColor,
   PRESETS,
   toHexColor,
-} from "./preprocess.js?v=22";
+} from "./preprocess.js?v=23";
 
 const $ = (id) => document.getElementById(id);
 
@@ -45,6 +45,9 @@ const els = {
   edgeTrimField: $("edge-trim-field"),
   edgeTrim: $("edge-trim"),
   edgeTrimOut: $("edge-trim-out"),
+  defringeField: $("defringe-field"),
+  defringe: $("defringe"),
+  defringeOut: $("defringe-out"),
   showResult: $("show-result"),
   showSource: $("show-source"),
   greenScreen: $("green-screen"),
@@ -82,7 +85,7 @@ const state = {
   flatNote: null, // status prefix when load-time detection fired
 };
 
-const tracer = new Tracer(new URL("./worker.js?v=22", import.meta.url));
+const tracer = new Tracer(new URL("./worker.js?v=23", import.meta.url));
 
 function currentSettings() {
   return {
@@ -104,6 +107,7 @@ function currentSettings() {
           : null,
     fuzz: Number(els.fuzz.value),
     edgeTrim: Number(els.edgeTrim.value),
+    defringe: Number(els.defringe.value),
   };
 }
 
@@ -115,6 +119,7 @@ function updateOutputs() {
   els.cornerThresholdOut.textContent = els.cornerThreshold.value;
   els.fuzzOut.textContent = els.fuzz.value;
   els.edgeTrimOut.textContent = els.edgeTrim.value;
+  els.defringeOut.textContent = els.defringe.value;
 }
 
 function applyPreset(name) {
@@ -131,6 +136,7 @@ function updateTransparencyFields() {
   els.knockoutColorField.hidden = mode !== "custom";
   els.fuzzField.hidden = mode === "";
   els.edgeTrimField.hidden = mode === "";
+  els.defringeField.hidden = mode === "";
 }
 
 function resetSettings() {
@@ -149,6 +155,7 @@ function resetSettings() {
   els.knockoutColor.value = "#ffffff";
   els.fuzz.value = String(DEFAULTS.fuzz);
   els.edgeTrim.value = String(DEFAULTS.edgeTrim);
+  els.defringe.value = String(DEFAULTS.defringe);
   setEyedropper(false);
   updateTransparencyFields();
   updateOutputs();
@@ -391,7 +398,7 @@ for (const input of [els.colors, els.speckle, els.layerDiff]) {
   });
 }
 
-for (const input of [els.fuzz, els.edgeTrim]) {
+for (const input of [els.fuzz, els.edgeTrim, els.defringe]) {
   input.addEventListener("input", () => {
     updateOutputs();
     scheduleRetrace();

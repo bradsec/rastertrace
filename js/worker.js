@@ -1,15 +1,16 @@
 // Web Worker: runs preprocessing + wasm tracing off the main thread.
-import init, { trace } from "../pkg/rastertrace_wasm.js?v=22";
+import init, { trace } from "../pkg/rastertrace_wasm.js?v=23";
 import {
   binarizeAlpha,
-  boxBlur,
+  defringeAlpha,
   erodeAlpha,
   finalizeSvg,
+  medianFilter,
   modeFilter,
   quantize,
   removeBackground,
   toGrayscale,
-} from "./preprocess.js?v=22";
+} from "./preprocess.js?v=23";
 
 const ready = init();
 
@@ -33,10 +34,11 @@ self.onmessage = async (event) => {
     if (settings.grayscale) toGrayscale(img);
     if (hasAlpha) binarizeAlpha(img);
     // Optional denoise for photographic sources; destroys intentional
-    // dither/pixel-art texture, so it is opt-in.
+    // dither/pixel-art texture, so it is opt-in. Median, not blur: it
+    // removes noise without graying the edges the tracer follows.
     if (settings.denoise) {
       stage("Denoising…");
-      boxBlur(img, 2);
+      medianFilter(img, 2);
     }
     const quantized = settings.colors < 256;
     if (quantized) {
@@ -58,6 +60,12 @@ self.onmessage = async (event) => {
       if (knockedOut && settings.edgeTrim > 0) {
         stage("Trimming edges…");
         erodeAlpha(img, settings.edgeTrim);
+      }
+      // Repaint whatever fringe remains after the trim: unlike trimming,
+      // this keeps thin features at full size.
+      if (knockedOut && settings.defringe > 0) {
+        stage("Defringing…");
+        defringeAlpha(img, settings.defringe);
       }
     }
 

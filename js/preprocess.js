@@ -54,6 +54,7 @@ export const DEFAULTS = Object.freeze({
   transparent: "",
   fuzz: 16,
   edgeTrim: 0,
+  defringe: 0,
 });
 
 // Keyed by color count. Speckle and layer difference scale inversely:
@@ -88,46 +89,147 @@ export function toHexColor([r, g, b]) {
 }
 
 /**
- * Most common opaque corner color, or null when the corners are already
- * mostly transparent.
+ * sRGB [0-255] channels to Oklab [L, a, b]. Oklab is perceptually
+ * uniform: Euclidean distances here track how different two colors look,
+ * unlike raw sRGB where dark and saturated regions are over-weighted.
+ */
+let SRGB_LINEAR;
+function linearLut() {
+  if (!SRGB_LINEAR) {
+    SRGB_LINEAR = new Float64Array(256);
+    for (let i = 0; i < 256; i++) {
+      const v = i / 255;
+      SRGB_LINEAR[i] = v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
+    }
+  }
+  return SRGB_LINEAR;
+}
+
+export function srgbToOklab([r, g, b]) {
+  const lut = linearLut();
+  const lr = lut[r];
+  const lg = lut[g];
+  const lb = lut[b];
+  const l = Math.cbrt(0.4122214708 * lr + 0.5363325363 * lg + 0.0514459929 * lb);
+  const m = Math.cbrt(0.2119034982 * lr + 0.6806995451 * lg + 0.1073969566 * lb);
+  const s = Math.cbrt(0.0883024619 * lr + 0.2817188376 * lg + 0.6299787005 * lb);
+  return [
+    0.2104542553 * l + 0.793617785 * m - 0.0040720468 * s,
+    1.9779984951 * l - 2.428592205 * m + 0.4505937099 * s,
+    0.0259040371 * l + 0.7827717662 * m - 0.808675766 * s,
+  ];
+}
+
+/** Oklab [L, a, b] back to sRGB [0-255], clamped and rounded. */
+export function oklabToSrgb([L, a, b]) {
+  const l = (L + 0.3963377774 * a + 0.2158037573 * b) ** 3;
+  const m = (L - 0.1055613458 * a - 0.0638541728 * b) ** 3;
+  const s = (L - 0.0894841775 * a - 1.291485548 * b) ** 3;
+  const lr = 4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s;
+  const lg = -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s;
+  const lb = -0.0041960863 * l - 0.7034186147 * m + 1.707614701 * s;
+  const gam = (v) => {
+    const c = v <= 0.0031308 ? 12.92 * v : 1.055 * Math.max(0, v) ** (1 / 2.4) - 0.055;
+    return Math.max(0, Math.min(255, Math.round(c * 255)));
+  };
+  return [gam(lr), gam(lg), gam(lb)];
+}
+
+/**
+ * Dominant border color, or null when the border is mostly transparent.
+ * Samples the border ring plus 4x4 corner patches and bins samples
+ * coarsely (16 levels per channel), returning the average color of the
+ * dominant bin: single corner pixels are one JPEG artifact or watermark
+ * away from the wrong answer, and binning absorbs compression noise.
  */
 export function detectBackgroundColor(img) {
   const { data, width, height } = img;
-  const idx = (x, y) => (y * width + x) * 4;
-  const corners = [idx(0, 0), idx(width - 1, 0), idx(0, height - 1), idx(width - 1, height - 1)];
-  const opaque = [];
-  for (const i of corners) {
-    if (data[i + 3] >= ALPHA_THRESHOLD) opaque.push([data[i], data[i + 1], data[i + 2]]);
+  const samples = [];
+  let total = 0;
+  const take = (x, y) => {
+    total += 1;
+    const i = (y * width + x) * 4;
+    if (data[i + 3] >= ALPHA_THRESHOLD) samples.push(i);
+  };
+  const stride = Math.max(1, Math.floor((2 * (width + height)) / 2048));
+  for (let x = 0; x < width; x += stride) {
+    take(x, 0);
+    take(x, height - 1);
   }
-  if (opaque.length === 0) return null;
-  const counts = new Map();
-  let best = null;
-  let bestCount = 0;
-  for (const c of opaque) {
-    const key = c.join(",");
-    const n = (counts.get(key) || 0) + 1;
-    counts.set(key, n);
-    if (n > bestCount) {
-      bestCount = n;
-      best = c;
+  for (let y = 1; y < height - 1; y += stride) {
+    take(0, y);
+    take(width - 1, y);
+  }
+  const k = Math.min(4, width, height);
+  for (const [cx, cy] of [[0, 0], [width - k, 0], [0, height - k], [width - k, height - k]]) {
+    for (let y = cy; y < cy + k; y++) {
+      for (let x = cx; x < cx + k; x++) take(x, y);
     }
   }
-  return best;
+  // Mostly transparent border: any opaque border pixels are subject, not
+  // background.
+  if (samples.length < total / 2) return null;
+
+  const bin = (i) => ((data[i] >> 4) << 8) | ((data[i + 1] >> 4) << 4) | (data[i + 2] >> 4);
+  const bins = new Map();
+  let bestKey = -1;
+  let bestCount = 0;
+  for (const i of samples) {
+    const key = bin(i);
+    const n = (bins.get(key) || 0) + 1;
+    bins.set(key, n);
+    if (n > bestCount) {
+      bestCount = n;
+      bestKey = key;
+    }
+  }
+  let r = 0;
+  let g = 0;
+  let b = 0;
+  let n = 0;
+  for (const i of samples) {
+    if (bin(i) !== bestKey) continue;
+    r += data[i];
+    g += data[i + 1];
+    b += data[i + 2];
+    n += 1;
+  }
+  return [Math.round(r / n), Math.round(g / n), Math.round(b / n)];
+}
+
+/**
+ * Perceptual fuzz matcher: chroma-weighted Oklab distance to `target`,
+ * scaled so 0-255 fuzz values stay comparable to the old per-channel
+ * scale. Doubling the a/b (chroma) axes keeps hue shifts (subject edges)
+ * protected while letting pure lightness noise (shadows, JPEG artifacts)
+ * count as background. Allocation-free per call: runs per pixel.
+ */
+function makeFuzzMatch(target, fuzz) {
+  const [L1, A1, B1] = srgbToOklab(target);
+  const lut = linearLut();
+  return (r, g, b) => {
+    const lr = lut[r];
+    const lg = lut[g];
+    const lb = lut[b];
+    const l = Math.cbrt(0.4122214708 * lr + 0.5363325363 * lg + 0.0514459929 * lb);
+    const m = Math.cbrt(0.2119034982 * lr + 0.6806995451 * lg + 0.1073969566 * lb);
+    const s = Math.cbrt(0.0883024619 * lr + 0.2817188376 * lg + 0.6299787005 * lb);
+    const dL = L1 - (0.2104542553 * l + 0.793617785 * m - 0.0040720468 * s);
+    const dA = (A1 - (1.9779984951 * l - 2.428592205 * m + 0.4505937099 * s)) * 2;
+    const dB = (B1 - (0.0259040371 * l + 0.7827717662 * m - 0.808675766 * s)) * 2;
+    return Math.sqrt(dL * dL + dA * dA + dB * dB) * 255 <= fuzz;
+  };
 }
 
 /**
  * Set alpha to 0 wherever the image matches color within fuzz
- * (max per-channel difference). Mutates img in place.
+ * (perceptual distance, see makeFuzzMatch). Mutates img in place.
  */
-export function knockOutColor(img, [r, g, b], fuzz) {
+export function knockOutColor(img, color, fuzz) {
   const { data } = img;
+  const matches = makeFuzzMatch(color, fuzz);
   for (let i = 0; i < data.length; i += 4) {
-    const d = Math.max(
-      Math.abs(data[i] - r),
-      Math.abs(data[i + 1] - g),
-      Math.abs(data[i + 2] - b),
-    );
-    if (d <= fuzz) data[i + 3] = 0;
+    if (matches(data[i], data[i + 1], data[i + 2])) data[i + 3] = 0;
   }
   return img;
 }
@@ -135,7 +237,7 @@ export function knockOutColor(img, [r, g, b], fuzz) {
 /**
  * Flood-fill background removal: zero the alpha of every pixel CONNECTED
  * to the image border whose color matches the border seed within fuzz
- * (max per-channel difference). Pixels of the same color inside the
+ * (perceptual distance). Pixels of the same color inside the
  * subject stay opaque because they are not connected to the edge.
  * Seed color comes from the most common opaque corner; every border
  * pixel matching it seeds the fill. Returns the seed color, or null when
@@ -145,12 +247,9 @@ export function knockOutEdges(img, fuzz) {
   const { data, width, height } = img;
   const seed = detectBackgroundColor(img);
   if (!seed) return null;
-  const [sr, sg, sb] = seed;
+  const fuzzMatch = makeFuzzMatch(seed, fuzz);
   const matches = (i) =>
-    data[i + 3] >= ALPHA_THRESHOLD &&
-    Math.abs(data[i] - sr) <= fuzz &&
-    Math.abs(data[i + 1] - sg) <= fuzz &&
-    Math.abs(data[i + 2] - sb) <= fuzz;
+    data[i + 3] >= ALPHA_THRESHOLD && fuzzMatch(data[i], data[i + 1], data[i + 2]);
 
   const visited = new Uint8Array(width * height);
   const stack = [];
@@ -262,6 +361,86 @@ export function erodeAlpha(img, passes) {
     }
     if (peel.length === 0) break;
     for (const p of peel) data[p * 4 + 3] = 0;
+  }
+  return img;
+}
+
+/**
+ * Matte defringe: recolor the outermost `depth` rings of the opaque
+ * region from the colors one ring deeper, hiding background-blend fringe
+ * without shrinking the shape. Complements erodeAlpha: trim deletes
+ * boundary pixels (thin features shrink), defringe repaints them. Rings
+ * are processed from the innermost fringe ring outward so interior colors
+ * propagate to the edge; pixels with no deeper neighbor (features thinner
+ * than 2*depth) keep their original color. Mutates img in place.
+ */
+export function defringeAlpha(img, depth) {
+  if (depth <= 0) return img;
+  const { data, width, height } = img;
+  const n = width * height;
+  // BFS distance from transparency: 0 transparent, d for the d-th opaque
+  // ring, -1 for opaque pixels deeper than `depth` (clean interior).
+  const dist = new Int32Array(n).fill(-1);
+  let queue = [];
+  for (let p = 0; p < n; p++) {
+    if (data[p * 4 + 3] < ALPHA_THRESHOLD) {
+      dist[p] = 0;
+      queue.push(p);
+    }
+  }
+  if (queue.length === 0 || queue.length === n) return img;
+  const rings = [];
+  for (let d = 1; d <= depth && queue.length; d++) {
+    const next = [];
+    for (const p of queue) {
+      const x = p % width;
+      const y = (p / width) | 0;
+      const grow = (q) => {
+        if (dist[q] === -1) {
+          dist[q] = d;
+          next.push(q);
+        }
+      };
+      if (x > 0) grow(p - 1);
+      if (x < width - 1) grow(p + 1);
+      if (y > 0) grow(p - width);
+      if (y < height - 1) grow(p + width);
+    }
+    rings.push(next);
+    queue = next;
+  }
+
+  for (let d = rings.length; d >= 1; d--) {
+    for (const p of rings[d - 1]) {
+      const x = p % width;
+      const y = (p / width) | 0;
+      let r = 0;
+      let g = 0;
+      let b = 0;
+      let count = 0;
+      for (let dy = -1; dy <= 1; dy++) {
+        const ny = y + dy;
+        if (ny < 0 || ny >= height) continue;
+        for (let dx = -1; dx <= 1; dx++) {
+          const nx = x + dx;
+          if (nx < 0 || nx >= width) continue;
+          const q = ny * width + nx;
+          // Pull only from deeper rings (already repainted) or interior.
+          if (q === p || (dist[q] !== -1 && dist[q] <= d)) continue;
+          const j = q * 4;
+          r += data[j];
+          g += data[j + 1];
+          b += data[j + 2];
+          count += 1;
+        }
+      }
+      if (count > 0) {
+        const j = p * 4;
+        data[j] = r / count;
+        data[j + 1] = g / count;
+        data[j + 2] = b / count;
+      }
+    }
   }
   return img;
 }
@@ -406,22 +585,24 @@ export function quantize(img, colors) {
   }
   if (hist.size <= colors) return img;
 
-  const entries = [...hist.entries()].map(([key, count]) => ({
-    r: (key >> 16) & 0xff,
-    g: (key >> 8) & 0xff,
-    b: key & 0xff,
-    count,
-  }));
+  // Clustering runs in Oklab so splits and distances are perceptual:
+  // low color counts keep visually distinct hues apart instead of
+  // merging them by raw RGB proximity.
+  const entries = [...hist.entries()].map(([key, count]) => {
+    const rgb = [(key >> 16) & 0xff, (key >> 8) & 0xff, key & 0xff];
+    const [L, A, B] = srgbToOklab(rgb);
+    return { key, L, A, B, count };
+  });
 
   // Median cut: repeatedly split the box with the largest channel range.
   const boxes = [entries];
   while (boxes.length < colors) {
     let boxIndex = -1;
     let boxRange = -1;
-    let boxChannel = "r";
+    let boxChannel = "L";
     for (let i = 0; i < boxes.length; i++) {
       if (boxes[i].length < 2) continue;
-      for (const ch of ["r", "g", "b"]) {
+      for (const ch of ["L", "A", "B"]) {
         let min = 255;
         let max = 0;
         for (const e of boxes[i]) {
@@ -454,17 +635,17 @@ export function quantize(img, colors) {
 
   // Weighted average color per box seeds the palette.
   let palette = boxes.map((box) => {
-    let r = 0;
-    let g = 0;
-    let b = 0;
+    let L = 0;
+    let A = 0;
+    let B = 0;
     let total = 0;
     for (const e of box) {
-      r += e.r * e.count;
-      g += e.g * e.count;
-      b += e.b * e.count;
+      L += e.L * e.count;
+      A += e.A * e.count;
+      B += e.B * e.count;
       total += e.count;
     }
-    return [r / total, g / total, b / total];
+    return [L / total, A / total, B / total];
   });
 
   // Lloyd (k-means) refinement over the histogram. Median-cut alone leaves
@@ -478,10 +659,10 @@ export function quantize(img, colors) {
       let best = 0;
       let bestDist = Infinity;
       for (let k = 0; k < palette.length; k++) {
-        const dr = e.r - palette[k][0];
-        const dg = e.g - palette[k][1];
-        const db = e.b - palette[k][2];
-        const dist = dr * dr + dg * dg + db * db;
+        const dL = e.L - palette[k][0];
+        const dA = e.A - palette[k][1];
+        const dB = e.B - palette[k][2];
+        const dist = dL * dL + dA * dA + dB * dB;
         if (dist < bestDist) {
           bestDist = dist;
           best = k;
@@ -497,20 +678,19 @@ export function quantize(img, colors) {
     for (let i = 0; i < entries.length; i++) {
       const e = entries[i];
       const s = sums[assign[i]];
-      s[0] += e.r * e.count;
-      s[1] += e.g * e.count;
-      s[2] += e.b * e.count;
+      s[0] += e.L * e.count;
+      s[1] += e.A * e.count;
+      s[2] += e.B * e.count;
       s[3] += e.count;
     }
     palette = sums.map((s, k) => (s[3] > 0 ? [s[0] / s[3], s[1] / s[3], s[2] / s[3]] : palette[k]));
   }
 
   // Every unique color maps to its (now converged) nearest palette entry.
-  const rounded = palette.map((p) => p.map(Math.round));
+  const rounded = palette.map(oklabToSrgb);
   const colorToPalette = new Map();
   for (let i = 0; i < entries.length; i++) {
-    const e = entries[i];
-    colorToPalette.set((e.r << 16) | (e.g << 8) | e.b, rounded[assign[i]]);
+    colorToPalette.set(entries[i].key, rounded[assign[i]]);
   }
 
   for (let i = 0; i < data.length; i += 4) {
@@ -527,49 +707,43 @@ export function quantize(img, colors) {
 }
 
 /**
- * Separable 3x3 box blur on RGB, repeated `passes` times (2 passes
- * approximate a gaussian). Alpha is untouched and transparent pixels do
- * not bleed into opaque ones. Smooths sensor/compression noise so
- * quantized gradient bands get clean contours instead of ragged ones.
+ * 3x3 per-channel median filter on opaque RGB, repeated `passes` times.
+ * Kills sensor/compression noise while preserving edges exactly, unlike
+ * a blur which grays the very boundaries the tracer follows. Alpha is
+ * untouched and transparent neighbors are excluded from the window.
  */
-export function boxBlur(img, passes = 2) {
+export function medianFilter(img, passes = 1) {
   const { data, width, height } = img;
-  const buf = new Uint8ClampedArray(data.length);
+  const out = new Uint8ClampedArray(data.length);
+  const win = [[], [], []];
 
-  const blurAxis = (src, dst, horizontal) => {
+  for (let pass = 0; pass < passes; pass++) {
+    out.set(data);
     for (let y = 0; y < height; y++) {
       for (let x = 0; x < width; x++) {
         const i = (y * width + x) * 4;
-        if (src[i + 3] < ALPHA_THRESHOLD) {
-          dst.set(src.subarray(i, i + 4), i);
-          continue;
+        if (data[i + 3] < ALPHA_THRESHOLD) continue;
+        win[0].length = win[1].length = win[2].length = 0;
+        for (let dy = -1; dy <= 1; dy++) {
+          const ny = y + dy;
+          if (ny < 0 || ny >= height) continue;
+          for (let dx = -1; dx <= 1; dx++) {
+            const nx = x + dx;
+            if (nx < 0 || nx >= width) continue;
+            const j = (ny * width + nx) * 4;
+            if (data[j + 3] < ALPHA_THRESHOLD) continue;
+            win[0].push(data[j]);
+            win[1].push(data[j + 1]);
+            win[2].push(data[j + 2]);
+          }
         }
-        let r = 0;
-        let g = 0;
-        let b = 0;
-        let n = 0;
-        for (let d = -1; d <= 1; d++) {
-          const nx = horizontal ? x + d : x;
-          const ny = horizontal ? y : y + d;
-          if (nx < 0 || nx >= width || ny < 0 || ny >= height) continue;
-          const j = (ny * width + nx) * 4;
-          if (src[j + 3] < ALPHA_THRESHOLD) continue;
-          r += src[j];
-          g += src[j + 1];
-          b += src[j + 2];
-          n++;
+        for (let c = 0; c < 3; c++) {
+          win[c].sort((a, b) => a - b);
+          out[i + c] = win[c][win[c].length >> 1];
         }
-        dst[i] = r / n;
-        dst[i + 1] = g / n;
-        dst[i + 2] = b / n;
-        dst[i + 3] = src[i + 3];
       }
     }
-  };
-
-  for (let pass = 0; pass < passes; pass++) {
-    blurAxis(data, buf, true);
-    blurAxis(buf, data, false);
+    data.set(out);
   }
   return img;
 }
