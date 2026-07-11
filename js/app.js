@@ -43,6 +43,7 @@ const els = {
   edgeTrimOut: $("edge-trim-out"),
   showResult: $("show-result"),
   showSource: $("show-source"),
+  greenScreen: $("green-screen"),
   status: $("status"),
   preview: $("preview"),
   resultView: $("result-view"),
@@ -447,6 +448,12 @@ for (const radio of document.querySelectorAll('input[name="mode"]')) {
 
 els.showResult.addEventListener("click", () => setView("result"));
 els.showSource.addEventListener("click", () => setView("source"));
+els.greenScreen.addEventListener("click", () => {
+  const enabled = els.greenScreen.getAttribute("aria-pressed") !== "true";
+  els.greenScreen.setAttribute("aria-pressed", String(enabled));
+  els.preview.classList.toggle("checkerboard", !enabled);
+  els.preview.classList.toggle("green-screen", enabled);
+});
 
 // -- Zoom & pan: wheel zooms at the cursor, drag pans, buttons step ----
 

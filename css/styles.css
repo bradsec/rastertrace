@@ -237,6 +237,8 @@ input[type="radio"], input[type="checkbox"] { accent-color: var(--accent); width
   background-size: 20px 20px;
 }
 
+.green-screen { background: #00b140; }
+
 .preview img { max-width: 100%; max-height: 100%; object-fit: contain; display: block; user-select: none; -webkit-user-drag: none; }
 
 .zoom-controls { display: inline-flex; border: 1px solid var(--border-strong); border-radius: var(--r-sm); overflow: hidden; }
