@@ -3,6 +3,7 @@ import { capBitmap, decodeImage, rasterize, rotateBitmap, Tracer } from "./pipel
 import {
   analyzeFlatness,
   countPaths,
+  DEFAULTS,
   fitTraceScale,
   parseHexColor,
   PRESETS,
@@ -128,18 +129,18 @@ function updateTransparencyFields() {
 
 function resetSettings() {
   els.preset.value = "";
-  els.colors.value = "256";
-  els.speckle.value = "8";
-  els.layerDiff.value = "16";
-  els.upscale.value = "2";
-  document.querySelector('input[name="mode"][value="spline"]').checked = true;
-  els.grayscale.checked = false;
-  els.denoise.checked = false;
-  els.crisp.checked = false;
-  els.transparent.value = "";
+  els.colors.value = String(DEFAULTS.colors);
+  els.speckle.value = String(DEFAULTS.speckle);
+  els.layerDiff.value = String(DEFAULTS.layerDiff);
+  els.upscale.value = String(DEFAULTS.upscale);
+  document.querySelector(`input[name="mode"][value="${DEFAULTS.mode}"]`).checked = true;
+  els.grayscale.checked = DEFAULTS.grayscale;
+  els.denoise.checked = DEFAULTS.denoise;
+  els.crisp.checked = DEFAULTS.crisp;
+  els.transparent.value = DEFAULTS.transparent;
   els.knockoutColor.value = "#ffffff";
-  els.fuzz.value = "16";
-  els.edgeTrim.value = "2";
+  els.fuzz.value = String(DEFAULTS.fuzz);
+  els.edgeTrim.value = String(DEFAULTS.edgeTrim);
   setEyedropper(false);
   updateTransparencyFields();
   updateOutputs();
@@ -240,13 +241,11 @@ function scheduleRetrace() {
 /**
  * Load-time content detection. Flat-color sources get visible smart
  * defaults: colors snapped to the detected count, cleanup levels from the
- * nearest preset at or above it, and crisp resampling on. Controls move
- * in the open and stay fully user-editable; non-flat images reset crisp
- * so a previous image's detection never leaks onto a photo.
+ * nearest preset at or above it. Controls move in the open and stay fully
+ * user-editable.
  */
 function applyDetectedSettings(bitmap) {
   const { flat, colorCount } = analyzeFlatness(rasterize(bitmap, 1, false));
-  els.crisp.checked = flat;
   if (!flat) {
     state.flatNote = null;
     return;
@@ -261,7 +260,7 @@ function applyDetectedSettings(bitmap) {
   els.layerDiff.value = preset.layerDiff;
   els.preset.value = "";
   updateOutputs();
-  state.flatNote = `Detected flat image (~${colorCount} colors), crisp settings applied.`;
+  state.flatNote = `Detected flat image (~${colorCount} colors), color settings applied.`;
 }
 
 async function loadFile(file) {

@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   analyzeFlatness,
   assertRasterBudget,
+  DEFAULTS,
   MAX_TRACE_PIXELS,
   binarizeAlpha,
   countPaths,
@@ -230,6 +231,31 @@ test("resolveSettings: explicit beats preset beats defaults", () => {
   assert.equal(d.colors, 256);
   assert.equal(d.speckle, 8);
   assert.equal(d.layerDiff, 16);
+});
+
+test("defaults match initial and per-image reset settings", () => {
+  assert.deepEqual(
+    {
+      edgeTrim: DEFAULTS.edgeTrim,
+      fuzz: DEFAULTS.fuzz,
+      crisp: DEFAULTS.crisp,
+      denoise: DEFAULTS.denoise,
+      grayscale: DEFAULTS.grayscale,
+      mode: DEFAULTS.mode,
+      speckle: DEFAULTS.speckle,
+      layerDiff: DEFAULTS.layerDiff,
+    },
+    {
+      edgeTrim: 0,
+      fuzz: 16,
+      crisp: false,
+      denoise: false,
+      grayscale: false,
+      mode: "spline",
+      speckle: 8,
+      layerDiff: 16,
+    },
+  );
 });
 
 test("erodeAlpha peels one boundary ring per pass", () => {

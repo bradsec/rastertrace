@@ -13,8 +13,8 @@ Convert raster images to clean, scalable SVG vectors entirely in your browser. [
 - Optional denoise blur for photographic sources
 - Background removal: auto-detect from corners, hex color, or eyedropper pick from the image; edge trim chokes the cutout to remove leftover fringe
 - Color-count presets from 2 to 256 with matched cleanup levels: fewer colors get more aggressive speckle and layer cleanup for flat print-style output
-- Flat-image detection: logos, text, and pixel art are detected at load; the color count snaps to the image and crisp settings apply automatically, with every control still editable.
-- Crisp edges toggle: sharper corner tracing for hard-edged sources; auto-enabled by detection, available manually for any image.
+- Flat-image detection: logos, text, and pixel art are detected at load; the color count snaps to the image, with every control still editable.
+- Crisp edges toggle: sharper corner tracing for hard-edged sources, available manually for any image.
 - Live re-trace on setting changes, SVG download and clipboard copy
 - Zoomable preview: pinch, scroll wheel, or buttons; drag to pan
 - Rotate the loaded image in 90 degree steps

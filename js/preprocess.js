@@ -47,7 +47,11 @@ export const DEFAULTS = Object.freeze({
   upscale: 2,
   mode: "spline",
   grayscale: false,
+  denoise: false,
+  crisp: false,
+  transparent: "",
   fuzz: 16,
+  edgeTrim: 0,
 });
 
 // Keyed by color count. Speckle and layer difference scale inversely:
