@@ -200,8 +200,11 @@ async function retrace() {
   try {
     const settings = currentSettings();
     const scale = fitTraceScale(state.bitmap.width, state.bitmap.height, settings.upscale);
-    if (!state.raster || state.raster.scale !== scale || state.raster.crisp !== settings.crisp) {
-      state.raster = { scale, crisp: settings.crisp, imageData: rasterize(state.bitmap, scale, settings.crisp) };
+    // Nearest-neighbor pairs with pixel-exact tracing only; crisp mode is
+    // corner sharpness, not resampling (NN jaggies anti-aliased sources).
+    const nearest = settings.mode === "none";
+    if (!state.raster || state.raster.scale !== scale || state.raster.nearest !== nearest) {
+      state.raster = { scale, nearest, imageData: rasterize(state.bitmap, scale, nearest) };
     }
     const result = await tracer.trace(state.raster.imageData, settings, state.sourceWidth, state.sourceHeight);
     if (!result) return; // superseded by a newer request

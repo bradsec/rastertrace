@@ -132,7 +132,7 @@
           <legend title="How traced outlines are drawn">Path mode</legend>
           <label class="choice"><input type="radio" name="mode" value="spline" checked> <span title="Smooth flowing curves; best for most artwork">Spline (smooth)</span></label>
           <label class="choice"><input type="radio" name="mode" value="polygon"> <span title="Straight line segments; best for hard-edged geometric art">Polygon</span></label>
-          <label class="choice"><input type="radio" name="mode" value="none"> <span title="Exact pixel outlines with no smoothing; best for pixel art">Pixel (exact)</span></label>
+          <label class="choice"><input type="radio" name="mode" value="none"> <span title="Exact pixel outlines with nearest-neighbor upscaling; best for pixel art">Pixel (exact)</span></label>
         </fieldset>
 
         <div class="field">
@@ -151,7 +151,7 @@
         <div class="field">
           <label class="choice"><input type="checkbox" id="grayscale"> <span title="Convert to shades of gray before tracing">Grayscale</span></label>
           <label class="choice"><input type="checkbox" id="denoise"> <span title="Smooths photo noise before color reduction. Softens pixel art and fine texture">Denoise (photos; softens pixel art)</span></label>
-          <label class="choice"><input type="checkbox" id="crisp"> <span title="Nearest-neighbor resize and sharper corner rounding. Best for text, logos, and pixel art">Crisp edges (text &amp; logos)</span></label>
+          <label class="choice"><input type="checkbox" id="crisp"> <span title="Sharper corner rounding for hard-edged sources. Best for text and logos">Crisp edges (text &amp; logos)</span></label>
         </div>
 
         <fieldset class="field">
