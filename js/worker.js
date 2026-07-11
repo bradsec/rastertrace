@@ -1,5 +1,5 @@
 // Web Worker: runs preprocessing + wasm tracing off the main thread.
-import init, { trace } from "../pkg/rastertrace_wasm.js?v=26";
+import init, { trace } from "../pkg/rastertrace_wasm.js?v=27";
 import {
   binarizeAlpha,
   defringeAlpha,
@@ -10,14 +10,15 @@ import {
   modeFilter,
   quantize,
   removeBackground,
+  thresholdImage,
   toGrayscale,
-} from "./preprocess.js?v=26";
+} from "./preprocess.js?v=27";
 
 // Explicit versioned URL: the glue's own wasm fetch drops the ?v= query,
 // so a rebuilt binary would otherwise be served from stale browser cache
 // against new glue (positional args shift into garbage).
 const ready = init({
-  module_or_path: new URL("../pkg/rastertrace_wasm_bg.wasm?v=26", import.meta.url),
+  module_or_path: new URL("../pkg/rastertrace_wasm_bg.wasm?v=27", import.meta.url),
 });
 
 self.onmessage = async (event) => {
@@ -78,9 +79,13 @@ self.onmessage = async (event) => {
       }
     }
 
-    // Binary tracing keys on r < 128 and ignores alpha: transparent
-    // areas (source alpha or knockout) must read as white background.
-    if (settings.stencil) fillTransparent(img, [255, 255, 255]);
+    // Binary tracing keys on r < 128 and ignores alpha. Apply the user
+    // threshold ourselves (pure black/white), then paint transparent
+    // areas (source alpha or knockout) white so they read as background.
+    if (settings.stencil) {
+      thresholdImage(img, settings.stencilThreshold ?? 128);
+      fillTransparent(img, [255, 255, 255]);
+    }
 
     stage("Tracing vectors…");
     const svg = trace(

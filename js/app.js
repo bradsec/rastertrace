@@ -1,5 +1,5 @@
 // UI wiring: state, controls, preview, download.
-import { capBitmap, decodeImage, rasterize, rotateBitmap, Tracer } from "./pipeline.js?v=26";
+import { capBitmap, decodeImage, rasterize, rotateBitmap, Tracer } from "./pipeline.js?v=27";
 import {
   analyzeFlatness,
   applyExportOptions,
@@ -13,7 +13,7 @@ import {
   PRESETS,
   sanitizeSettings,
   toHexColor,
-} from "./preprocess.js?v=26";
+} from "./preprocess.js?v=27";
 
 const $ = (id) => document.getElementById(id);
 
@@ -45,6 +45,9 @@ const els = {
   spliceThreshold: $("splice-threshold"),
   spliceThresholdOut: $("splice-threshold-out"),
   stencil: $("stencil"),
+  stencilThresholdField: $("stencil-threshold-field"),
+  stencilThreshold: $("stencil-threshold"),
+  stencilThresholdOut: $("stencil-threshold-out"),
   grayscale: $("grayscale"),
   crisp: $("crisp"),
   transparent: $("transparent"),
@@ -110,7 +113,7 @@ const state = {
   flatNote: null, // status prefix when load-time detection fired
 };
 
-const tracer = new Tracer(new URL("./worker.js?v=26", import.meta.url));
+const tracer = new Tracer(new URL("./worker.js?v=27", import.meta.url));
 
 function currentSettings() {
   return {
@@ -127,6 +130,7 @@ function currentSettings() {
     denoise: els.denoise.checked,
     crisp: els.crisp.checked,
     stencil: els.stencil.checked,
+    stencilThreshold: Number(els.stencilThreshold.value),
     pathPrecision: Number(els.pathPrecision.value),
     lengthThreshold: Number(els.lengthThreshold.value),
     spliceThreshold: Number(els.spliceThreshold.value),
@@ -154,6 +158,11 @@ function updateOutputs() {
   els.pathPrecisionOut.textContent = els.pathPrecision.value;
   els.lengthThresholdOut.textContent = els.lengthThreshold.value;
   els.spliceThresholdOut.textContent = els.spliceThreshold.value;
+  els.stencilThresholdOut.textContent = els.stencilThreshold.value;
+}
+
+function updateStencilFields() {
+  els.stencilThresholdField.hidden = !els.stencil.checked;
 }
 
 /**
@@ -172,6 +181,7 @@ function applyExportProfile(name) {
   els.hierarchical.value = profile.hierarchical;
   els.upscale.value = String(profile.upscale);
   els.stencil.checked = profile.stencil;
+  updateStencilFields();
   els.pathPrecision.value = String(profile.pathPrecision);
   if (profile.spliceThreshold) els.spliceThreshold.value = String(profile.spliceThreshold);
   els.minify.checked = profile.minify;
@@ -204,6 +214,7 @@ function snapshotSettings() {
     denoise: els.denoise.checked,
     crisp: els.crisp.checked,
     stencil: els.stencil.checked,
+    stencilThreshold: Number(els.stencilThreshold.value),
     transparent: els.transparent.value,
     knockoutColor: els.knockoutColor.value,
     fuzz: Number(els.fuzz.value),
@@ -260,6 +271,7 @@ function restoreSettings() {
   check(els.denoise, "denoise");
   check(els.crisp, "crisp");
   check(els.stencil, "stencil");
+  set(els.stencilThreshold, "stencilThreshold");
   set(els.transparent, "transparent");
   set(els.knockoutColor, "knockoutColor");
   set(els.fuzz, "fuzz");
@@ -274,6 +286,7 @@ function restoreSettings() {
   check(els.minify, "minify");
   updateTransparencyFields();
   updateExportFields();
+  updateStencilFields();
   updateOutputs();
 }
 
@@ -317,6 +330,7 @@ function resetSettings() {
   els.edgeTrim.value = String(DEFAULTS.edgeTrim);
   els.defringe.value = String(DEFAULTS.defringe);
   els.stencil.checked = false;
+  els.stencilThreshold.value = "128";
   els.pathPrecision.value = "3";
   els.lengthThreshold.value = "4";
   els.spliceThreshold.value = "45";
@@ -327,6 +341,7 @@ function resetSettings() {
   setEyedropper(false);
   updateTransparencyFields();
   updateExportFields();
+  updateStencilFields();
   updateOutputs();
 }
 
@@ -698,6 +713,11 @@ els.grayscale.addEventListener("change", scheduleRetrace);
 els.denoise.addEventListener("change", scheduleRetrace);
 els.stencil.addEventListener("change", () => {
   clearProfile();
+  updateStencilFields();
+  scheduleRetrace();
+});
+els.stencilThreshold.addEventListener("input", () => {
+  updateOutputs();
   scheduleRetrace();
 });
 els.hierarchical.addEventListener("change", () => {

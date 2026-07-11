@@ -29,6 +29,7 @@ import {
   resolveSettings,
   sanitizeSettings,
   snapToImageColor,
+  thresholdImage,
   toGrayscale,
   toHexColor,
 } from "../js/preprocess.js";
@@ -427,6 +428,22 @@ test("sanitizeSettings handles junk input", () => {
   assert.deepEqual(sanitizeSettings(null), {});
   assert.deepEqual(sanitizeSettings("nope"), {});
   assert.deepEqual(sanitizeSettings([1, 2]), {});
+});
+
+test("thresholdImage cuts to pure black/white at the threshold", () => {
+  const img = makeImage(3, 1, [200, 200, 200, 255]);
+  setPixel(img, 1, 0, [100, 100, 100, 255]);
+  setPixel(img, 2, 0, [128, 128, 128, 255]);
+  thresholdImage(img, 128);
+  assert.deepEqual(getPixel(img, 0, 0), [255, 255, 255, 255]); // above
+  assert.deepEqual(getPixel(img, 1, 0), [0, 0, 0, 255]); // below
+  assert.deepEqual(getPixel(img, 2, 0), [255, 255, 255, 255]); // at threshold stays white
+});
+
+test("thresholdImage keeps alpha untouched", () => {
+  const img = makeImage(1, 1, [40, 40, 40, 0]);
+  thresholdImage(img, 128);
+  assert.deepEqual(getPixel(img, 0, 0), [0, 0, 0, 0]);
 });
 
 test("countPaths counts path elements", () => {

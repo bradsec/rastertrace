@@ -61,6 +61,7 @@ export const DEFAULTS = Object.freeze({
   edgeTrim: 0,
   defringe: 0,
   stencil: false,
+  stencilThreshold: 128,
   pathPrecision: 3,
   lengthThreshold: 4,
   spliceThreshold: 45,
@@ -124,6 +125,22 @@ export function applyExportOptions(svgText, { physicalWidth, physicalUnit, title
 }
 
 /**
+ * Cut every pixel to pure black or white: r below the threshold goes
+ * black, everything else white. Alpha is untouched. Run after
+ * toGrayscale so r is luma; this makes the stencil threshold a user
+ * control instead of vtracer's fixed cut at 128.
+ */
+export function thresholdImage(img, threshold) {
+  const d = img.data;
+  for (let i = 0; i < d.length; i += 4) {
+    const v = d[i] < threshold ? 0 : 255;
+    d[i] = v;
+    d[i + 1] = v;
+    d[i + 2] = v;
+  }
+}
+
+/**
  * Paint pixels below the alpha threshold with the given opaque color.
  * Binary (stencil) tracing keys on brightness only and ignores alpha, so
  * transparent areas must become background-colored before the trace.
@@ -156,6 +173,7 @@ const SETTING_CHECKS = {
   denoise: (v) => typeof v === "boolean",
   crisp: (v) => typeof v === "boolean",
   stencil: (v) => typeof v === "boolean",
+  stencilThreshold: (v) => Number.isFinite(v) && v >= 1 && v <= 254,
   transparent: (v) => ["", "edges", "auto", "custom"].includes(v),
   knockoutColor: (v) => typeof v === "string" && /^#[0-9a-fA-F]{6}$/.test(v),
   fuzz: (v) => Number.isFinite(v) && v >= 0 && v <= 255,

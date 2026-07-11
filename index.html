@@ -43,7 +43,7 @@
     }
   </script>
 
-  <link rel="stylesheet" href="css/styles.css?v=26">
+  <link rel="stylesheet" href="css/styles.css?v=27">
 </head>
 <body>
   <header class="topbar">
@@ -192,6 +192,10 @@
 
         <div class="field">
           <label class="choice"><input type="checkbox" id="stencil"> <span title="Black and white stencil trace: dark areas become black shapes, everything else drops out. Best for laser cutting, stamps, and silhouettes">Stencil (black &amp; white)</span></label>
+          <div class="subfield" id="stencil-threshold-field" hidden>
+            <label for="stencil-threshold" title="Brightness cut-off: pixels darker than this become black shapes. Lower keeps only the darkest areas; raise to pick up midtones">Stencil threshold <output id="stencil-threshold-out" for="stencil-threshold">128</output></label>
+            <input type="range" id="stencil-threshold" min="1" max="254" step="1" value="128">
+          </div>
           <label class="choice"><input type="checkbox" id="grayscale"> <span title="Convert to shades of gray before tracing">Grayscale</span></label>
           <label class="choice"><input type="checkbox" id="denoise"> <span title="Smooths photo noise before color reduction. Softens pixel art and fine texture">Denoise (photos; softens pixel art)</span></label>
           <label class="choice"><input type="checkbox" id="crisp"> <span title="Sharper corner rounding for hard-edged sources. Best for text and logos">Crisp edges (text &amp; logos)</span></label>
@@ -333,6 +337,6 @@
     <span class="app-version" id="app-version"></span>
   </footer>
 
-  <script type="module" src="js/app.js?v=26"></script>
+  <script type="module" src="js/app.js?v=27"></script>
 </body>
 </html>
