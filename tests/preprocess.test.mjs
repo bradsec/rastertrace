@@ -13,6 +13,7 @@ import {
   erodeAlpha,
   finalizeSvg,
   fitTraceScale,
+  groupSvgFills,
   MAX_TRACE_SIDE,
   knockOutColor,
   medianFilter,
@@ -270,6 +271,61 @@ test("finalizeSvg restores source size and adds viewBox", () => {
 test("finalizeSvg leaves unexpected roots unchanged", () => {
   const svg = "<svg><path/></svg>";
   assert.equal(finalizeSvg(svg, 10, 10), svg);
+});
+
+test("groupSvgFills wraps adjacent same-fill paths and strips per-path fill", () => {
+  const svg = [
+    '<svg width="4" height="4">',
+    '<path d="M0 0" fill="#FF0000" transform="translate(0,0)"/>',
+    '<path d="M1 1" fill="#FF0000" transform="translate(1,1)"/>',
+    '<path d="M2 2" fill="#00FF00" transform="translate(2,2)"/>',
+    "</svg>",
+  ].join("\n");
+  const out = groupSvgFills(svg);
+  assert.match(out, /<g fill="#FF0000">\n<path d="M0 0" transform="translate\(0,0\)"\/>\n<path d="M1 1" transform="translate\(1,1\)"\/>\n<\/g>/);
+  // Lone green path stays ungrouped with its own fill.
+  assert.match(out, /<path d="M2 2" fill="#00FF00" transform="translate\(2,2\)"\/>/);
+  assert.equal(countPaths(out), 3);
+});
+
+test("groupSvgFills keeps document order across groups", () => {
+  const svg = [
+    '<path d="M0 0" fill="#AAA111"/>',
+    '<path d="M1 1" fill="#AAA111"/>',
+    '<path d="M2 2" fill="#BBB222"/>',
+    '<path d="M3 3" fill="#AAA111"/>',
+  ].join("\n");
+  const out = groupSvgFills(svg);
+  // Non-adjacent same-fill paths must NOT merge: stacking relies on order.
+  const order = [...out.matchAll(/d="(M\d \d)"/g)].map((m) => m[1]);
+  assert.deepEqual(order, ["M0 0", "M1 1", "M2 2", "M3 3"]);
+  const idxGroup = out.indexOf('<g fill="#AAA111">');
+  const idxB = out.indexOf('d="M2 2"');
+  const idxLast = out.indexOf('d="M3 3"');
+  assert.ok(idxGroup >= 0 && idxGroup < idxB && idxB < idxLast);
+  // The trailing #AAA111 path keeps its own fill (run of one).
+  assert.match(out, /<path d="M3 3" fill="#AAA111"\/>/);
+});
+
+test("groupSvgFills leaves single paths and pathless fills alone", () => {
+  const single = '<svg>\n<path d="M0 0" fill="#123456"/>\n</svg>';
+  assert.equal(groupSvgFills(single), single);
+  const noFill = '<svg>\n<path d="M0 0"/>\n<path d="M1 1"/>\n</svg>';
+  assert.equal(groupSvgFills(noFill), noFill);
+});
+
+test("finalizeSvg groups same-fill paths in vtracer output", () => {
+  const svg = [
+    '<?xml version="1.0" encoding="UTF-8"?>',
+    '<svg version="1.1" xmlns="http://www.w3.org/2000/svg" width="20" height="20">',
+    '<path d="M0 0" fill="#010101" transform="translate(0,0)"/>',
+    '<path d="M1 1" fill="#010101" transform="translate(1,1)"/>',
+    "</svg>",
+  ].join("\n");
+  const out = finalizeSvg(svg, 10, 10);
+  assert.match(out, /width="10" height="10" viewBox="0 0 20 20"/);
+  assert.match(out, /<g fill="#010101">/);
+  assert.equal(countPaths(out), 2);
 });
 
 test("countPaths counts path elements", () => {

@@ -795,12 +795,51 @@ export function modeFilter(img) {
 }
 
 /**
+ * Wrap runs of adjacent same-fill <path> elements in a shared
+ * <g fill="..."> and drop the per-path fill attributes. Only paths
+ * separated by whitespace count as adjacent, and only adjacent runs
+ * merge: stacked output relies on document order for z-order, so
+ * non-adjacent same-fill paths must stay where they are.
+ */
+export function groupSvgFills(svgText) {
+  const fillOf = (path) => (path.match(/\sfill="([^"]*)"/) || [])[1] || null;
+  const matches = [...svgText.matchAll(/<path\b[^>]*\/>/g)];
+  let out = "";
+  let cursor = 0;
+  let i = 0;
+  while (i < matches.length) {
+    const fill = fillOf(matches[i][0]);
+    let j = i;
+    while (
+      fill &&
+      j + 1 < matches.length &&
+      fillOf(matches[j + 1][0]) === fill &&
+      /^\s*$/.test(svgText.slice(matches[j].index + matches[j][0].length, matches[j + 1].index))
+    ) {
+      j++;
+    }
+    if (j > i) {
+      out += svgText.slice(cursor, matches[i].index) + `<g fill="${fill}">\n`;
+      for (let k = i; k <= j; k++) {
+        out += matches[k][0].replace(/\s+fill="[^"]*"/, "");
+        out += k < j ? svgText.slice(matches[k].index + matches[k][0].length, matches[k + 1].index) : "\n";
+      }
+      out += "</g>";
+      cursor = matches[j].index + matches[j][0].length;
+    }
+    i = j + 1;
+  }
+  return out + svgText.slice(cursor);
+}
+
+/**
  * Rewrite the SVG root so the document keeps the source pixel dimensions
- * with a viewBox, hiding the internal upscale factor. Returns the SVG
- * unchanged when the root does not match the expected vtracer shape.
+ * with a viewBox, hiding the internal upscale factor, and group same-fill
+ * paths to shrink the file. Returns the root unchanged when it does not
+ * match the expected vtracer shape.
  */
 export function finalizeSvg(svgText, width, height) {
-  return svgText.replace(
+  return groupSvgFills(svgText).replace(
     /(<svg[^>]*?) width="(\d+)" height="(\d+)">/,
     (_, head, w, h) => `${head} width="${width}" height="${height}" viewBox="0 0 ${w} ${h}">`,
   );

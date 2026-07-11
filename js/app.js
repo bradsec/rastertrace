@@ -1,14 +1,15 @@
 // UI wiring: state, controls, preview, download.
-import { capBitmap, decodeImage, rasterize, rotateBitmap, Tracer } from "./pipeline.js?v=23";
+import { capBitmap, decodeImage, rasterize, rotateBitmap, Tracer } from "./pipeline.js?v=24";
 import {
   analyzeFlatness,
   countPaths,
   DEFAULTS,
   fitTraceScale,
+  MAX_TRACE_SIDE,
   parseHexColor,
   PRESETS,
   toHexColor,
-} from "./preprocess.js?v=23";
+} from "./preprocess.js?v=24";
 
 const $ = (id) => document.getElementById(id);
 
@@ -85,7 +86,7 @@ const state = {
   flatNote: null, // status prefix when load-time detection fired
 };
 
-const tracer = new Tracer(new URL("./worker.js?v=23", import.meta.url));
+const tracer = new Tracer(new URL("./worker.js?v=24", import.meta.url));
 
 function currentSettings() {
   return {
@@ -94,7 +95,7 @@ function currentSettings() {
     layerDiff: Number(els.layerDiff.value),
     cornerThreshold: Number(els.cornerThreshold.value),
     hierarchical: els.hierarchical.value,
-    upscale: Number(els.upscale.value),
+    upscale: els.upscale.value === "auto" ? "auto" : Number(els.upscale.value),
     mode: document.querySelector('input[name="mode"]:checked').value,
     grayscale: els.grayscale.checked,
     denoise: els.denoise.checked,
@@ -199,7 +200,12 @@ async function retrace() {
   showError("");
   try {
     const settings = currentSettings();
-    const scale = fitTraceScale(state.bitmap.width, state.bitmap.height, settings.upscale);
+    // "auto" traces small sources at the full budget: upscale to the
+    // 2048 px cap regardless of source size (never below 1x).
+    const upscale = settings.upscale === "auto"
+      ? Math.max(1, MAX_TRACE_SIDE / Math.max(state.bitmap.width, state.bitmap.height))
+      : settings.upscale;
+    const scale = fitTraceScale(state.bitmap.width, state.bitmap.height, upscale);
     // Nearest-neighbor pairs with pixel-exact tracing only; crisp mode is
     // corner sharpness, not resampling (NN jaggies anti-aliased sources).
     const nearest = settings.mode === "none";
@@ -233,7 +239,7 @@ async function retrace() {
     // Report whenever the trace ran below the requested size, whether the
     // bitmap was capped at load or the upscale was clamped.
     const { width, height } = state.raster.imageData;
-    const requestedSide = settings.upscale * Math.max(state.sourceWidth, state.sourceHeight);
+    const requestedSide = upscale * Math.max(state.sourceWidth, state.sourceHeight);
     if (Math.max(width, height) < requestedSide) {
       statusText += ` Image resized to ${width}×${height} px for tracing.`;
     }
@@ -386,6 +392,18 @@ document.body.addEventListener("drop", (e) => {
   e.preventDefault();
   els.dropzone.classList.remove("dragover");
   loadFile(e.dataTransfer?.files?.[0]);
+});
+
+// Ctrl/Cmd+V anywhere loads a clipboard image (screenshot workflows).
+document.addEventListener("paste", (e) => {
+  const file =
+    [...(e.clipboardData?.files ?? [])].find((f) => f.type.startsWith("image/")) ??
+    [...(e.clipboardData?.items ?? [])]
+      .find((i) => i.kind === "file" && i.type.startsWith("image/"))
+      ?.getAsFile();
+  if (!file) return;
+  e.preventDefault();
+  loadFile(file);
 });
 
 els.preset.addEventListener("change", () => {
