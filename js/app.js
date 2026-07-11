@@ -118,6 +118,32 @@ function applyPreset(name) {
   updateOutputs();
 }
 
+function updateTransparencyFields() {
+  const mode = els.transparent.value;
+  els.knockoutColorField.hidden = mode !== "custom";
+  els.fuzzField.hidden = mode === "";
+  els.edgeTrimField.hidden = mode === "";
+}
+
+function resetSettings() {
+  els.preset.value = "";
+  els.colors.value = "256";
+  els.speckle.value = "8";
+  els.layerDiff.value = "16";
+  els.upscale.value = "2";
+  document.querySelector('input[name="mode"][value="spline"]').checked = true;
+  els.grayscale.checked = false;
+  els.denoise.checked = false;
+  els.crisp.checked = false;
+  els.transparent.value = "";
+  els.knockoutColor.value = "#ffffff";
+  els.fuzz.value = "16";
+  els.edgeTrim.value = "2";
+  setEyedropper(false);
+  updateTransparencyFields();
+  updateOutputs();
+}
+
 let elapsedTimer = 0;
 
 function setBusy(busy) {
@@ -252,6 +278,7 @@ async function loadFile(file) {
       bitmap.close(); // a newer load started while this one decoded
       return;
     }
+    resetSettings();
     state.bitmap?.close();
     state.bitmap = bitmap;
     state.sourceWidth = sourceWidth;
@@ -364,10 +391,7 @@ for (const input of [els.fuzz, els.edgeTrim]) {
 }
 
 els.transparent.addEventListener("change", () => {
-  const mode = els.transparent.value;
-  els.knockoutColorField.hidden = mode !== "custom";
-  els.fuzzField.hidden = mode === "";
-  els.edgeTrimField.hidden = mode === "";
+  updateTransparencyFields();
   scheduleRetrace();
 });
 
