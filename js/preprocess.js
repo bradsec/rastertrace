@@ -644,3 +644,7 @@ export function resolveSettings(preset, explicit = {}) {
   }
   return merged;
 }
+
+export function traceMode(settings) {
+  return settings.crisp ? "polygon" : settings.mode;
+}

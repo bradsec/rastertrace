@@ -8,8 +8,9 @@ import {
   modeFilter,
   quantize,
   removeBackground,
+  traceMode,
   toGrayscale,
-} from "./preprocess.js?v=18";
+} from "./preprocess.js?v=19";
 
 const ready = init();
 
@@ -66,7 +67,7 @@ self.onmessage = async (event) => {
       new Uint8Array(img.data.buffer),
       img.width,
       img.height,
-      settings.mode,
+      traceMode(settings),
       settings.speckle,
       8, // color_precision: colors already reduced above, like the CLI
       settings.layerDiff,
