@@ -1,16 +1,16 @@
 {
-  "name": "img2svg-wasm",
+  "name": "rastertrace-wasm",
   "type": "module",
-  "description": "WASM bindings around vtracer for the img2svg web app",
+  "description": "WASM bindings around vtracer for the RasterTrace web app",
   "version": "1.0.0",
   "license": "MIT",
   "files": [
-    "img2svg_wasm_bg.wasm",
-    "img2svg_wasm.js",
-    "img2svg_wasm.d.ts"
+    "rastertrace_wasm_bg.wasm",
+    "rastertrace_wasm.js",
+    "rastertrace_wasm.d.ts"
   ],
-  "main": "img2svg_wasm.js",
-  "types": "img2svg_wasm.d.ts",
+  "main": "rastertrace_wasm.js",
+  "types": "rastertrace_wasm.d.ts",
   "sideEffects": [
     "./snippets/*"
   ]

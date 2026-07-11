@@ -1,4 +1,4 @@
-// Pure pixel and string operations for the img2svg pipeline.
+// Pure pixel and string operations for the RasterTrace pipeline.
 // Every function here runs in Node (tests) and the browser (worker/app):
 // images are plain { data: Uint8ClampedArray, width, height } RGBA buffers.
 

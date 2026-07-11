@@ -1,6 +1,6 @@
-//! WASM bindings around vtracer for the img2svg web app.
+//! WASM bindings around vtracer for the RasterTrace web app.
 //!
-//! Mirrors the vtracer invocation used by the img2svg Python CLI:
+//! Mirrors the vtracer invocation used by RasterTrace:
 //! color mode, stacked hierarchy, and the same tunable parameters.
 
 use visioncortex::{ColorImage, PathSimplifyMode};

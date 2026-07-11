@@ -1,11 +1,11 @@
 {
-  "name": "img2svg-webapp",
+  "name": "rastertrace-webapp",
   "version": "1.1.9",
   "private": true,
   "license": "MIT",
-  "repository": "github:bradsec/img2svg",
+  "repository": "github:bradsec/rastertrace",
   "type": "module",
-  "description": "Browser-based raster to SVG converter using vtracer compiled to WebAssembly",
+  "description": "RasterTrace browser-based raster to SVG converter using vtracer compiled to WebAssembly",
   "scripts": {
     "test": "node --test",
     "serve": "python3 -m http.server 8137",

@@ -1,8 +1,8 @@
 [package]
-name = "img2svg-wasm"
+name = "rastertrace-wasm"
 version = "1.0.0"
 edition = "2021"
-description = "WASM bindings around vtracer for the img2svg web app"
+description = "WASM bindings around vtracer for the RasterTrace web app"
 license = "MIT"
 
 [lib]

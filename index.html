@@ -3,10 +3,10 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-  <meta name="description" content="Convert PNG, JPEG, WebP, GIF, and BMP images to clean SVG vectors entirely in your browser. Color quantization, background removal, print-ready presets. No upload, no backend.">
+  <meta name="description" content="RasterTrace converts PNG, JPEG, WebP, GIF, and BMP images to clean SVG vectors entirely in your browser. Color quantization, background removal, print-ready presets. No upload, no backend.">
   <meta name="color-scheme" content="dark">
   <meta name="theme-color" content="#141517">
-  <link rel="canonical" href="https://bradsec.github.io/img2svg/">
+  <link rel="canonical" href="https://rastertrace.com/">
   <link rel="icon" href="./favicon.ico" sizes="any">
   <link rel="icon" type="image/png" sizes="32x32" href="./favicon-32x32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="./favicon-16x16.png">
@@ -14,28 +14,28 @@
   <link rel="manifest" href="./site.webmanifest">
 
   <meta property="og:type" content="website">
-  <meta property="og:site_name" content="img2svg">
-  <meta property="og:title" content="img2svg - Convert Images to SVG Vectors in Your Browser">
-  <meta property="og:description" content="Convert PNG, JPEG, WebP, GIF, and BMP images to clean SVG vectors entirely in your browser. Traced by vtracer compiled to WebAssembly. No upload, no backend.">
-  <meta property="og:url" content="https://bradsec.github.io/img2svg/">
-  <meta property="og:image" content="https://bradsec.github.io/img2svg/og-image.png">
+  <meta property="og:site_name" content="RasterTrace">
+  <meta property="og:title" content="RasterTrace - Convert Raster Images to SVG Vectors in Your Browser">
+  <meta property="og:description" content="RasterTrace converts raster images to clean SVG vectors entirely in your browser. Traced by vtracer compiled to WebAssembly. No upload, no backend.">
+  <meta property="og:url" content="https://rastertrace.com/">
+  <meta property="og:image" content="https://rastertrace.com/og-image.png">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
 
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="img2svg - Convert Images to SVG Vectors in Your Browser">
-  <meta name="twitter:description" content="Convert raster images to clean SVG vectors entirely in your browser. No upload, no backend.">
-  <meta name="twitter:image" content="https://bradsec.github.io/img2svg/og-image.png">
+  <meta name="twitter:title" content="RasterTrace - Convert Raster Images to SVG Vectors in Your Browser">
+  <meta name="twitter:description" content="RasterTrace converts raster images to clean SVG vectors entirely in your browser. No upload, no backend.">
+  <meta name="twitter:image" content="https://rastertrace.com/og-image.png">
 
-  <title>img2svg - Convert Images to SVG Vectors in Your Browser</title>
+  <title>RasterTrace - Convert Raster Images to SVG Vectors in Your Browser</title>
 
   <script type="application/ld+json">
     {
       "@context": "https://schema.org",
       "@type": "WebApplication",
-      "name": "img2svg",
-      "url": "https://bradsec.github.io/img2svg/",
-      "description": "Convert PNG, JPEG, WebP, GIF, and BMP images to clean SVG vectors entirely in your browser. Traced by vtracer compiled to WebAssembly. No upload, no backend.",
+      "name": "RasterTrace",
+      "url": "https://rastertrace.com/",
+      "description": "RasterTrace converts PNG, JPEG, WebP, GIF, and BMP images to clean SVG vectors entirely in your browser. Traced by vtracer compiled to WebAssembly. No upload, no backend.",
       "applicationCategory": "MultimediaApplication",
       "operatingSystem": "Any (modern web browser)",
       "browserRequirements": "Requires JavaScript and WebAssembly.",
@@ -51,7 +51,7 @@
       <svg class="logo" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
         <path d="M2 13 L6 4 L10 11 L14 3" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
       </svg>
-      <h1>img2svg</h1>
+      <h1>RasterTrace</h1>
       <span class="tagline">Raster in. Clean vectors out. Nothing leaves your browser.</span>
     </div>
   </header>
@@ -212,13 +212,13 @@
   <footer class="statusbar">
     <p>Traced by <a class="repo-link" href="https://github.com/visioncortex/vtracer" target="_blank" rel="noopener noreferrer">vtracer</a> compiled to WebAssembly. Images are processed locally and never uploaded.</p>
     <span class="spacer"></span>
-    <a class="repo-link" href="https://github.com/bradsec/img2svg" target="_blank" rel="noopener noreferrer" aria-label="img2svg on GitHub">
+    <a class="repo-link" href="https://github.com/bradsec/rastertrace" target="_blank" rel="noopener noreferrer" aria-label="RasterTrace on GitHub">
       <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
-      <span>github.com/bradsec/img2svg</span>
+      <span>github.com/bradsec/rastertrace</span>
     </a>
     <span class="app-version" id="app-version"></span>
   </footer>
 
-  <script type="module" src="js/app.js?v=20"></script>
+  <script type="module" src="js/app.js?v=21"></script>
 </body>
 </html>

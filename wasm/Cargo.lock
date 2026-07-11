@@ -203,15 +203,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "img2svg-wasm"
-version = "1.0.0"
-dependencies = [
- "visioncortex",
- "vtracer",
- "wasm-bindgen",
-]
-
-[[package]]
 name = "itertools"
 version = "0.8.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -327,6 +318,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "dfbc457d0c7a0759a614551b11a6409e5951f6c7537be1f1b7682b9ae9230368"
 dependencies = [
  "proc-macro2",
+]
+
+[[package]]
+name = "rastertrace-wasm"
+version = "1.0.0"
+dependencies = [
+ "visioncortex",
+ "vtracer",
+ "wasm-bindgen",
 ]
 
 [[package]]
