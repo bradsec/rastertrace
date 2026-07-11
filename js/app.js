@@ -1,6 +1,7 @@
 // UI wiring: state, controls, preview, download.
 import { capBitmap, decodeImage, rasterize, rotateBitmap, Tracer } from "./pipeline.js?v=15";
 import {
+  analyzeFlatness,
   countPaths,
   fitTraceScale,
   parseHexColor,
@@ -73,6 +74,7 @@ const state = {
   raster: null, // { scale, imageData } cache, keyed by current bitmap
   picking: false,
   loadToken: 0, // guards against overlapping loads (drop while decoding)
+  flatNote: null, // status prefix when load-time detection fired
 };
 
 const tracer = new Tracer(new URL("./worker.js?v=15", import.meta.url));
@@ -176,6 +178,7 @@ async function retrace() {
     let statusText = result.knockedOut
       ? `Traced ${paths.toLocaleString()} paths. Removed background rgb(${result.knockedOut.join(", ")}).`
       : `Traced ${paths.toLocaleString()} paths.`;
+    if (state.flatNote) statusText = `${state.flatNote} ${statusText}`;
     // Report whenever the trace ran below the requested size, whether the
     // bitmap was capped at load or the upscale was clamped.
     const { width, height } = state.raster.imageData;
@@ -202,6 +205,33 @@ function scheduleRetrace() {
   state.debounce = setTimeout(retrace, 350);
 }
 
+/**
+ * Load-time content detection. Flat-color sources get visible smart
+ * defaults: colors snapped to the detected count, cleanup levels from the
+ * nearest preset at or above it, and crisp resampling on. Controls move
+ * in the open and stay fully user-editable; non-flat images reset crisp
+ * so a previous image's detection never leaks onto a photo.
+ */
+function applyDetectedSettings(bitmap) {
+  const { flat, colorCount } = analyzeFlatness(rasterize(bitmap, 1, false));
+  els.crisp.checked = flat;
+  if (!flat) {
+    state.flatNote = null;
+    return;
+  }
+  const presetKey = Object.keys(PRESETS)
+    .map(Number)
+    .sort((a, b) => a - b)
+    .find((k) => k >= colorCount);
+  const preset = PRESETS[presetKey];
+  els.colors.value = colorCount;
+  els.speckle.value = preset.speckle;
+  els.layerDiff.value = preset.layerDiff;
+  els.preset.value = "";
+  updateOutputs();
+  state.flatNote = `Detected flat image (~${colorCount} colors), crisp settings applied.`;
+}
+
 async function loadFile(file) {
   if (!file) return;
   showError("");
@@ -222,6 +252,7 @@ async function loadFile(file) {
     state.sourceWidth = sourceWidth;
     state.sourceHeight = sourceHeight;
     state.raster = null;
+    applyDetectedSettings(bitmap);
     state.fileName = file.name || "image";
     if (state.sourceUrl) URL.revokeObjectURL(state.sourceUrl);
     state.sourceUrl = URL.createObjectURL(file);
