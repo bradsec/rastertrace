@@ -1,5 +1,5 @@
 // Browser-side pipeline: decode, premultiplied upscale, worker round-trip.
-import { assertRasterBudget, MAX_TRACE_SIDE } from "./preprocess.js?v=30";
+import { assertRasterBudget, MAX_TRACE_SIDE } from "./preprocess.js?v=31";
 
 export async function sniffImageSize(file) {
   const bytes = new Uint8Array(await file.slice(0, 256 * 1024).arrayBuffer());

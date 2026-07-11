@@ -1,6 +1,6 @@
 // UI wiring: state, controls, preview, download.
-import { capBitmap, decodeImage, rasterize, rotateBitmap, Tracer } from "./pipeline.js?v=30";
-import { parseSvgPaths, toDxf, toPdf } from "./vectorexport.js?v=30";
+import { capBitmap, decodeImage, rasterize, rotateBitmap, Tracer } from "./pipeline.js?v=31";
+import { parseSvgPaths, toDxf, toPdf } from "./vectorexport.js?v=31";
 import {
   analyzeFlatness,
   applyExportOptions,
@@ -14,7 +14,7 @@ import {
   PRESETS,
   sanitizeSettings,
   toHexColor,
-} from "./preprocess.js?v=30";
+} from "./preprocess.js?v=31";
 
 const $ = (id) => document.getElementById(id);
 
@@ -117,7 +117,7 @@ const state = {
   flatNote: null, // status prefix when load-time detection fired
 };
 
-const tracer = new Tracer(new URL("./worker.js?v=30", import.meta.url));
+const tracer = new Tracer(new URL("./worker.js?v=31", import.meta.url));
 
 function currentSettings() {
   return {
@@ -177,6 +177,11 @@ function updateStencilFields() {
 function applyExportProfile(name) {
   const profile = EXPORT_PROFILES[name];
   if (!profile) return;
+  // Clean slate first: leftover tweaks (an old stencil threshold,
+  // background removal, physical size) would silently combine with the
+  // profile and can blank the result entirely.
+  resetSettings();
+  els.restoredNote.hidden = true;
   els.colors.value = String(profile.colors);
   els.speckle.value = String(profile.speckle);
   els.layerDiff.value = String(profile.layerDiff);
@@ -190,6 +195,7 @@ function applyExportProfile(name) {
   if (profile.spliceThreshold) els.spliceThreshold.value = String(profile.spliceThreshold);
   els.minify.checked = profile.minify;
   els.preset.value = "";
+  els.exportProfile.value = name; // resetSettings cleared the select
   updateOutputs();
 }
 
