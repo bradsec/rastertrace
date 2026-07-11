@@ -43,7 +43,7 @@
     }
   </script>
 
-  <link rel="stylesheet" href="css/styles.css?v=34">
+  <link rel="stylesheet" href="css/styles.css?v=35">
 </head>
 <body>
   <header class="topbar">
@@ -310,7 +310,23 @@
         </div>
       </div>
 
-      <section class="export-help" aria-label="SVG export guide">
+      <section class="export-help" aria-label="Settings and SVG export guide">
+          <h2>Settings guide</h2>
+          <dl class="help-settings">
+            <div><dt>Preset &amp; Colors</dt><dd>Maximum colors in the output. Fewer colors means simpler, cleaner, smaller SVGs; presets pair a color count with matched cleanup levels.</dd></div>
+            <div><dt>Speckle filter</dt><dd>Drops traced specks smaller than this many pixels. Raise it to remove noise, dust, and JPEG artifacts.</dd></div>
+            <div><dt>Layer difference</dt><dd>Minimum color difference between stacked layers. Raise it to merge similar shades into one shape.</dd></div>
+            <div><dt>Upscale before tracing</dt><dd>Enlarges the image before tracing for smoother curves. Auto fits 2048&nbsp;px; Ultra fits 4096&nbsp;px for fabrication (slower).</dd></div>
+            <div><dt>Path mode</dt><dd>Spline traces smooth curves (most artwork), Polygon straight segments (hard-edged geometry), Pixel exact outlines (pixel art).</dd></div>
+            <div><dt>Corner rounding</dt><dd>Angles smoother than this trace as curves. Lower keeps text and logo corners sharp; higher flows.</dd></div>
+            <div><dt>Layering</dt><dd>Stacked layers shapes on top of each other (smallest files). Cutout makes non-overlapping shapes that tile edge to edge, for cutting machines.</dd></div>
+            <div><dt>Advanced tracing</dt><dd>Path precision: decimal places in coordinates (1-2 small web files, 3-4 fabrication). Segment length and spline splitting trade curve fidelity for simplicity.</dd></div>
+            <div><dt>Stencil &amp; threshold</dt><dd>Black &amp; white trace: pixels darker than the threshold become black shapes, everything else drops out. Best for laser cutting, stamps, silhouettes.</dd></div>
+            <div><dt>Grayscale, Denoise, Crisp</dt><dd>Grayscale converts to gray tones before tracing. Denoise smooths photo noise (softens pixel art). Crisp edges sharpens corner tracing for text and logos.</dd></div>
+            <div><dt>Background removal</dt><dd>Makes the background transparent: connected-from-edges, auto-detected color, or a picked color. Tolerance widens the match; edge trim and defringe clean the cutout boundary.</dd></div>
+            <div><dt>SVG export</dt><dd>Pixel or physical (mm, cm, in) output size, and minified output for the smallest file. Applied instantly without re-tracing.</dd></div>
+          </dl>
+
           <h2>SVG export guide</h2>
           <div class="help-grid">
             <div>
@@ -344,6 +360,6 @@
     <span class="app-version" id="app-version"></span>
   </footer>
 
-  <script type="module" src="js/app.js?v=34"></script>
+  <script type="module" src="js/app.js?v=35"></script>
 </body>
 </html>

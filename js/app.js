@@ -1,6 +1,6 @@
 // UI wiring: state, controls, preview, download.
-import { capBitmap, decodeImage, rasterize, rotateBitmap, Tracer } from "./pipeline.js?v=34";
-import { parseSvgPaths, toDxf, toPdf } from "./vectorexport.js?v=34";
+import { capBitmap, decodeImage, rasterize, rotateBitmap, Tracer } from "./pipeline.js?v=35";
+import { parseSvgPaths, toDxf, toPdf } from "./vectorexport.js?v=35";
 import {
   analyzeFlatness,
   applyExportOptions,
@@ -14,7 +14,7 @@ import {
   PRESETS,
   sanitizeSettings,
   toHexColor,
-} from "./preprocess.js?v=34";
+} from "./preprocess.js?v=35";
 
 const $ = (id) => document.getElementById(id);
 
@@ -118,7 +118,7 @@ const state = {
   flatNote: null, // status prefix when load-time detection fired
 };
 
-const tracer = new Tracer(new URL("./worker.js?v=34", import.meta.url));
+const tracer = new Tracer(new URL("./worker.js?v=35", import.meta.url));
 
 function currentSettings() {
   return {
