@@ -383,6 +383,30 @@ test("analyzeFlatness detects exact low-color images", () => {
   assert.equal(result.colorCount, 20);
 });
 
+test("analyzeFlatness detects dominant clusters in noisy flat art", () => {
+  const img = makeImage(100, 100);
+  for (let y = 0; y < 100; y++) {
+    for (let x = 0; x < 100; x++) {
+      const noise = (x * 17 + y * 31) % 41 - 20;
+      const base =
+        y < 45
+          ? [8, 8, 8]
+          : y < 85
+            ? [236, 232, 220]
+            : [145, 145, 135];
+      setPixel(img, x, y, [
+        Math.max(0, Math.min(255, base[0] + noise)),
+        Math.max(0, Math.min(255, base[1] + noise)),
+        Math.max(0, Math.min(255, base[2] + noise)),
+        255,
+      ]);
+    }
+  }
+  const result = analyzeFlatness(img);
+  assert.equal(result.flat, true);
+  assert.ok(result.colorCount <= 4, `expected <= 4 clusters, got ${result.colorCount}`);
+});
+
 test("analyzeFlatness counts colors needed for 95% coverage", () => {
   // Five equal-ish bands (one loses a row to fringe): 95% coverage needs
   // all five dominant colors, so colorCount must be exactly 5.

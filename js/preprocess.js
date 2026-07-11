@@ -310,9 +310,10 @@ export function dominantOpaqueColor(img) {
  * colors even when anti-aliasing adds thousands of rare fringe colors, so
  * coverage is tested before unique counts: flat when the 16 most common
  * sampled colors cover >= 90% of opaque samples. Exact sampled images below
- * 256 colors are also flat, so balanced low-color art still drives the
- * color slider. colorCount is the number of colors needed for 95% coverage,
- * clamped to [2, 32] for heuristic flat images.
+ * 256 colors are also flat, and noisy flat art can still pass when its
+ * colors collapse into a few dominant RGB clusters. colorCount is the number
+ * of colors needed for 95% coverage, clamped to [2, 32] for heuristic flat
+ * images.
  * Transparent pixels are ignored; a fully
  * transparent image is not flat.
  */
@@ -347,8 +348,31 @@ export function analyzeFlatness(img) {
     }
     if (counted && i >= 16) break;
   }
-  if (counts.size < 256 && topCoverage < 0.9) {
+  if (counts.size <= 32 && topCoverage < 0.9) {
     return { flat: true, colorCount: Math.max(2, counts.size) };
+  }
+  if (topCoverage < 0.9) {
+    const clusters = new Map();
+    for (const [key, count] of counts) {
+      const r = (key >> 16) & 0xff;
+      const g = (key >> 8) & 0xff;
+      const b = key & 0xff;
+      const clusterKey = (r >> 6) << 4 | (g >> 6) << 2 | (b >> 6);
+      clusters.set(clusterKey, (clusters.get(clusterKey) || 0) + count);
+    }
+    const clusterCounts = [...clusters.values()].sort((a, b) => b - a);
+    let clusterCovered = 0;
+    let clusterColorCount = clusterCounts.length;
+    for (let i = 0; i < Math.min(8, clusterCounts.length); i++) {
+      clusterCovered += clusterCounts[i];
+      if (clusterCovered / total >= 0.95) {
+        clusterColorCount = i + 1;
+        break;
+      }
+    }
+    if (clusterCovered / total >= 0.9 && clusterCounts[0] / total >= 0.35) {
+      return { flat: true, colorCount: Math.min(32, Math.max(2, clusterColorCount)) };
+    }
   }
   return {
     flat: topCoverage >= 0.9,
