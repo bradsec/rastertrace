@@ -264,8 +264,21 @@ details.advanced[open] { display: grid; gap: 10px; }
 
 .status { margin: 0; color: var(--text-dim); font-size: 13px; }
 
+.restored-note {
+  margin: 0;
+  padding: 8px 10px;
+  font-size: 12px;
+  color: var(--text-dim);
+  background: var(--accent-soft);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+}
+
+.restored-note strong { color: var(--accent); font-weight: 600; }
+
 /* ---------- SVG export guide under the canvas ---------- */
 .export-help {
+  grid-column: 1 / -1; /* own workspace row, below both columns */
   padding: 16px;
   background: var(--surface-1);
   border: 1px solid var(--border);
@@ -386,9 +399,10 @@ details.advanced[open] { display: grid; gap: 10px; }
 
   .workspace { grid-template-columns: 1fr; }
 
-  /* Task order on mobile: result first, tweak below */
+  /* Task order on mobile: result first, tweak below, guide last */
   .preview-pane { order: 1; }
   .controls { order: 2; }
+  .export-help { order: 3; }
 
   .preview { min-height: 220px; max-height: 55vh; }
 

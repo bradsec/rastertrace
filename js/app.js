@@ -1,6 +1,6 @@
 // UI wiring: state, controls, preview, download.
-import { capBitmap, decodeImage, rasterize, rotateBitmap, Tracer } from "./pipeline.js?v=29";
-import { parseSvgPaths, toDxf, toPdf } from "./vectorexport.js?v=29";
+import { capBitmap, decodeImage, rasterize, rotateBitmap, Tracer } from "./pipeline.js?v=30";
+import { parseSvgPaths, toDxf, toPdf } from "./vectorexport.js?v=30";
 import {
   analyzeFlatness,
   applyExportOptions,
@@ -14,7 +14,7 @@ import {
   PRESETS,
   sanitizeSettings,
   toHexColor,
-} from "./preprocess.js?v=29";
+} from "./preprocess.js?v=30";
 
 const $ = (id) => document.getElementById(id);
 
@@ -91,6 +91,7 @@ const els = {
   downloadDxf: $("download-dxf"),
   download: $("download"),
   resetSettingsBtn: $("reset-settings"),
+  restoredNote: $("restored-note"),
   panStage: $("pan-stage"),
   zoomIn: $("zoom-in"),
   zoomOut: $("zoom-out"),
@@ -116,7 +117,7 @@ const state = {
   flatNote: null, // status prefix when load-time detection fired
 };
 
-const tracer = new Tracer(new URL("./worker.js?v=29", import.meta.url));
+const tracer = new Tracer(new URL("./worker.js?v=30", import.meta.url));
 
 function currentSettings() {
   return {
@@ -253,6 +254,7 @@ function restoreSettings() {
   } catch {
     return;
   }
+  const defaults = JSON.stringify(snapshotSettings());
   const set = (el, key) => {
     if (saved[key] !== undefined) el.value = String(saved[key]);
   };
@@ -291,6 +293,9 @@ function restoreSettings() {
   updateExportFields();
   updateStencilFields();
   updateOutputs();
+  // Tell the user their previous session's settings are in effect, so a
+  // surprising result (e.g. an old stencil threshold) is explainable.
+  els.restoredNote.hidden = JSON.stringify(snapshotSettings()) === defaults;
 }
 
 function applyPreset(name) {
@@ -1057,6 +1062,7 @@ els.downloadDxf.addEventListener("click", () => {
 
 els.resetSettingsBtn.addEventListener("click", () => {
   resetSettings();
+  els.restoredNote.hidden = true;
   saveSettings();
   scheduleRetrace();
   els.status.textContent = "Settings reset to defaults.";
