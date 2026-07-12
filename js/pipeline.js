@@ -145,6 +145,34 @@ export async function rotateBitmap(bitmap, clockwise = true) {
 }
 
 /**
+ * Invert the RGB channels of an RGBA buffer in place. Alpha is left as-is
+ * so transparent pixels stay transparent. Inversion is its own inverse:
+ * applying it twice restores the original pixels.
+ */
+export function invertRGBA(data) {
+  for (let i = 0; i < data.length; i += 4) {
+    data[i] = 255 - data[i];
+    data[i + 1] = 255 - data[i + 1];
+    data[i + 2] = 255 - data[i + 2];
+  }
+}
+
+/**
+ * Return a negative copy of the bitmap, closing the original. Mirrors
+ * rotateBitmap's contract so app.js can swap state.bitmap the same way.
+ */
+export async function invertBitmap(bitmap) {
+  const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
+  const ctx = canvas.getContext("2d");
+  ctx.drawImage(bitmap, 0, 0);
+  const image = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  invertRGBA(image.data);
+  ctx.putImageData(image, 0, 0);
+  bitmap.close();
+  return createImageBitmap(canvas);
+}
+
+/**
  * Draw the bitmap at the given scale factor and return raw RGBA pixels.
  * Canvas interpolates in premultiplied alpha space, which is exactly the
  * halo-free resample the pipeline needs for transparent images. Scale may

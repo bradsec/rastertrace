@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { fitDecodeSize, sniffImageSize, Tracer } from "../js/pipeline.js";
+import { fitDecodeSize, invertRGBA, sniffImageSize, Tracer } from "../js/pipeline.js";
 
 function blob(bytes, type = "image/png") {
   return new Blob([Uint8Array.from(bytes)], { type });
@@ -74,6 +74,26 @@ test("sniffImageSize reads WebP VP8X dimensions", async () => {
 test("fitDecodeSize caps the longest side", () => {
   assert.deepEqual(fitDecodeSize(4032, 3024, 2048), { width: 2048, height: 1536 });
   assert.deepEqual(fitDecodeSize(100, 50, 2048), { width: 100, height: 50 });
+});
+
+test("invertRGBA inverts RGB and leaves alpha untouched", () => {
+  const data = Uint8ClampedArray.from([0, 128, 255, 200]);
+  invertRGBA(data);
+  assert.deepEqual([...data], [255, 127, 0, 200]);
+});
+
+test("invertRGBA over two pixels only touches RGB channels", () => {
+  const data = Uint8ClampedArray.from([10, 20, 30, 40, 200, 100, 50, 0]);
+  invertRGBA(data);
+  assert.deepEqual([...data], [245, 235, 225, 40, 55, 155, 205, 0]);
+});
+
+test("invertRGBA applied twice restores the original", () => {
+  const original = Uint8ClampedArray.from([1, 50, 200, 255, 99, 0, 17, 128]);
+  const data = Uint8ClampedArray.from(original);
+  invertRGBA(data);
+  invertRGBA(data);
+  assert.deepEqual([...data], [...original]);
 });
 
 test("Tracer cancels stale worker work before posting the next trace", async () => {
