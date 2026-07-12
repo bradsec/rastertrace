@@ -294,6 +294,9 @@ details.advanced[open] { display: grid; gap: 10px; }
   color: var(--text-faint);
 }
 
+.export-help a { color: var(--accent); text-underline-offset: 2px; }
+.export-help a:hover { color: var(--accent-hover); }
+
 .help-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
