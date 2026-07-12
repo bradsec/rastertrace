@@ -168,6 +168,7 @@ main {
 .color-row input[type="color"] { width: 56px; flex-shrink: 0; }
 .color-row .button { min-height: 38px; padding: 0 10px; font-size: 13px; flex: 1; }
 .color-row .button[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); }
+.icon-button[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); }
 .preview.picking { cursor: crosshair; }
 .preview.picking img { cursor: crosshair; }
 .subfield label { font-weight: 500; font-size: 12px; color: var(--text-dim); }

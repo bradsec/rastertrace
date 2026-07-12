@@ -78,13 +78,16 @@
         <button type="button" id="replace-image" class="button button-secondary">Replace image…</button>
         <button type="button" id="reset-settings" class="button button-secondary" title="Restore every control to its default value">Reset settings</button>
         <p id="restored-note" class="restored-note" hidden>Using your previous settings. Press <strong>Reset settings</strong> for defaults.</p>
-        <div class="button-row" role="group" aria-label="Rotate image">
+        <div class="button-row" role="group" aria-label="Rotate and invert image">
           <span class="button-row-label">Rotate</span>
           <button type="button" id="rotate-left" class="button button-secondary icon-button" title="Rotate 90 degrees counter-clockwise" aria-label="Rotate 90 degrees counter-clockwise">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
           </button>
           <button type="button" id="rotate-right" class="button button-secondary icon-button" title="Rotate 90 degrees clockwise" aria-label="Rotate 90 degrees clockwise">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+          </button>
+          <button type="button" id="invert-image" class="button button-secondary icon-button" aria-pressed="false" title="Invert colors (negative), useful for stencils" aria-label="Invert image colors">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor" stroke="none"/></svg>
           </button>
         </div>
 
