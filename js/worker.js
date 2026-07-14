@@ -1,5 +1,5 @@
 // Web Worker: runs preprocessing + wasm tracing off the main thread.
-import init, { trace } from "../pkg/rastertrace_wasm.js?v=38";
+import init, { trace } from "../pkg/rastertrace_wasm.js?v=39";
 import {
   binarizeAlpha,
   defringeAlpha,
@@ -12,13 +12,13 @@ import {
   removeBackground,
   thresholdImage,
   toGrayscale,
-} from "./preprocess.js?v=38";
+} from "./preprocess.js?v=39";
 
 // Explicit versioned URL: the glue's own wasm fetch drops the ?v= query,
 // so a rebuilt binary would otherwise be served from stale browser cache
 // against new glue (positional args shift into garbage).
 const ready = init({
-  module_or_path: new URL("../pkg/rastertrace_wasm_bg.wasm?v=38", import.meta.url),
+  module_or_path: new URL("../pkg/rastertrace_wasm_bg.wasm?v=39", import.meta.url),
 });
 
 self.onmessage = async (event) => {

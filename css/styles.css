@@ -320,6 +320,16 @@ details.advanced[open] { display: grid; gap: 10px; }
 
 .help-grid em { font-style: normal; color: var(--text); }
 
+.help-grid .support-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 6px;
+  text-decoration: none;
+}
+
+.help-grid .support-link:hover { text-decoration: underline; }
+
 .preview {
   position: relative;
   min-height: 320px;
