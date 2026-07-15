@@ -14,7 +14,7 @@ Convert raster images to clean, scalable SVG vectors entirely in your browser. [
 - Background removal: auto-detect from border sampling, hex color, or eyedropper pick from the image; perceptual match tolerance; edge trim chokes the cutout and defringe repaints leftover fringe without shrinking thin details
 - Purpose-based export profiles: Web optimized, Balanced, High detail, Print & cutting, and Laser stencil set colors, cleanup, path detail, and output options together (all controls stay editable)
 - Stencil mode: true black/white binary tracing for laser cutting, stamps, and silhouettes, with an adjustable brightness threshold to pick up or drop midtones
-- Physical size export: write real-world width/height (mm, cm, in) into the SVG for print and cutting software, viewBox preserved
+- SVG size export: preserve source pixels or write a custom width/height in px, mm, cm, or in, with the viewBox preserved
 - Minified output option, or accessible output with `role="img"` and a `<title>` from the file name
 - Advanced tracing controls: path coordinate precision, curve segment length, spline splitting
 - Color-count presets from 2 to 256 with matched cleanup levels: fewer colors get more aggressive speckle and layer cleanup for flat print-style output
@@ -28,7 +28,7 @@ Convert raster images to clean, scalable SVG vectors entirely in your browser. [
 - Paste an image from the clipboard (Ctrl/Cmd+V) to load it, alongside drag-and-drop and the file picker
 - Same-fill paths grouped under shared `<g fill>` elements for smaller SVG files
 - Upscale "Auto (fit 2048)" traces small images at the full 2048 px budget for maximum curve quality
-- Live re-trace on setting changes, SVG download, clipboard copy, and PNG export at the trace resolution
+- Live re-trace on setting changes, Save As dialogs for SVG, PNG, PDF, and DXF, clipboard copy, and PNG export at the trace resolution
 - Vector PDF export (true curves, physical page size when set) for print shops and design handoff
 - DXF export (R12) for CAD, CNC, and cutters: one closed polyline per shape, one layer per color, mm units when a physical size is set
 - Settings persist across visits and image replacements (flat-image detection still tunes colors per image); one-click Reset settings
@@ -36,8 +36,8 @@ Convert raster images to clean, scalable SVG vectors entirely in your browser. [
 - Zoomable preview: pinch, scroll wheel, or buttons; drag to pan
 - Rotate the loaded image in 90 degree steps
 - Trace size capped at 2048 px on the longest side: small images upscale for smoother curves, large photos downscale proportionally (the status line reports the applied scale). Opt-in Ultra mode raises the cap to 4096 px for the cleanest fabrication exports (slower, high memory)
-- Guidance built in: photographic sources and high path counts get status-line suggestions, and an SVG export guide sits under the preview
-- Responsive layout, keyboard operable, WCAG AA contrast
+- Guidance built in: photographic sources and high path counts get footer status suggestions, with the full settings guide available from Help
+- Three-panel editor with a canvas-only center, independently scrolling controls, responsive mobile stacking, keyboard operation, and WCAG AA contrast
 
 ## Structure
 
@@ -69,7 +69,7 @@ Static files only. The GitHub Actions workflow runs the tests and publishes the 
 
 ## Browser support
 
-Requires OffscreenCanvas and module workers: Chrome/Edge 109+, Firefox 111+, Safari 16.4+.
+Requires OffscreenCanvas and module workers: Chrome/Edge 109+, Firefox 111+, Safari 16.4+. Chrome and Edge offer native Save As dialogs; other supported browsers use their standard download flow because they do not expose a file-location picker to web pages.
 
 ## License
 

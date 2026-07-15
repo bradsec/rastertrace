@@ -14,7 +14,7 @@ import {
   PRESETS,
   sanitizeSettings,
   toHexColor,
-} from "./preprocess.js?v=39";
+} from "./preprocess.js?v=40";
 
 const $ = (id) => document.getElementById(id);
 
@@ -54,6 +54,7 @@ const els = {
   grayscale: $("grayscale"),
   crisp: $("crisp"),
   transparent: $("transparent"),
+  backgroundSummary: $("background-summary"),
   knockoutColorField: $("knockout-color-field"),
   knockoutColor: $("knockout-color"),
   pickFromImage: $("pick-from-image"),
@@ -98,6 +99,8 @@ const els = {
   zoomIn: $("zoom-in"),
   zoomOut: $("zoom-out"),
   zoomReset: $("zoom-reset"),
+  preferencesDialog: $("preferences-dialog"),
+  measurementUnitPreference: document.querySelector('#preferences-dialog [name="measurementUnit"]'),
 };
 
 const state = {
@@ -119,6 +122,64 @@ const state = {
   loadToken: 0, // guards against overlapping loads (drop while decoding)
   flatNote: null, // status prefix when load-time detection fired
 };
+
+const PREFERENCES_KEY = "rastertrace-preferences";
+const PHYSICAL_UNITS = new Set(["in", "cm", "mm"]);
+const MEASUREMENT_UNITS = new Set(["px", "in", "cm", "mm"]);
+const MM_PER_UNIT = { in: 25.4, cm: 10, mm: 1 };
+const DISPLAY_UNITS_PER_INCH = { px: 96, in: 1, cm: 2.54, mm: 25.4 };
+let preferences = { measurementUnit: "mm" };
+
+function readPreferences(fallbackUnit = "mm") {
+  try {
+    const saved = JSON.parse(localStorage.getItem(PREFERENCES_KEY) || "{}");
+    return {
+      measurementUnit: MEASUREMENT_UNITS.has(saved.measurementUnit)
+        ? saved.measurementUnit
+        : fallbackUnit,
+    };
+  } catch {
+    return { measurementUnit: fallbackUnit };
+  }
+}
+
+function savePreferences() {
+  try {
+    localStorage.setItem(PREFERENCES_KEY, JSON.stringify(preferences));
+  } catch {
+    // Preferences still apply for this session when storage is unavailable.
+  }
+}
+
+function convertPhysicalValue(value, fromUnit, toUnit) {
+  return value * MM_PER_UNIT[fromUnit] / MM_PER_UNIT[toUnit];
+}
+
+function applyMeasurementUnit(unit, preserveSize = true) {
+  if (!MEASUREMENT_UNITS.has(unit)) return;
+  if (unit === "px") {
+    updatePhysicalHeightOut();
+    refreshExport();
+    return;
+  }
+  const previousUnit = PHYSICAL_UNITS.has(els.physicalUnit.value) ? els.physicalUnit.value : "mm";
+  const width = Number(els.physicalWidth.value);
+  if (preserveSize && previousUnit !== unit && width > 0) {
+    const converted = convertPhysicalValue(width, previousUnit, unit);
+    els.physicalWidth.value = String(Number(converted.toFixed(unit === "in" ? 3 : 2)));
+  }
+  els.physicalUnit.value = unit;
+  updatePhysicalHeightOut();
+  refreshExport();
+}
+
+function formatDimensionsFromInches(width, height) {
+  const unit = preferences.measurementUnit;
+  const displayWidth = width * DISPLAY_UNITS_PER_INCH[unit];
+  const displayHeight = height * DISPLAY_UNITS_PER_INCH[unit];
+  const digits = unit === "px" ? 0 : unit === "in" ? 2 : 1;
+  return `${displayWidth.toFixed(digits)}×${displayHeight.toFixed(digits)} ${unit}`;
+}
 
 const tracer = new Tracer(new URL("./worker.js?v=39", import.meta.url));
 
@@ -333,6 +394,7 @@ function updateTransparencyFields() {
   els.fuzzField.hidden = mode === "";
   els.edgeTrimField.hidden = mode === "";
   els.defringeField.hidden = mode === "";
+  els.backgroundSummary.textContent = els.transparent.selectedOptions[0]?.textContent || "Keep background";
 }
 
 function updateExportFields() {
@@ -404,8 +466,10 @@ function setResultActions(enabled) {
   els.downloadPng.disabled = !enabled;
   els.downloadPdf.disabled = !enabled;
   els.downloadDxf.disabled = !enabled;
-  els.download.setAttribute("aria-disabled", String(!enabled));
-  if (!enabled) els.download.removeAttribute("href");
+  els.download.disabled = !enabled;
+  for (const button of document.querySelectorAll('.menu-popover [data-result-action], [data-action="save-svg"]')) {
+    button.disabled = !enabled;
+  }
 }
 
 /** Export post-processing options from the SVG export controls. */
@@ -455,8 +519,6 @@ function refreshExport() {
   const kb = blob.size / 1024;
   els.statPaths.textContent = paths.toLocaleString();
   els.statSize.textContent = kb >= 1024 ? `${(kb / 1024).toFixed(1)} MB` : `${kb.toFixed(0)} KB`;
-  els.download.href = state.downloadUrl;
-  els.download.download = `${state.fileName.replace(/\.[^.]+$/, "")}.svg`;
   setResultActions(true);
   updatePhysicalHeightOut();
   return { paths };
@@ -605,6 +667,104 @@ function setView(view) {
 
 els.pickFile.addEventListener("click", () => els.fileInput.click());
 els.replaceImage.addEventListener("click", () => els.fileInput.click());
+
+for (const button of document.querySelectorAll('[data-action="open-image"]')) {
+  button.addEventListener("click", () => els.fileInput.click());
+}
+for (const button of document.querySelectorAll('[data-action="save-svg"]')) {
+  button.addEventListener("click", () => {
+    if (!els.download.disabled) els.download.click();
+  });
+}
+for (const button of document.querySelectorAll('[data-action="reset-settings"]')) {
+  button.addEventListener("click", () => els.resetSettingsBtn.click());
+}
+
+const menuActionTargets = {
+  "copy-svg": els.copySvg,
+  "download-png": els.downloadPng,
+  "download-pdf": els.downloadPdf,
+  "download-dxf": els.downloadDxf,
+  "show-result": els.showResult,
+  "show-source": els.showSource,
+  "zoom-fit": els.zoomReset,
+  "zoom-in": els.zoomIn,
+  "zoom-out": els.zoomOut,
+};
+for (const [action, target] of Object.entries(menuActionTargets)) {
+  document.querySelector(`[data-action="${action}"]`).addEventListener("click", () => target.click());
+}
+
+for (const panel of document.querySelectorAll("details.panel[data-panel-key]")) {
+  const storageKey = `rastertrace:panel:${panel.dataset.panelKey}`;
+  try {
+    const stored = localStorage.getItem(storageKey);
+    if (stored !== null) panel.open = stored === "true";
+  } catch {
+    // Disclosure state remains available for this session when storage is unavailable.
+  }
+  panel.addEventListener("toggle", () => {
+    try {
+      localStorage.setItem(storageKey, String(panel.open));
+    } catch {
+      // Opening and closing panels does not depend on persistence.
+    }
+  });
+}
+
+document.querySelector('[data-action="about"]').addEventListener("click", () => {
+  $("about-dialog").showModal();
+});
+document.querySelector('[data-action="settings-guide"]').addEventListener("click", () => {
+  $("settings-guide-dialog").showModal();
+});
+document.querySelector('[data-action="preferences"]').addEventListener("click", () => {
+  els.preferencesDialog.returnValue = "";
+  els.measurementUnitPreference.value = preferences.measurementUnit;
+  els.preferencesDialog.showModal();
+});
+els.preferencesDialog.addEventListener("close", () => {
+  if (els.preferencesDialog.returnValue !== "apply") return;
+  preferences = { measurementUnit: els.measurementUnitPreference.value };
+  applyMeasurementUnit(preferences.measurementUnit);
+  savePreferences();
+  saveSettings();
+  els.status.textContent = "Preferences saved.";
+});
+
+const appMenus = [...document.querySelectorAll("details.app-menu")];
+const closeMenus = (except) => {
+  for (const menu of appMenus) if (menu !== except) menu.open = false;
+};
+for (const menu of appMenus) {
+  menu.addEventListener("toggle", () => { if (menu.open) closeMenus(menu); });
+  menu.querySelector("summary").addEventListener("pointerenter", (event) => {
+    if (event.pointerType === "mouse" && !menu.open && appMenus.some((other) => other.open)) menu.open = true;
+  });
+}
+document.addEventListener("pointerdown", (event) => {
+  if (!(event.target instanceof Element) || !event.target.closest(".app-menu")) closeMenus();
+}, { capture: true });
+document.addEventListener("click", (event) => {
+  if (event.target instanceof Element && event.target.closest(".menu-popover button, .menu-popover a")) closeMenus();
+});
+window.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") {
+    const activeMenu = appMenus.find((menu) => menu.open && menu.contains(document.activeElement));
+    closeMenus();
+    activeMenu?.querySelector("summary")?.focus({ preventScroll: true });
+    return;
+  }
+  if (!(event.ctrlKey || event.metaKey) || event.altKey) return;
+  if (event.key.toLowerCase() === "o") {
+    event.preventDefault();
+    els.fileInput.click();
+  }
+  if (event.key.toLowerCase() === "e" && !els.download.disabled) {
+    event.preventDefault();
+    els.download.click();
+  }
+});
 
 // Rotation replaces the working bitmap, so the source view is re-rendered
 // from it: eyedropper coordinates and the preview stay consistent.
@@ -811,6 +971,10 @@ els.exportSize.addEventListener("change", () => {
 for (const input of [els.physicalWidth, els.physicalUnit]) {
   input.addEventListener("input", refreshExport);
 }
+els.physicalUnit.addEventListener("change", () => {
+  preferences = { measurementUnit: els.physicalUnit.value };
+  savePreferences();
+});
 els.minify.addEventListener("change", refreshExport);
 // Crisp nudges corner rounding in the open (like presets); the slider
 // stays fully user-editable afterwards.
@@ -1021,7 +1185,64 @@ els.copySvg.addEventListener("click", async () => {
     await navigator.clipboard.writeText(state.svg);
     els.status.textContent = "SVG copied to clipboard.";
   } catch {
-    els.status.textContent = "Clipboard unavailable. Use Download instead.";
+    els.status.textContent = "Clipboard unavailable. Use Save As instead.";
+  }
+});
+
+function exportFileName(extension) {
+  return `${state.fileName.replace(/\.[^.]+$/, "")}.${extension}`;
+}
+
+function downloadBlob(blob, extension) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = exportFileName(extension);
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+async function chooseSaveFile(extension, mimeType) {
+  if (!("showSaveFilePicker" in window)) return null;
+  try {
+    return await window.showSaveFilePicker({
+      suggestedName: exportFileName(extension),
+      types: [{
+        description: `${extension.toUpperCase()} file`,
+        accept: { [mimeType]: [`.${extension}`] },
+      }],
+    });
+  } catch (err) {
+    if (err?.name === "AbortError") return undefined;
+    throw err;
+  }
+}
+
+async function saveBlob(blob, extension, fileHandle) {
+  if (fileHandle === undefined) return { cancelled: true };
+  if (!fileHandle) {
+    downloadBlob(blob, extension);
+    return { downloaded: true };
+  }
+  const writable = await fileHandle.createWritable();
+  await writable.write(blob);
+  await writable.close();
+  return { name: fileHandle.name };
+}
+
+function saveStatus(format, result, detail = "") {
+  if (result.downloaded) return `${format} export sent to your browser downloads${detail}.`;
+  return `${format} saved as ${result.name}${detail}.`;
+}
+
+els.download.addEventListener("click", async () => {
+  if (!state.svg || els.download.disabled) return;
+  try {
+    const fileHandle = await chooseSaveFile("svg", "image/svg+xml");
+    const result = await saveBlob(new Blob([state.svg], { type: "image/svg+xml" }), "svg", fileHandle);
+    if (!result.cancelled) els.status.textContent = saveStatus("SVG", result);
+  } catch (err) {
+    showError(err.message || "SVG export failed.");
   }
 });
 
@@ -1029,8 +1250,10 @@ els.copySvg.addEventListener("click", async () => {
 // engraving and upload tools that reject SVG get the full detail.
 els.downloadPng.addEventListener("click", async () => {
   if (!state.svg || els.downloadPng.disabled) return;
-  els.downloadPng.disabled = true;
   try {
+    const fileHandle = await chooseSaveFile("png", "image/png");
+    if (fileHandle === undefined) return;
+    els.downloadPng.disabled = true;
     const img = new Image();
     img.src = state.downloadUrl;
     await img.decode();
@@ -1042,13 +1265,8 @@ els.downloadPng.addEventListener("click", async () => {
     canvas.height = height;
     canvas.getContext("2d").drawImage(img, 0, 0, width, height);
     const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `${state.fileName.replace(/\.[^.]+$/, "")}.png`;
-    a.click();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
-    els.status.textContent = `PNG exported at ${width}×${height} px.`;
+    const result = await saveBlob(blob, "png", fileHandle);
+    els.status.textContent = saveStatus("PNG", result, ` at ${width}×${height} px`);
   } catch (err) {
     showError(err.message || "PNG export failed.");
   } finally {
@@ -1056,26 +1274,18 @@ els.downloadPng.addEventListener("click", async () => {
   }
 });
 
-function downloadBlob(blob, extension) {
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `${state.fileName.replace(/\.[^.]+$/, "")}.${extension}`;
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
-}
-
 /** Physical export width in the given output unit, or null when off. */
 function physicalWidthIn(unitsPerMm, unitsPerInch) {
   if (els.exportSize.value !== "physical") return null;
   const width = Number(els.physicalWidth.value);
   if (!(width > 0)) return null;
   const unit = els.physicalUnit.value;
+  if (unit === "px") return null;
   if (unit === "in") return width * unitsPerInch;
   return width * unitsPerMm * (unit === "cm" ? 10 : 1);
 }
 
-els.downloadPdf.addEventListener("click", () => {
+els.downloadPdf.addEventListener("click", async () => {
   if (!state.svgRaw || els.downloadPdf.disabled) return;
   try {
     const parsed = parseSvgPaths(state.svgRaw);
@@ -1084,24 +1294,31 @@ els.downloadPdf.addEventListener("click", () => {
     const widthPt = physicalWidthIn(72 / 25.4, 72) ?? state.sourceWidth * 0.75;
     const heightPt = widthPt * (state.sourceHeight / state.sourceWidth);
     const pdf = toPdf(parsed, { pageWidth: widthPt, pageHeight: heightPt });
-    downloadBlob(new Blob([pdf], { type: "application/pdf" }), "pdf");
-    els.status.textContent = `PDF exported at ${(widthPt / 72).toFixed(2)}×${(heightPt / 72).toFixed(2)} in.`;
+    const fileHandle = await chooseSaveFile("pdf", "application/pdf");
+    const result = await saveBlob(new Blob([pdf], { type: "application/pdf" }), "pdf", fileHandle);
+    if (!result.cancelled) {
+      els.status.textContent = saveStatus("PDF", result, ` at ${formatDimensionsFromInches(widthPt / 72, heightPt / 72)}`);
+    }
   } catch (err) {
     showError(err.message || "PDF export failed.");
   }
 });
 
-els.downloadDxf.addEventListener("click", () => {
+els.downloadDxf.addEventListener("click", async () => {
   if (!state.svgRaw || els.downloadDxf.disabled) return;
   try {
     const parsed = parseSvgPaths(state.svgRaw);
     // DXF units: mm when a physical size is set, else source pixels.
     const widthUnits = physicalWidthIn(1, 25.4) ?? state.sourceWidth;
     const dxf = toDxf(parsed, { scale: widthUnits / parsed.width });
-    downloadBlob(new Blob([dxf], { type: "image/vnd.dxf" }), "dxf");
-    els.status.textContent = els.exportSize.value === "physical"
-      ? `DXF exported at ${widthUnits.toFixed(1)} mm wide.`
-      : `DXF exported at ${widthUnits} units (source pixels).`;
+    const fileHandle = await chooseSaveFile("dxf", "image/vnd.dxf");
+    const result = await saveBlob(new Blob([dxf], { type: "image/vnd.dxf" }), "dxf", fileHandle);
+    if (!result.cancelled) {
+      const detail = els.exportSize.value === "physical"
+        ? ` at ${widthUnits.toFixed(1)} mm wide`
+        : ` at ${widthUnits} units (source pixels)`;
+      els.status.textContent = saveStatus("DXF", result, detail);
+    }
   } catch (err) {
     showError(err.message || "DXF export failed.");
   }
@@ -1118,28 +1335,16 @@ els.resetSettingsBtn.addEventListener("click", () => {
 // Persist on any control interaction; one delegated listener covers
 // every current and future input in the column.
 {
-  const controlsRoot = document.querySelector(".controls");
-  controlsRoot.addEventListener("input", saveSettings);
-  controlsRoot.addEventListener("change", saveSettings);
-}
-
-// The export guide fills the space under the canvas on desktop (the
-// controls column is usually taller); on small screens it stays a
-// workspace-level block so the mobile order puts it last, not between
-// the preview and the controls.
-{
-  const guideMedia = window.matchMedia("(max-width: 820px)");
-  const exportHelp = document.querySelector(".export-help");
-  const previewPane = document.querySelector(".preview-pane");
-  const placeExportHelp = () => {
-    const home = guideMedia.matches ? els.workspace : previewPane;
-    if (exportHelp.parentElement !== home) home.appendChild(exportHelp);
-  };
-  guideMedia.addEventListener("change", placeExportHelp);
-  placeExportHelp();
+  for (const controlsRoot of document.querySelectorAll(".controls")) {
+    controlsRoot.addEventListener("input", saveSettings);
+    controlsRoot.addEventListener("change", saveSettings);
+  }
 }
 
 restoreSettings();
+preferences = readPreferences(els.physicalUnit.value);
+applyMeasurementUnit(preferences.measurementUnit);
+saveSettings();
 
 // Offline support: static app, versioned assets. Registration failure
 // (http, old browser) is harmless.
@@ -1152,6 +1357,9 @@ if ("serviceWorker" in navigator) {
 fetch("package.json")
   .then((r) => r.json())
   .then(({ version }) => {
-    if (version) $("app-version").textContent = `v${version}`;
+    if (version) {
+      $("app-version").textContent = `v${version}`;
+      $("about-version").textContent = version;
+    }
   })
   .catch(() => {});

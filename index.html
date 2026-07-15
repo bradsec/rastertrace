@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Convert PNG, JPEG, WebP, GIF and BMP images to clean SVG vectors in your browser. Remove backgrounds, tune colors and export SVG, PNG, PDF or DXF. No uploads.">
   <meta name="color-scheme" content="dark">
-  <meta name="theme-color" content="#141517">
+  <meta name="theme-color" content="#17191d">
   <link rel="canonical" href="https://rastertrace.com/">
   <link rel="icon" href="./favicon.ico" sizes="any">
   <link rel="icon" type="image/png" sizes="32x32" href="./favicon-32x32.png">
@@ -43,16 +43,54 @@
     }
   </script>
 
-  <link rel="stylesheet" href="css/styles.css?v=39">
+  <link rel="stylesheet" href="css/styles.css?v=44">
 </head>
 <body>
-  <header class="topbar">
-    <div class="brand">
-      <svg class="logo" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
-        <path d="M2 13 L6 4 L10 11 L14 3" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
-      </svg>
-      <h1>RasterTrace</h1>
-      <span class="tagline">Raster in. Clean vectors out.</span>
+  <header class="app-header">
+    <div class="menubar">
+      <h1 class="brand" aria-label="RasterTrace home"><span class="brand-mark">rt</span><span>rastertrace</span></h1>
+      <details class="app-menu"><summary>File</summary><div class="menu-popover">
+        <button type="button" data-action="open-image">Open image<span>Ctrl+O</span></button>
+        <hr>
+        <button type="button" data-action="save-svg" data-result-action disabled>Save as SVG<span>Ctrl+E</span></button>
+        <button type="button" data-action="copy-svg" data-result-action disabled>Copy SVG</button>
+        <button type="button" data-action="download-png" data-result-action disabled>Save as PNG</button>
+        <button type="button" data-action="download-pdf" data-result-action disabled>Save as PDF</button>
+        <button type="button" data-action="download-dxf" data-result-action disabled>Save as DXF</button>
+        <hr>
+        <button type="button" data-action="preferences">Preferences</button>
+        <button type="button" data-action="reset-settings">Reset settings</button>
+      </div></details>
+      <details class="app-menu"><summary>View</summary><div class="menu-popover">
+        <button type="button" data-action="show-result">Show result</button>
+        <button type="button" data-action="show-source">Show source</button>
+        <hr>
+        <button type="button" data-action="zoom-fit">Fit preview<span>0</span></button>
+        <button type="button" data-action="zoom-in">Zoom in<span>+</span></button>
+        <button type="button" data-action="zoom-out">Zoom out<span>-</span></button>
+      </div></details>
+      <details class="app-menu"><summary>Help</summary><div class="menu-popover">
+        <button type="button" data-action="settings-guide">Settings guide</button>
+        <button type="button" data-action="about">About rastertrace</button>
+      </div></details>
+    </div>
+    <div class="header-canvas-tools">
+      <div class="zoom-controls" role="group" aria-label="Zoom">
+        <button type="button" id="zoom-out" class="header-tool" aria-label="Zoom out" title="Zoom out (-)">&minus;</button>
+        <button type="button" id="zoom-reset" class="header-tool zoom-level" aria-label="Reset zoom to fit" title="Reset zoom and position (0)">Fit</button>
+        <button type="button" id="zoom-in" class="header-tool" aria-label="Zoom in" title="Zoom in (+)">+</button>
+      </div>
+    </div>
+    <div class="topbar-actions" role="group" aria-label="Quick actions">
+      <button class="header-action" type="button" data-action="open-image"><span>Open image</span></button>
+      <span class="action-divider" aria-hidden="true"></span>
+      <div class="export-actions" role="group" aria-label="Export result">
+        <button type="button" id="copy-svg" class="header-action" disabled title="Copy the SVG markup to the clipboard"><span>Copy SVG</span></button>
+        <button type="button" id="download-png" class="header-action" disabled title="Save a PNG at the trace resolution, choosing its name and location"><span>PNG</span></button>
+        <button type="button" id="download-pdf" class="header-action" disabled title="Save a vector PDF, choosing its name and location"><span>PDF</span></button>
+        <button type="button" id="download-dxf" class="header-action" disabled title="Save DXF geometry, choosing its name and location"><span>DXF</span></button>
+        <button type="button" id="download" class="primary-action" disabled title="Save the SVG, choosing its name and location"><span>Save SVG</span></button>
+      </div>
     </div>
   </header>
 
@@ -75,22 +113,31 @@
     <!-- Workspace: hidden until an image loads -->
     <section id="workspace" class="workspace" hidden>
       <aside class="controls" aria-label="Conversion settings">
-        <button type="button" id="replace-image" class="button button-secondary">Replace image…</button>
-        <button type="button" id="reset-settings" class="button button-secondary" title="Restore every control to its default value">Reset settings</button>
-        <p id="restored-note" class="restored-note" hidden>Using your previous settings. Press <strong>Reset settings</strong> for defaults.</p>
-        <div class="button-row" role="group" aria-label="Rotate and invert image">
-          <button type="button" id="rotate-left" class="button button-secondary icon-button" title="Rotate 90 degrees counter-clockwise" aria-label="Rotate 90 degrees counter-clockwise">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
-          </button>
-          <button type="button" id="rotate-right" class="button button-secondary icon-button" title="Rotate 90 degrees clockwise" aria-label="Rotate 90 degrees clockwise">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
-          </button>
-          <button type="button" id="invert-image" class="button button-secondary icon-button" aria-pressed="false" title="Invert colors (negative), useful for stencils" aria-label="Invert image colors">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor" stroke="none"/></svg>
-          </button>
+        <div class="controls-toolbar">
+          <div class="utility-actions">
+            <button type="button" id="replace-image" class="button button-secondary">Replace image</button>
+            <button type="button" id="reset-settings" class="button button-secondary" title="Restore every control to its default value">Reset settings</button>
+          </div>
+          <p id="restored-note" class="restored-note" hidden>Using your previous settings. Press <strong>Reset settings</strong> for defaults.</p>
+          <div class="button-row" role="group" aria-label="Rotate and invert image">
+            <button type="button" id="rotate-left" class="button button-secondary icon-button" title="Rotate 90 degrees counter-clockwise" aria-label="Rotate 90 degrees counter-clockwise">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+            </button>
+            <button type="button" id="rotate-right" class="button button-secondary icon-button" title="Rotate 90 degrees clockwise" aria-label="Rotate 90 degrees clockwise">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+            </button>
+            <button type="button" id="invert-image" class="button button-secondary icon-button" aria-pressed="false" title="Invert colors (negative), useful for stencils" aria-label="Invert image colors">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor" stroke="none"/></svg>
+            </button>
+          </div>
+          <div class="view-toggle toolbar-view-toggle" role="group" aria-label="Preview view">
+            <button type="button" id="show-result" class="toggle" aria-pressed="true" title="Show the traced SVG output">Result</button>
+            <button type="button" id="show-source" class="toggle" aria-pressed="false" title="Show the original image">Source</button>
+          </div>
+          <button type="button" id="green-screen" class="button button-secondary toolbar-wide-action" aria-pressed="false" title="Preview transparency over green">Green screen</button>
         </div>
 
-        <div class="field">
+        <div class="field rail-intro">
           <label for="export-profile" title="Purpose-based starting point: sets colors, cleanup, path detail, and output options together. Every control stays editable">Export profile</label>
           <select id="export-profile">
             <option value="">Custom</option>
@@ -106,7 +153,7 @@
              profile is active: it is that profile's main dial. -->
         <div id="stencil-threshold-slot" hidden></div>
 
-        <details class="panel" open>
+        <details class="panel" data-panel-key="colors" open>
           <summary>Colors &amp; cleanup</summary>
           <div class="panel-body">
 
@@ -145,7 +192,47 @@
           </div>
         </details>
 
-        <details class="panel" open>
+        <details class="panel" data-panel-key="background">
+          <summary title="Choose how the source background is handled">
+            <span class="panel-heading"><span>Background</span><span id="background-summary" class="panel-summary">Keep background</span></span>
+          </summary>
+          <div class="panel-body">
+            <div class="field background-mode-field">
+              <label for="transparent" title="Edges: remove everything connected to the image border. Color: remove a color everywhere it appears">Background mode</label>
+              <select id="transparent">
+                <option value="">Keep background</option>
+                <option value="edges">Remove connected from edges</option>
+                <option value="auto">Remove color (auto-detect)</option>
+                <option value="custom">Remove color (pick)</option>
+              </select>
+            </div>
+            <div class="conditional-fields">
+              <div class="subfield" id="knockout-color-field" hidden>
+                <label for="knockout-color" title="Pixels matching this color become transparent">Color to remove</label>
+                <div class="color-row">
+                  <input type="color" id="knockout-color" value="#ffffff">
+                  <button type="button" id="pick-from-image" class="button button-secondary" aria-pressed="false" title="Click the image to sample the color (Esc cancels)">Pick from image</button>
+                </div>
+              </div>
+              <div class="subfield" id="fuzz-field" hidden>
+                <div class="label-row"><label for="fuzz" title="How closely pixels must match the removed color. 0 is exact; raise for JPEG noise or gradients">Match tolerance</label> <output id="fuzz-out" for="fuzz">16</output></div>
+                <input type="range" id="fuzz" min="0" max="255" step="1" value="16">
+              </div>
+              <div class="subfield" id="edge-trim-field" hidden>
+                <div class="label-row"><label for="edge-trim" title="Peels this many pixels off the cutout boundary to remove leftover fringe. Thin details shrink by the same amount">Edge trim</label> <output id="edge-trim-out" for="edge-trim">0</output></div>
+                <input type="range" id="edge-trim" min="0" max="16" step="1" value="0">
+              </div>
+              <div class="subfield" id="defringe-field" hidden>
+                <div class="label-row"><label for="defringe" title="Repaints this many pixels of the cutout boundary with interior colors to hide leftover fringe. Keeps thin details at full size">Defringe</label> <output id="defringe-out" for="defringe">0</output></div>
+                <input type="range" id="defringe" min="0" max="8" step="1" value="0">
+              </div>
+            </div>
+          </div>
+        </details>
+      </aside>
+
+      <aside class="controls controls-right" aria-label="Tracing and export settings">
+        <details class="panel" data-panel-key="tracing" open>
           <summary>Tracing</summary>
           <div class="panel-body">
 
@@ -211,55 +298,22 @@
           </div>
         </details>
 
-        <details class="panel">
-          <summary title="Make the background transparent in the traced SVG">Background removal</summary>
-          <div class="panel-body">
-          <div class="subfield">
-            <label for="transparent" title="Edges: remove everything connected to the image border. Color: remove a color everywhere it appears">Mode</label>
-            <select id="transparent">
-              <option value="">Keep background</option>
-              <option value="edges">Remove connected from edges</option>
-              <option value="auto">Remove color (auto-detect)</option>
-              <option value="custom">Remove color (pick)</option>
-            </select>
-          </div>
-          <div class="subfield" id="knockout-color-field" hidden>
-            <label for="knockout-color" title="Pixels matching this color become transparent">Color to remove</label>
-            <div class="color-row">
-              <input type="color" id="knockout-color" value="#ffffff">
-              <button type="button" id="pick-from-image" class="button button-secondary" aria-pressed="false" title="Click the image to sample the color (Esc cancels)">Pick from image</button>
-            </div>
-          </div>
-          <div class="subfield" id="fuzz-field" hidden>
-            <div class="label-row"><label for="fuzz" title="How closely pixels must match the removed color. 0 is exact; raise for JPEG noise or gradients">Match tolerance</label> <output id="fuzz-out" for="fuzz">16</output></div>
-            <input type="range" id="fuzz" min="0" max="255" step="1" value="16">
-          </div>
-          <div class="subfield" id="edge-trim-field" hidden>
-            <div class="label-row"><label for="edge-trim" title="Peels this many pixels off the cutout boundary to remove leftover fringe. Thin details shrink by the same amount">Edge trim</label> <output id="edge-trim-out" for="edge-trim">0</output></div>
-            <input type="range" id="edge-trim" min="0" max="16" step="1" value="0">
-          </div>
-          <div class="subfield" id="defringe-field" hidden>
-            <div class="label-row"><label for="defringe" title="Repaints this many pixels of the cutout boundary with interior colors to hide leftover fringe. Keeps thin details at full size">Defringe</label> <output id="defringe-out" for="defringe">0</output></div>
-            <input type="range" id="defringe" min="0" max="8" step="1" value="0">
-          </div>
-          </div>
-        </details>
-
-        <details class="panel">
+        <details class="panel" data-panel-key="svg-export">
           <summary title="How the downloaded SVG file is written. Changes apply instantly without re-tracing">SVG export</summary>
           <div class="panel-body">
           <div class="subfield">
-            <label for="export-size" title="Match source pixels writes width/height in px for stable web layout. Physical size writes real-world units for print and cutting software">Size</label>
+            <label for="export-size" title="Match source pixels preserves the image dimensions. Custom size lets you set a width in px, mm, cm, or in.">Size</label>
             <select id="export-size">
               <option value="px">Match source pixels</option>
-              <option value="physical">Physical size</option>
+              <option value="physical">Custom size</option>
             </select>
           </div>
           <div class="subfield" id="physical-size-field" hidden>
             <div class="label-row"><label for="physical-width" title="Exported width; height follows the image aspect ratio">Width</label> <output id="physical-height-out" for="physical-width"></output></div>
             <div class="color-row">
               <input type="number" id="physical-width" min="1" step="any" value="100" inputmode="decimal">
-              <select id="physical-unit" aria-label="Physical unit">
+              <select id="physical-unit" aria-label="Output unit">
+                <option value="px">px</option>
                 <option value="mm">mm</option>
                 <option value="cm">cm</option>
                 <option value="in">in</option>
@@ -272,20 +326,6 @@
       </aside>
 
       <div class="preview-pane">
-        <div class="preview-toolbar">
-          <div class="view-toggle" role="group" aria-label="Preview view">
-            <button type="button" id="show-result" class="toggle" aria-pressed="true" title="Show the traced SVG output">Result</button>
-            <button type="button" id="show-source" class="toggle" aria-pressed="false" title="Show the original image">Source</button>
-          </div>
-          <button type="button" id="green-screen" class="toggle" aria-pressed="false" title="Preview transparency over green">Green</button>
-          <div class="zoom-controls" role="group" aria-label="Zoom">
-            <button type="button" id="zoom-out" class="toggle" aria-label="Zoom out" title="Zoom out (-)">&minus;</button>
-            <button type="button" id="zoom-reset" class="toggle zoom-level" aria-label="Reset zoom to fit" title="Reset zoom and position (0)">Fit</button>
-            <button type="button" id="zoom-in" class="toggle" aria-label="Zoom in" title="Zoom in (+)">+</button>
-          </div>
-          <p id="status" class="status" role="status" aria-live="polite"></p>
-        </div>
-
         <div id="preview" class="preview checkerboard" tabindex="0" aria-label="Conversion preview. Pinch, scroll, or use plus and minus to zoom; drag to pan.">
           <div id="pan-stage" class="pan-stage">
             <img id="result-view" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==" alt="Traced SVG result" draggable="false">
@@ -296,24 +336,14 @@
           </div>
         </div>
 
-        <div class="actions">
-          <dl class="stats">
-            <div><dt>Paths</dt><dd id="stat-paths">–</dd></div>
-            <div><dt>Size</dt><dd id="stat-size">–</dd></div>
-            <div><dt>Time</dt><dd id="stat-time">–</dd></div>
-          </dl>
-          <div class="action-buttons">
-            <button type="button" id="copy-svg" class="button button-secondary" disabled title="Copy the SVG markup to the clipboard">Copy SVG</button>
-            <button type="button" id="download-png" class="button button-secondary" disabled title="Render the traced result to a PNG at the trace resolution">Download PNG</button>
-            <button type="button" id="download-pdf" class="button button-secondary" disabled title="Vector PDF for print shops and design handoff; uses the physical size when set">Download PDF</button>
-            <button type="button" id="download-dxf" class="button button-secondary" disabled title="DXF geometry for CAD, CNC, and cutters; one closed polyline per shape, one layer per color; mm units when a physical size is set">Download DXF</button>
-            <a id="download" class="button button-primary" href="data:," aria-disabled="true" download>Download SVG</a>
-          </div>
-        </div>
       </div>
 
-      <section class="export-help" aria-label="Settings and SVG export guide">
-          <h2>Settings guide</h2>
+    </section>
+
+    <dialog id="settings-guide-dialog" class="guide-dialog" aria-labelledby="settings-guide-title">
+      <form method="dialog" class="dialog-form guide-dialog-content">
+          <div class="dialog-heading"><h2 id="settings-guide-title">Settings guide</h2><p>Tracing controls and SVG export options.</p></div>
+          <h2>Tracing settings</h2>
           <dl class="help-settings">
             <div><dt>Preset &amp; Colors</dt><dd>Maximum colors in the output. Fewer colors means simpler, cleaner, smaller SVGs; presets pair a color count with matched cleanup levels.</dd></div>
             <div><dt>Speckle filter</dt><dd>Drops traced specks smaller than this many pixels. Raise it to remove noise, dust, and JPEG artifacts.</dd></div>
@@ -326,7 +356,7 @@
             <div><dt>Stencil &amp; threshold</dt><dd>Black &amp; white trace: pixels darker than the threshold become black shapes, everything else drops out. Best for laser cutting, stamps, silhouettes.</dd></div>
             <div><dt>Grayscale, Denoise, Crisp</dt><dd>Grayscale converts to gray tones before tracing. Denoise smooths photo noise (softens pixel art). Crisp edges sharpens corner tracing for text and logos.</dd></div>
             <div><dt>Background removal</dt><dd>Makes the background transparent: connected-from-edges, auto-detected color, or a picked color. Tolerance widens the match; edge trim and defringe clean the cutout boundary.</dd></div>
-            <div><dt>SVG export</dt><dd>Pixel or physical (mm, cm, in) output size, and minified output for the smallest file. Applied instantly without re-tracing.</dd></div>
+            <div><dt>SVG export</dt><dd>Source pixels or a custom px, mm, cm, or in output size, plus minified output for the smallest file. Applied instantly without re-tracing.</dd></div>
           </dl>
 
           <h2>SVG export guide</h2>
@@ -337,7 +367,7 @@
             </div>
             <div>
               <h3>Size &amp; units</h3>
-              <p>SVG is vector geometry, so there is no DPI: it scales cleanly at any size. Use <em>Match source pixels</em> for websites and apps. Use <em>Physical size</em> (mm, cm, in) so print and cutting software opens the file at the real-world size; the height follows the image automatically.</p>
+              <p>SVG is vector geometry, so there is no DPI: it scales cleanly at any size. Use <em>Match source pixels</em> for websites and apps. Use <em>Custom size</em> to set a width in px, mm, cm, or in; the height follows the image automatically. Physical units let print and cutting software open the file at its real-world size.</p>
             </div>
             <div>
               <h3>Smallest files</h3>
@@ -347,26 +377,19 @@
               <h3>Laser &amp; cutting</h3>
               <p>For laser work use the Laser stencil profile: black &amp; white trace, aggressive despeckle, physical size. Set upscale to <em>Ultra (fit 4096)</em> for the cleanest edges, and try <em>Cutout</em> layering for vinyl and CNC. Photos usually engrave better exported as a prepared raster image than as a traced SVG.</p>
             </div>
-            <div>
-              <h3>Credits</h3>
-              <p>Vector tracing is powered by the open-source <a href="https://github.com/visioncortex/vtracer" target="_blank" rel="noopener noreferrer">vtracer</a> and <a href="https://github.com/visioncortex/visioncortex" target="_blank" rel="noopener noreferrer">visioncortex</a> libraries. Full license texts are in <a href="THIRD-PARTY-LICENSES.txt" target="_blank" rel="noopener noreferrer">THIRD-PARTY-LICENSES.txt</a>.</p>
-            </div>
-            <div>
-              <h3>Created by Mark Bradley</h3>
-              <p>Found RasterTrace useful? Support the creator.</p>
-              <a class="support-link" href="https://buymeacoffee.com/markbradley" target="_blank" rel="noopener noreferrer" aria-label="Support the creator on Buy Me a Coffee">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h12v7a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5V8Z"/><path d="M16 10h2a3 3 0 0 1 0 6h-2M7 4v1m4-1v1m4-1v1"/></svg>
-                <span>Buy me a coffee</span>
-              </a>
-            </div>
           </div>
-      </section>
-    </section>
+          <div class="dialog-actions"><button value="close">Close</button></div>
+      </form>
+    </dialog>
   </main>
 
   <footer class="statusbar">
-    <p>Images are processed locally and never uploaded.</p>
-    <span class="spacer"></span>
+    <p id="status" role="status" aria-live="polite">Ready</p>
+    <dl class="status-stats" aria-label="Trace result statistics">
+      <div><dt>Paths</dt><dd id="stat-paths">-</dd></div>
+      <div><dt>Size</dt><dd id="stat-size">-</dd></div>
+      <div><dt>Time</dt><dd id="stat-time">-</dd></div>
+    </dl>
     <a class="repo-link" href="https://github.com/bradsec/rastertrace" target="_blank" rel="noopener noreferrer" aria-label="RasterTrace on GitHub">
       <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
       <span>github.com/bradsec/rastertrace</span>
@@ -374,6 +397,35 @@
     <span class="app-version" id="app-version"></span>
   </footer>
 
-  <script type="module" src="js/app.js?v=39"></script>
+  <dialog id="preferences-dialog" aria-labelledby="preferences-title">
+    <form method="dialog" class="dialog-form">
+          <div class="dialog-heading"><h2 id="preferences-title">Preferences</h2><p>Customize how physical export measurements are displayed.</p></div>
+      <label>Measurement units displayed
+        <select name="measurementUnit">
+          <option value="px">Pixels</option>
+          <option value="in">Inches</option>
+          <option value="cm">Centimetres</option>
+          <option value="mm">Millimetres</option>
+        </select>
+      </label>
+      <p class="preference-help">Changing units preserves the current physical export size.</p>
+      <div class="dialog-actions"><button value="cancel">Cancel</button><button value="apply">Save preferences</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="about-dialog" aria-labelledby="about-title">
+    <form method="dialog" class="dialog-form">
+      <div class="dialog-heading"><h2 id="about-title">About rastertrace</h2><p>Version <span id="about-version"></span></p></div>
+      <p>Convert raster images to clean SVG vectors locally in your browser. Images remain on your device.</p>
+      <p>Created by Mark Bradley (<a href="https://github.com/bradsec" target="_blank" rel="noopener noreferrer">BRADSEC</a>).</p>
+      <p>Vector tracing is powered by the open-source <a href="https://github.com/visioncortex/vtracer" target="_blank" rel="noopener noreferrer">vtracer</a> and <a href="https://github.com/visioncortex/visioncortex" target="_blank" rel="noopener noreferrer">visioncortex</a> libraries. <a href="THIRD-PARTY-LICENSES.txt" target="_blank" rel="noopener noreferrer">View third-party licenses</a>.</p>
+      <a class="about-repo-link" href="https://github.com/bradsec/rastertrace" target="_blank" rel="noopener noreferrer">View rastertrace on GitHub</a>
+      <p class="about-support-copy">Found rastertrace useful? Support the creator.</p>
+      <a class="about-repo-link" href="https://buymeacoffee.com/markbradley" target="_blank" rel="noopener noreferrer">Buy me a coffee</a>
+      <div class="dialog-actions"><button value="close">Close</button></div>
+    </form>
+  </dialog>
+
+  <script type="module" src="js/app.js?v=46"></script>
 </body>
 </html>

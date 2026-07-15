@@ -345,6 +345,12 @@ test("applyExportOptions rounds physical height to 2 decimals", () => {
   assert.match(out, /width="10in" height="6\.67in"/);
 });
 
+test("applyExportOptions rewrites custom pixel size keeping viewBox", () => {
+  const svg = '<svg width="300" height="200" viewBox="0 0 300 200">\n</svg>';
+  const out = applyExportOptions(svg, { physicalWidth: 450, physicalUnit: "px" });
+  assert.match(out, /width="450px" height="300px" viewBox="0 0 300 200"/);
+});
+
 test("applyExportOptions adds role and title as first child, escaped", () => {
   const svg = '<svg width="10" height="10" viewBox="0 0 10 10">\n<path d="M0 0"/>\n</svg>';
   const out = applyExportOptions(svg, { title: "a <b> & c" });

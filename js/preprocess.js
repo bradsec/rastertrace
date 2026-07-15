@@ -98,8 +98,8 @@ export const EXPORT_PROFILES = Object.freeze({
 /**
  * Post-process a finalized SVG for export. Options:
  * - minify: drop the XML declaration and generator comment.
- * - physicalWidth + physicalUnit ("mm"|"cm"|"in"): rewrite the root
- *   width/height to physical units, height from the pixel aspect ratio,
+ * - physicalWidth + physicalUnit ("px"|"mm"|"cm"|"in"): rewrite the root
+ *   width/height to the requested unit, height from the pixel aspect ratio,
  *   keeping the viewBox so the file still scales.
  * - title: insert an escaped <title> as the first child and role="img".
  */
@@ -184,7 +184,7 @@ const SETTING_CHECKS = {
   spliceThreshold: (v) => Number.isFinite(v) && v >= 10 && v <= 90,
   exportSize: (v) => v === "px" || v === "physical",
   physicalWidth: (v) => Number.isFinite(v) && v > 0 && v <= 100000,
-  physicalUnit: (v) => ["mm", "cm", "in"].includes(v),
+  physicalUnit: (v) => ["px", "mm", "cm", "in"].includes(v),
   minify: (v) => typeof v === "boolean",
 };
 
