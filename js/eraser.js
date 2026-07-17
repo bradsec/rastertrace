@@ -8,6 +8,19 @@ export function svgViewBox(svg) {
   return { x: values[0], y: values[1], width: values[2], height: values[3] };
 }
 
+export function snapPointToAngle(anchor, point, width, height, increment = Math.PI / 4) {
+  if (!(width > 0) || !(height > 0) || !(increment > 0)) return point;
+  const dx = (point.x - anchor.x) * width;
+  const dy = (point.y - anchor.y) * height;
+  const distance = Math.hypot(dx, dy);
+  if (!distance) return point;
+  const angle = Math.round(Math.atan2(dy, dx) / increment) * increment;
+  return {
+    x: anchor.x + Math.cos(angle) * distance / width,
+    y: anchor.y + Math.sin(angle) * distance / height,
+  };
+}
+
 function n(value) {
   return Number(value.toFixed(3));
 }

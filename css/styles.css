@@ -568,6 +568,41 @@ details.advanced[open] { display: grid; gap: 10px; }
 
 .error { margin: 0; color: var(--error); font-weight: 600; }
 
+.trace-summary {
+  padding: 11px 14px 12px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-1);
+}
+
+.trace-summary h2 {
+  margin: 0 0 8px;
+  color: var(--text-faint);
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+.trace-summary-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0;
+}
+
+.trace-summary-stats div { min-width: 0; }
+.trace-summary-stats dt { color: var(--text-faint); font-size: 11px; }
+.trace-summary-stats dd {
+  margin: 2px 0 0;
+  overflow: hidden;
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* ---------- Statusbar footer ---------- */
 .statusbar {
   display: flex;
@@ -587,10 +622,6 @@ details.advanced[open] { display: grid; gap: 10px; }
 .statusbar .status-zoom .header-tool { height: 20px; min-width: 24px; padding-inline: 5px; font-size: 11px; }
 .statusbar .status-zoom .zoom-level { min-width: 44px; }
 .statusbar #status { min-width: 0; flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.status-stats { display: flex; flex: 0 0 auto; align-items: center; gap: 14px; margin: 0; }
-.status-stats div { display: flex; align-items: baseline; gap: 5px; }
-.status-stats dt { color: var(--text-faint); }
-.status-stats dd { min-width: 38px; margin: 0; color: var(--text); font-weight: 650; font-variant-numeric: tabular-nums; }
 .statusbar .repo-link { display: inline-flex; align-items: center; gap: 6px; color: var(--text-dim); text-decoration: none; }
 .statusbar .repo-link:hover { color: var(--accent); }
 
@@ -675,6 +706,10 @@ dialog::backdrop { background: rgb(7 9 12 / 72%); }
   .header-canvas-tools { width: calc(100% + 14px); margin-left: -7px; justify-content: flex-start; }
   .eraser-size, .restore-original { display: none; }
   .status-zoom { display: none; }
+  .trace-summary { display: none; }
+  .statusbar { justify-content: center; }
+  .statusbar #status, .statusbar .repo-link { display: none; }
+  .statusbar .app-version { display: inline; }
   .app-menu summary { padding-inline: 7px; }
 
   main { padding: 16px 12px; }
@@ -691,14 +726,11 @@ dialog::backdrop { background: rgb(7 9 12 / 72%); }
 }
 
 @media (max-width: 680px) {
-  .menubar .app-menu:last-child { display: none; }
   .topbar-actions > .header-action, .action-divider, #download-pdf, #download-dxf { display: none; }
-  .statusbar .repo-link, .app-version { display: none; }
+  .statusbar .repo-link { display: none; }
 }
 
 @media (max-width: 520px) {
   .brand { display: none; }
   #copy-svg { display: none; }
-  .statusbar #status { display: none; }
-  .status-stats { flex: 1 1 auto; justify-content: space-between; }
 }

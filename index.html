@@ -43,7 +43,7 @@
     }
   </script>
 
-  <link rel="stylesheet" href="css/styles.css?v=59">
+  <link rel="stylesheet" href="css/styles.css?v=61">
 </head>
 <body>
   <header class="app-header">
@@ -71,7 +71,10 @@
         <button type="button" data-action="zoom-out">Zoom out<span>-</span></button>
       </div></details>
       <details class="app-menu"><summary>Help</summary><div class="menu-popover">
-        <button type="button" data-action="settings-guide">Settings guide</button>
+        <button type="button" data-action="tracing-guide">Tracing settings</button>
+        <button type="button" data-action="cleanup-guide">Vector cleanup</button>
+        <button type="button" data-action="export-guide">SVG export guide</button>
+        <hr>
         <button type="button" data-action="about">About rastertrace</button>
       </div></details>
     </div>
@@ -159,6 +162,15 @@
           </div>
           <button type="button" id="green-screen" class="button button-secondary toolbar-wide-action" aria-pressed="false" title="Preview transparency over green">Green screen</button>
         </div>
+
+        <section class="trace-summary" aria-labelledby="trace-summary-title">
+          <h2 id="trace-summary-title">Trace result</h2>
+          <dl class="trace-summary-stats">
+            <div><dt>Paths</dt><dd id="stat-paths">-</dd></div>
+            <div><dt>Size</dt><dd id="stat-size">-</dd></div>
+            <div><dt>Time</dt><dd id="stat-time">-</dd></div>
+          </dl>
+        </section>
 
         <div class="field rail-intro">
           <label for="export-profile" title="Purpose-based starting point: sets colors, cleanup, path detail, and output options together. Every control stays editable">Export profile</label>
@@ -368,10 +380,9 @@
 
     </section>
 
-    <dialog id="settings-guide-dialog" class="guide-dialog" aria-labelledby="settings-guide-title">
+    <dialog id="tracing-guide-dialog" class="guide-dialog" aria-labelledby="tracing-guide-title">
       <form method="dialog" class="dialog-form guide-dialog-content">
-          <div class="dialog-heading"><h2 id="settings-guide-title">Settings guide</h2><p>Tracing controls and SVG export options.</p></div>
-          <h2>Tracing settings</h2>
+          <div class="dialog-heading"><h2 id="tracing-guide-title">Tracing settings</h2><p>Controls for turning raster artwork into clean vector paths.</p></div>
           <dl class="help-settings">
             <div><dt>Preset &amp; Colors</dt><dd>Maximum colors in the output. Fewer colors means simpler, cleaner, smaller SVGs; presets pair a color count with matched cleanup levels.</dd></div>
             <div><dt>Speckle filter</dt><dd>Drops traced specks smaller than this many pixels. Raise it to remove noise, dust, and JPEG artifacts.</dd></div>
@@ -384,11 +395,29 @@
             <div><dt>Stencil &amp; threshold</dt><dd>Black &amp; white trace: pixels darker than the threshold become black shapes, everything else drops out. Best for laser cutting, stamps, silhouettes.</dd></div>
             <div><dt>Grayscale, Denoise, Crisp</dt><dd>Grayscale converts to gray tones before tracing. Denoise smooths photo noise (softens pixel art). Crisp edges sharpens corner tracing for text and logos.</dd></div>
             <div><dt>Background removal</dt><dd>Makes the background transparent: connected-from-edges, auto-detected color, or a picked color. Tolerance widens the match; edge trim and defringe clean the cutout boundary.</dd></div>
-            <div><dt>SVG export</dt><dd>Source pixels or a custom px, mm, cm, or in output size, plus minified output for the smallest file. Applied instantly without re-tracing.</dd></div>
-            <div><dt>Manual cleanup tools</dt><dd>Press E for the circular eraser, M or Shift+M for box and circle selections, and L for the polygonal lasso. Delete removes a finished selection; Ctrl/Cmd+Z restores the last removed area.</dd></div>
           </dl>
+          <div class="dialog-actions"><button value="close">Close</button></div>
+      </form>
+    </dialog>
 
-          <h2>SVG export guide</h2>
+    <dialog id="cleanup-guide-dialog" class="guide-dialog" aria-labelledby="cleanup-guide-title">
+      <form method="dialog" class="dialog-form guide-dialog-content">
+          <div class="dialog-heading"><h2 id="cleanup-guide-title">Vector cleanup</h2><p>Remove unwanted areas from the traced vector result.</p></div>
+          <dl class="help-settings">
+            <div><dt>Eraser</dt><dd>Press E or select the eraser icon, then drag over unwanted vector areas. Use [ and ] to decrease or increase its diameter. The circular cursor shows the affected size.</dd></div>
+            <div><dt>Box &amp; circle marquee</dt><dd>Press M for a rectangular selection or Shift+M for an elliptical selection. Drag anywhere in the preview, including outside the image. Hold Shift for a square or circle, or Alt/Option to draw from the center.</dd></div>
+            <div><dt>Polygonal lasso</dt><dd>Press L, then click point-to-point around an irregular area. Hold Shift to lock a segment to 45-degree increments. Double-click or press Enter to close it. While drawing, Esc removes the last point.</dd></div>
+            <div><dt>Remove a selection</dt><dd>Press Delete or Backspace after closing a marquee. Areas outside the image are ignored, so cleanup affects only the vector result.</dd></div>
+            <div><dt>Undo, redo &amp; restore</dt><dd>Use Ctrl/Cmd+Z to undo and Ctrl/Cmd+Shift+Z or Ctrl/Cmd+Y to redo. Restore Original removes every manual cleanup action.</dd></div>
+            <div><dt>Exporting cleanup</dt><dd>Manual cleanup is preserved in SVG and PNG exports. PDF and DXF are unavailable while cleanup masks are present.</dd></div>
+          </dl>
+          <div class="dialog-actions"><button value="close">Close</button></div>
+      </form>
+    </dialog>
+
+    <dialog id="export-guide-dialog" class="guide-dialog" aria-labelledby="export-guide-title">
+      <form method="dialog" class="dialog-form guide-dialog-content">
+          <div class="dialog-heading"><h2 id="export-guide-title">SVG export guide</h2><p>Choose an output profile, size, and format for your destination.</p></div>
           <div class="help-grid">
             <div>
               <h3>Profiles</h3>
@@ -414,11 +443,6 @@
 
   <footer class="statusbar">
     <p id="status" role="status" aria-live="polite">Ready</p>
-    <dl class="status-stats" aria-label="Trace result statistics">
-      <div><dt>Paths</dt><dd id="stat-paths">-</dd></div>
-      <div><dt>Size</dt><dd id="stat-size">-</dd></div>
-      <div><dt>Time</dt><dd id="stat-time">-</dd></div>
-    </dl>
     <a class="repo-link" href="https://github.com/bradsec/rastertrace" target="_blank" rel="noopener noreferrer" aria-label="RasterTrace on GitHub">
       <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
       <span>github.com/bradsec/rastertrace</span>
@@ -460,6 +484,6 @@
     </form>
   </dialog>
 
-  <script type="module" src="js/app.js?v=55"></script>
+  <script type="module" src="js/app.js?v=59"></script>
 </body>
 </html>

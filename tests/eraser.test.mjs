@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { applyEraserMask, svgViewBox } from "../js/eraser.js";
+import { applyEraserMask, snapPointToAngle, svgViewBox } from "../js/eraser.js";
 
 test("svgViewBox reads comma and space separated values", () => {
   assert.deepEqual(svgViewBox('<svg viewBox="-2, 3, 100, 50"></svg>'), {
@@ -50,4 +50,14 @@ test("applyEraserMask supports rectangle, ellipse, and polygon deletions", () =>
   assert.match(result, /<rect x="20" y="20" width="60" height="40" fill="#000"\/>/);
   assert.match(result, /<ellipse cx="100" cy="50" rx="20" ry="20" fill="#000"\/>/);
   assert.match(result, /<polygon points="0,0 200,0 100,100" fill="#000"\/>/);
+});
+
+test("snapPointToAngle locks polygon segments in image-space 45 degree increments", () => {
+  const anchor = { x: 0.2, y: 0.2 };
+  const diagonal = snapPointToAngle(anchor, { x: 0.4, y: 0.6 }, 200, 100);
+  assert.ok(Math.abs(diagonal.x - 0.4) < 1e-10);
+  assert.ok(Math.abs(diagonal.y - 0.6) < 1e-10);
+
+  const horizontal = snapPointToAngle(anchor, { x: 0.5, y: 0.4 }, 200, 100);
+  assert.ok(Math.abs(horizontal.y - anchor.y) < 1e-10);
 });

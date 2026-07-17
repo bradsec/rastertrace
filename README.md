@@ -38,7 +38,7 @@ Convert raster images to clean, scalable SVG vectors entirely in your browser. [
 - Photoshop-style rectangular and elliptical marquees plus a point-to-point polygonal lasso. Use `M`, `Shift+M`, or `L`, hold Shift to constrain proportions, hold Alt/Option to draw from center, then press Delete/Backspace to remove the selected area.
 - Rotate the loaded image in 90 degree steps
 - Trace size capped at 2048 px on the longest side: small images upscale for smoother curves, large photos downscale proportionally (the status line reports the applied scale). Opt-in Ultra mode raises the cap to 4096 px for the cleanest fabrication exports (slower, high memory)
-- Guidance built in: photographic sources and high path counts get footer status suggestions, with the full settings guide available from Help
+- Guidance built in: photographic sources and high path counts get footer status suggestions, with separate tracing, vector cleanup, and SVG export guides available from Help
 - Three-panel editor with a canvas-only center, independently scrolling controls, responsive mobile stacking, keyboard operation, and WCAG AA contrast
 
 ## Structure

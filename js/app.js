@@ -1,7 +1,7 @@
 // UI wiring: state, controls, preview, download.
 import { capBitmap, decodeImage, invertBitmap, rasterize, rotateBitmap, Tracer } from "./pipeline.js?v=39";
 import { parseSvgPaths, toDxf, toPdf } from "./vectorexport.js?v=39";
-import { applyEraserMask, svgViewBox } from "./eraser.js?v=2";
+import { applyEraserMask, snapPointToAngle, svgViewBox } from "./eraser.js?v=3";
 import {
   analyzeFlatness,
   applyExportOptions,
@@ -763,9 +763,11 @@ for (const panel of document.querySelectorAll("details.panel[data-panel-key]")) 
 document.querySelector('[data-action="about"]').addEventListener("click", () => {
   $("about-dialog").showModal();
 });
-document.querySelector('[data-action="settings-guide"]').addEventListener("click", () => {
-  $("settings-guide-dialog").showModal();
-});
+for (const guide of ["tracing", "cleanup", "export"]) {
+  document.querySelector(`[data-action="${guide}-guide"]`).addEventListener("click", () => {
+    $(`${guide}-guide-dialog`).showModal();
+  });
+}
 document.querySelector('[data-action="preferences"]').addEventListener("click", () => {
   els.preferencesDialog.returnValue = "";
   els.measurementUnitPreference.value = preferences.measurementUnit;
@@ -1165,9 +1167,9 @@ function setSelectionTool(tool) {
   els.polygonLasso.setAttribute("aria-pressed", String(tool === "polygon"));
   els.preview.classList.toggle("selecting", Boolean(tool));
   if (tool === "polygon") {
-    els.status.textContent = "Click around an area. Double-click or press Enter to close the polygonal selection.";
+    els.status.textContent = "Click around an area. Hold Shift for 45° segments; double-click or press Enter to close.";
   } else if (tool) {
-    els.status.textContent = "Drag to select. Hold Shift for a square or circle; Alt/Option draws from the center.";
+    els.status.textContent = "Drag anywhere in the preview. Hold Shift for a square or circle; Alt/Option draws from the center.";
   }
 }
 
@@ -1210,6 +1212,7 @@ function renderSelection() {
   els.selectionOverlay.style.top = `${imageRect.top - previewRect.top}px`;
   els.selectionOverlay.style.width = `${imageRect.width}px`;
   els.selectionOverlay.style.height = `${imageRect.height}px`;
+  els.selectionOverlay.style.overflow = selection.finalized ? "hidden" : "visible";
   els.selectionOverlay.setAttribute("viewBox", `0 0 ${imageRect.width} ${imageRect.height}`);
   const px = (point) => ({ x: point.x * imageRect.width, y: point.y * imageRect.height });
   let shape;
@@ -1243,12 +1246,45 @@ function renderSelection() {
   darkAnts.setAttribute("vector-effect", "non-scaling-stroke");
   shape.setAttribute("class", "selection-ants-light");
   shape.setAttribute("vector-effect", "non-scaling-stroke");
-  els.selectionOverlay.replaceChildren(darkAnts, shape);
+  const selectionNodes = [darkAnts, shape];
+  if (selection.finalized) {
+    const ns = "http://www.w3.org/2000/svg";
+    const defs = document.createElementNS(ns, "defs");
+    const clipPath = document.createElementNS(ns, "clipPath");
+    clipPath.id = "selection-image-edge-clip";
+    clipPath.setAttribute("clipPathUnits", "userSpaceOnUse");
+    const clipShape = shape.cloneNode();
+    clipShape.removeAttribute("class");
+    clipShape.setAttribute("fill", "#fff");
+    clipShape.setAttribute("stroke", "none");
+    clipPath.appendChild(clipShape);
+    defs.appendChild(clipPath);
+
+    const edge = document.createElementNS(ns, "rect");
+    edge.setAttribute("x", "0.75");
+    edge.setAttribute("y", "0.75");
+    edge.setAttribute("width", String(Math.max(0, imageRect.width - 1.5)));
+    edge.setAttribute("height", String(Math.max(0, imageRect.height - 1.5)));
+    edge.setAttribute("fill", "none");
+    edge.setAttribute("clip-path", "url(#selection-image-edge-clip)");
+    edge.setAttribute("vector-effect", "non-scaling-stroke");
+    const darkEdge = edge.cloneNode();
+    darkEdge.setAttribute("class", "selection-ants-dark");
+    edge.setAttribute("class", "selection-ants-light");
+    selectionNodes.unshift(defs);
+    selectionNodes.push(darkEdge, edge);
+  }
+  els.selectionOverlay.replaceChildren(...selectionNodes);
   els.selectionOverlay.removeAttribute("hidden");
 }
 
 function finishPolygon() {
   if (state.selection?.type !== "polygon" || state.selection.points.length < 3) return;
+  if (!selectionIntersectsImage(state.selection)) {
+    clearSelection();
+    els.status.textContent = "Selection did not overlap the image.";
+    return;
+  }
   state.selection.finalized = true;
   state.selection.hover = null;
   renderSelection();
@@ -1286,25 +1322,51 @@ els.polygonLasso.addEventListener("click", () => { clearSelection(); setSelectio
 
 let selectionPointer = null;
 
-function selectionPoint(event, clamp = false) {
+function selectionPoint(event, mode = "strict") {
   const rect = els.resultView.getBoundingClientRect();
   if (!rect.width || !rect.height) return null;
   const x = (event.clientX - rect.left) / rect.width;
   const y = (event.clientY - rect.top) / rect.height;
-  if (!clamp && (x < 0 || x > 1 || y < 0 || y > 1)) return null;
+  if (mode === "strict" && (x < 0 || x > 1 || y < 0 || y > 1)) return null;
+  if (mode === "free") return { x, y };
   return {
     x: Math.min(1, Math.max(0, x)),
     y: Math.min(1, Math.max(0, y)),
   };
 }
 
+function selectionIntersectsImage(selection) {
+  let bounds;
+  if (selection.type === "polygon") {
+    const xs = selection.points.map((point) => point.x);
+    const ys = selection.points.map((point) => point.y);
+    bounds = {
+      x: Math.min(...xs),
+      y: Math.min(...ys),
+      width: Math.max(...xs) - Math.min(...xs),
+      height: Math.max(...ys) - Math.min(...ys),
+    };
+  } else {
+    bounds = marqueeGeometry(selection);
+  }
+  return bounds.x < 1 && bounds.y < 1 && bounds.x + bounds.width > 0 && bounds.y + bounds.height > 0;
+}
+
+function constrainedPolygonPoint(point, shiftKey) {
+  const selection = state.selection;
+  if (!shiftKey || selection?.type !== "polygon" || !selection.points.length) return point;
+  const box = svgViewBox(state.svgRaw || "");
+  if (!box) return point;
+  return snapPointToAngle(selection.points.at(-1), point, box.width, box.height);
+}
+
 els.preview.addEventListener("pointerdown", (event) => {
   if (!state.selectionTool || event.button !== 0) return;
   event.preventDefault();
   event.stopImmediatePropagation();
-  const point = selectionPoint(event);
-  // An active selection tool owns the whole preview. Empty-canvas clicks
-  // do nothing instead of falling through to the pan gesture.
+  const point = selectionPoint(event, "free");
+  // An active selection tool owns the whole preview, including the empty
+  // canvas around the image, so selection gestures never pan the artwork.
   if (!point) return;
   if (state.selectionTool === "polygon") {
     if (event.detail > 1) {
@@ -1314,7 +1376,7 @@ els.preview.addEventListener("pointerdown", (event) => {
     if (!state.selection || state.selection.finalized) {
       state.selection = { type: "polygon", points: [], hover: null, finalized: false };
     }
-    state.selection.points.push({ x: point.x, y: point.y });
+    state.selection.points.push(constrainedPolygonPoint({ x: point.x, y: point.y }, event.shiftKey));
     renderSelection();
     return;
   }
@@ -1340,12 +1402,12 @@ els.preview.addEventListener("dblclick", (event) => {
 
 els.preview.addEventListener("pointermove", (event) => {
   if (state.selectionTool === "polygon" && state.selection?.type === "polygon" && !state.selection.finalized) {
-    const point = selectionPoint(event);
-    state.selection.hover = point;
+    const point = selectionPoint(event, "free");
+    state.selection.hover = constrainedPolygonPoint(point, event.shiftKey);
     renderSelection();
   }
   if (selectionPointer !== event.pointerId || !state.selection) return;
-  const point = selectionPoint(event, true);
+  const point = selectionPoint(event, "free");
   if (!point) return;
   state.selection.current = { x: point.x, y: point.y };
   state.selection.constrain = event.shiftKey;
@@ -1359,7 +1421,7 @@ for (const type of ["pointerup", "pointercancel"]) {
     selectionPointer = null;
     if (!state.selection) return;
     const geometry = marqueeGeometry(state.selection);
-    if (geometry.width < 0.001 || geometry.height < 0.001) {
+    if (geometry.width < 0.001 || geometry.height < 0.001 || !selectionIntersectsImage(state.selection)) {
       clearSelection();
       return;
     }
