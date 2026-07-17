@@ -542,6 +542,7 @@ details.advanced[open] { display: grid; gap: 10px; }
 
 .tracing-veil {
   position: absolute;
+  z-index: 4;
   inset: 0;
   display: grid;
   place-items: center;

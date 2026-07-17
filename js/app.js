@@ -18,6 +18,7 @@ import {
 } from "./preprocess.js?v=40";
 
 const $ = (id) => document.getElementById(id);
+const EMPTY_IMAGE_SRC = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==";
 
 const els = {
   emptyState: $("empty-state"),
@@ -454,12 +455,12 @@ function resetSettings() {
 
 let elapsedTimer = 0;
 
-function setBusy(busy) {
+function setBusy(busy, label = "Starting…") {
   els.tracingVeil.hidden = !busy;
   clearInterval(elapsedTimer);
   if (busy) {
-    els.status.textContent = "Tracing…";
-    els.veilStage.textContent = "Starting…";
+    els.status.textContent = label;
+    els.veilStage.textContent = label;
     els.veilElapsed.textContent = "";
     const started = Date.now();
     elapsedTimer = setInterval(() => {
@@ -653,6 +654,33 @@ async function loadFile(file) {
   if (!file) return;
   showError("");
   const token = ++state.loadToken;
+  clearTimeout(state.debounce);
+  tracer.cancelPending();
+  state.bitmap?.close();
+  state.bitmap = null;
+  state.file = null;
+  state.svgRaw = null;
+  state.svg = null;
+  state.raster = null;
+  state.eraseStrokes = [];
+  state.eraseRedo = [];
+  state.flatNote = null;
+  clearSelection();
+  setSelectionTool(null);
+  setEraser(false);
+  setResultActions(false);
+  if (state.downloadUrl) URL.revokeObjectURL(state.downloadUrl);
+  if (state.sourceUrl) URL.revokeObjectURL(state.sourceUrl);
+  state.downloadUrl = null;
+  state.sourceUrl = null;
+  els.resultView.src = EMPTY_IMAGE_SRC;
+  els.sourceView.src = EMPTY_IMAGE_SRC;
+  els.statPaths.textContent = "-";
+  els.statSize.textContent = "-";
+  els.statTime.textContent = "-";
+  els.emptyState.hidden = true;
+  els.workspace.hidden = false;
+  setBusy(true, "Loading image…");
   try {
     const decoded = await decodeImage(file);
     const sourceWidth = decoded.width;
@@ -666,7 +694,6 @@ async function loadFile(file) {
     }
     // Settings survive image replacement (batch workflows tune once,
     // convert many); flat-image detection below still adjusts colors.
-    state.bitmap?.close();
     state.bitmap = bitmap;
     state.file = file;
     state.rotation = 0;
@@ -694,7 +721,11 @@ async function loadFile(file) {
     await retrace();
     els.preview.focus({ preventScroll: false });
   } catch (err) {
-    if (token === state.loadToken) showError(err.message || "Could not open that file.");
+    if (token === state.loadToken) {
+      setBusy(false);
+      els.status.textContent = "";
+      showError(err.message || "Could not open that file.");
+    }
   }
 }
 
