@@ -33,7 +33,9 @@ Convert raster images to clean, scalable SVG vectors entirely in your browser. [
 - DXF export (R12) for CAD, CNC, and cutters: one closed polyline per shape, one layer per color, mm units when a physical size is set
 - Settings persist across visits and image replacements (flat-image detection still tunes colors per image); one-click Reset settings
 - Works offline after the first visit (service worker, everything stays local)
-- Zoomable preview: pinch, scroll wheel, or buttons; drag to pan
+- Zoomable preview: pinch, scroll wheel, buttons, Fit, or Actual size (1:1); drag to pan
+- Vector eraser with a zoom-aware circular cursor, adjustable diameter, `[` and `]` size shortcuts, undo/redo, and Restore Original. Cleanup masks are included in SVG and PNG exports.
+- Photoshop-style rectangular and elliptical marquees plus a point-to-point polygonal lasso. Use `M`, `Shift+M`, or `L`, hold Shift to constrain proportions, hold Alt/Option to draw from center, then press Delete/Backspace to remove the selected area.
 - Rotate the loaded image in 90 degree steps
 - Trace size capped at 2048 px on the longest side: small images upscale for smoother curves, large photos downscale proportionally (the status line reports the applied scale). Opt-in Ultra mode raises the cap to 4096 px for the cleanest fabrication exports (slower, high memory)
 - Guidance built in: photographic sources and high path counts get footer status suggestions, with the full settings guide available from Help

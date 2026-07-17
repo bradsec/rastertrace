@@ -43,7 +43,7 @@
     }
   </script>
 
-  <link rel="stylesheet" href="css/styles.css?v=44">
+  <link rel="stylesheet" href="css/styles.css?v=59">
 </head>
 <body>
   <header class="app-header">
@@ -66,6 +66,7 @@
         <button type="button" data-action="show-source">Show source</button>
         <hr>
         <button type="button" data-action="zoom-fit">Fit preview<span>0</span></button>
+        <button type="button" data-action="zoom-actual">Actual size (1:1)<span>Ctrl+1</span></button>
         <button type="button" data-action="zoom-in">Zoom in<span>+</span></button>
         <button type="button" data-action="zoom-out">Zoom out<span>-</span></button>
       </div></details>
@@ -75,10 +76,32 @@
       </div></details>
     </div>
     <div class="header-canvas-tools">
-      <div class="zoom-controls" role="group" aria-label="Zoom">
-        <button type="button" id="zoom-out" class="header-tool" aria-label="Zoom out" title="Zoom out (-)">&minus;</button>
-        <button type="button" id="zoom-reset" class="header-tool zoom-level" aria-label="Reset zoom to fit" title="Reset zoom and position (0)">Fit</button>
-        <button type="button" id="zoom-in" class="header-tool" aria-label="Zoom in" title="Zoom in (+)">+</button>
+      <div class="eraser-controls" role="group" aria-label="Vector eraser">
+        <span class="eraser-tool-label">Eraser</span>
+        <button type="button" id="eraser-tool" class="header-tool eraser-tool" aria-label="Eraser tool" aria-pressed="false" disabled title="Erase parts of the vector result (E)">
+          <svg class="cleanup-tool-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m14.5 5.2 4.3 4.3a2 2 0 0 1 0 2.8l-6.9 6.9a2.7 2.7 0 0 1-3.8 0l-3.3-3.3a2.7 2.7 0 0 1 0-3.8l6.9-6.9a2 2 0 0 1 2.8 0Z"/><path d="m7.2 9.8 7 7"/><path d="M10.8 20h8.7"/></svg>
+        </button>
+        <label class="eraser-size" for="eraser-size" title="Eraser diameter. Use [ and ] to adjust">
+          <span>Size</span>
+          <input type="range" id="eraser-size" min="2" max="240" step="1" value="32" disabled>
+          <output id="eraser-size-out" for="eraser-size">32 px</output>
+        </label>
+        <button type="button" id="marquee-rect" class="header-tool cleanup-tool" aria-label="Rectangular marquee" aria-pressed="false" disabled title="Rectangular marquee (M)">
+          <svg class="cleanup-tool-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true" focusable="false"><rect x="3.5" y="5" width="17" height="14" rx="1" stroke-dasharray="3 2.5"/></svg>
+        </button>
+        <button type="button" id="marquee-ellipse" class="header-tool cleanup-tool" aria-label="Elliptical marquee" aria-pressed="false" disabled title="Elliptical marquee (Shift+M)">
+          <svg class="cleanup-tool-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true" focusable="false"><ellipse cx="12" cy="12" rx="8.5" ry="7" stroke-dasharray="3 2.5"/></svg>
+        </button>
+        <button type="button" id="polygon-lasso" class="header-tool cleanup-tool" aria-label="Polygonal lasso" aria-pressed="false" disabled title="Polygonal lasso (L)">
+          <svg class="cleanup-tool-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5 6.5 18.5 4 20 15.5 9 20 4 13Z" stroke-dasharray="3 2.5"/><circle cx="5" cy="6.5" r="1.25" fill="currentColor" stroke="none"/><circle cx="18.5" cy="4" r="1.25" fill="currentColor" stroke="none"/><circle cx="20" cy="15.5" r="1.25" fill="currentColor" stroke="none"/></svg>
+        </button>
+        <button type="button" id="eraser-undo" class="header-tool eraser-action" aria-label="Undo cleanup" disabled title="Undo cleanup (Ctrl/Cmd+Z)">
+          <svg class="cleanup-tool-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M9 7 4 12l5 5"/><path d="M5 12h8.5a6 6 0 0 1 6 6"/></svg>
+        </button>
+        <button type="button" id="eraser-redo" class="header-tool eraser-action" aria-label="Redo cleanup" disabled title="Redo cleanup (Ctrl/Cmd+Shift+Z)">
+          <svg class="cleanup-tool-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m15 7 5 5-5 5"/><path d="M19 12h-8.5a6 6 0 0 0-6 6"/></svg>
+        </button>
+        <button type="button" id="eraser-clear" class="header-tool eraser-action restore-original" disabled title="Remove all manual cleanup and restore the traced result">Restore Original</button>
       </div>
     </div>
     <div class="topbar-actions" role="group" aria-label="Quick actions">
@@ -334,6 +357,11 @@
           <div id="tracing-veil" class="tracing-veil" hidden>
             <p><span id="veil-stage">Tracing…</span> <span id="veil-elapsed" class="veil-elapsed"></span></p>
           </div>
+          <div id="eraser-cursor" class="eraser-cursor" aria-hidden="true" hidden></div>
+          <svg id="selection-overlay" class="selection-overlay" preserveAspectRatio="none" aria-hidden="true" hidden>
+            <rect class="selection-ants-dark" vector-effect="non-scaling-stroke"/>
+            <rect class="selection-ants-light" vector-effect="non-scaling-stroke"/>
+          </svg>
         </div>
 
       </div>
@@ -357,6 +385,7 @@
             <div><dt>Grayscale, Denoise, Crisp</dt><dd>Grayscale converts to gray tones before tracing. Denoise smooths photo noise (softens pixel art). Crisp edges sharpens corner tracing for text and logos.</dd></div>
             <div><dt>Background removal</dt><dd>Makes the background transparent: connected-from-edges, auto-detected color, or a picked color. Tolerance widens the match; edge trim and defringe clean the cutout boundary.</dd></div>
             <div><dt>SVG export</dt><dd>Source pixels or a custom px, mm, cm, or in output size, plus minified output for the smallest file. Applied instantly without re-tracing.</dd></div>
+            <div><dt>Manual cleanup tools</dt><dd>Press E for the circular eraser, M or Shift+M for box and circle selections, and L for the polygonal lasso. Delete removes a finished selection; Ctrl/Cmd+Z restores the last removed area.</dd></div>
           </dl>
 
           <h2>SVG export guide</h2>
@@ -395,6 +424,11 @@
       <span>github.com/bradsec/rastertrace</span>
     </a>
     <span class="app-version" id="app-version"></span>
+    <div class="zoom-controls status-zoom" role="group" aria-label="Zoom">
+      <button type="button" id="zoom-out" class="header-tool" aria-label="Zoom out" title="Zoom out (-)">&minus;</button>
+      <button type="button" id="zoom-reset" class="header-tool zoom-level" aria-label="Reset zoom to fit" title="Reset zoom and position (0)">Fit</button>
+      <button type="button" id="zoom-in" class="header-tool" aria-label="Zoom in" title="Zoom in (+)">+</button>
+    </div>
   </footer>
 
   <dialog id="preferences-dialog" aria-labelledby="preferences-title">
@@ -426,6 +460,6 @@
     </form>
   </dialog>
 
-  <script type="module" src="js/app.js?v=46"></script>
+  <script type="module" src="js/app.js?v=55"></script>
 </body>
 </html>
