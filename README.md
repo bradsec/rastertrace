@@ -4,6 +4,8 @@ Convert raster images to clean, scalable SVG vectors entirely in your browser. [
 
 **Live app: https://rastertrace.com/**
 
+![RasterTrace app interface](screenshot.png)
+
 ## Features
 
 - PNG, JPEG, WebP, GIF, BMP input (anything the browser decodes)
