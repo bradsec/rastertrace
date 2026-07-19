@@ -1,5 +1,5 @@
 // Browser-side pipeline: decode, premultiplied upscale, worker round-trip.
-import { assertRasterBudget, MAX_TRACE_SIDE } from "./preprocess.js?v=39";
+import { assertRasterBudget, MAX_TRACE_SIDE } from "./preprocess.js?v=40";
 
 export async function sniffImageSize(file) {
   const bytes = new Uint8Array(await file.slice(0, 256 * 1024).arrayBuffer());
@@ -197,11 +197,15 @@ export function rasterize(bitmap, scale, nearest = false) {
 /**
  * Serialize trace requests to a single worker. Only the latest request
  * matters: stale responses are dropped so slider scrubbing never shows
- * an out-of-date result.
+ * an out-of-date result. A superseded request younger than
+ * `terminateAfterMs` keeps the worker alive (its late reply is dropped);
+ * older ones terminate the worker to reclaim the CPU, paying one wasm
+ * re-init instead of one per scrub step.
  */
 export class Tracer {
-  constructor(workerUrl) {
+  constructor(workerUrl, { terminateAfterMs = 1000 } = {}) {
     this.workerUrl = workerUrl;
+    this.terminateAfterMs = terminateAfterMs;
     this.nextId = 0;
     this.pending = new Map();
     this.onProgress = null; // (stageLabel) => void, latest request only
@@ -231,9 +235,13 @@ export class Tracer {
     };
   }
 
-  cancelPending() {
+  dropPending() {
     for (const entry of this.pending.values()) entry.resolve(null);
     this.pending.clear();
+  }
+
+  cancelPending() {
+    this.dropPending();
     this.worker.terminate();
     this.startWorker();
   }
@@ -243,7 +251,11 @@ export class Tracer {
    * { svg, ms, knockedOut } or null when superseded by a newer request.
    */
   trace(imageData, settings, sourceWidth, sourceHeight) {
-    if (this.pending.size) this.cancelPending();
+    if (this.pending.size) {
+      const oldest = this.pending.values().next().value;
+      if (Date.now() - oldest.postedAt > this.terminateAfterMs) this.cancelPending();
+      else this.dropPending();
+    }
     const id = this.nextId++;
     // Copy: the buffer transfers to the worker and would detach the
     // caller's ImageData otherwise.
@@ -253,7 +265,7 @@ export class Tracer {
       height: imageData.height,
     };
     return new Promise((resolve, reject) => {
-      this.pending.set(id, { resolve, reject });
+      this.pending.set(id, { resolve, reject, postedAt: Date.now() });
       this.worker.postMessage({ id, img, settings, sourceWidth, sourceHeight }, [
         img.data.buffer,
       ]);

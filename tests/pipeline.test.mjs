@@ -96,32 +96,55 @@ test("invertRGBA applied twice restores the original", () => {
   assert.deepEqual([...data], [...original]);
 });
 
-test("Tracer cancels stale worker work before posting the next trace", async () => {
+function withFakeWorkers(fn) {
   const OriginalWorker = globalThis.Worker;
   const workers = [];
   class FakeWorker {
     constructor() {
       this.terminated = false;
+      this.messages = [];
       workers.push(this);
     }
     postMessage(message) {
-      this.message = message;
+      this.messages.push(message);
     }
     terminate() {
       this.terminated = true;
     }
   }
   globalThis.Worker = FakeWorker;
-  try {
+  return Promise.resolve(fn(workers)).finally(() => {
+    globalThis.Worker = OriginalWorker;
+  });
+}
+
+const IMAGE = { data: new Uint8ClampedArray([1, 2, 3, 4]), width: 1, height: 1 };
+
+test("Tracer keeps the worker alive when superseding a young request", () =>
+  withFakeWorkers(async (workers) => {
     const tracer = new Tracer("worker.js");
-    const imageData = { data: new Uint8ClampedArray([1, 2, 3, 4]), width: 1, height: 1 };
-    const stale = tracer.trace(imageData, {}, 1, 1);
-    const latest = tracer.trace(imageData, {}, 1, 1);
+    const stale = tracer.trace(IMAGE, {}, 1, 1);
+    const latest = tracer.trace(IMAGE, {}, 1, 1);
+    assert.equal(await stale, null);
+    // No terminate/restart: a scrub would otherwise re-init wasm per step.
+    assert.equal(workers.length, 1);
+    assert.equal(workers[0].terminated, false);
+    // The stale message still reaches the worker; its late reply is dropped.
+    assert.equal(workers[0].messages.length, 2);
+    workers[0].onmessage({ data: { id: workers[0].messages[0].id, svg: "<svg>old</svg>", ms: 1 } });
+    workers[0].onmessage({ data: { id: workers[0].messages[1].id, svg: "<svg></svg>", ms: 1 } });
+    assert.deepEqual(await latest, { id: 1, svg: "<svg></svg>", ms: 1 });
+  }));
+
+test("Tracer terminates a long-running trace before posting the next one", () =>
+  withFakeWorkers(async (workers) => {
+    const tracer = new Tracer("worker.js", { terminateAfterMs: 0 });
+    const stale = tracer.trace(IMAGE, {}, 1, 1);
+    await new Promise((resolve) => setTimeout(resolve, 5));
+    const latest = tracer.trace(IMAGE, {}, 1, 1);
     assert.equal(await stale, null);
     assert.equal(workers[0].terminated, true);
-    workers[1].onmessage({ data: { id: workers[1].message.id, svg: "<svg></svg>", ms: 1 } });
+    assert.equal(workers.length, 2);
+    workers[1].onmessage({ data: { id: workers[1].messages[0].id, svg: "<svg></svg>", ms: 1 } });
     assert.deepEqual(await latest, { id: 1, svg: "<svg></svg>", ms: 1 });
-  } finally {
-    globalThis.Worker = OriginalWorker;
-  }
-});
+  }));
