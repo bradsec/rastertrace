@@ -9,6 +9,7 @@ import {
   fillTransparent,
   MAX_TRACE_PIXELS,
   binarizeAlpha,
+  compressSvgPaths,
   countPaths,
   defringeAlpha,
   detectBackgroundColor,
@@ -25,6 +26,7 @@ import {
   parseHexColor,
   quantize,
   srgbToOklab,
+  straightenPaths,
   removeBackground,
   resolveSettings,
   sanitizeSettings,
@@ -786,4 +788,123 @@ test("analyzeFlatness counts colors needed for 95% coverage", () => {
   const result = analyzeFlatness(img);
   assert.equal(result.flat, true);
   assert.equal(result.colorCount, 5);
+});
+
+test("straightenPaths converts near-straight cubics to lines", () => {
+  const svg = '<path d="M0 0 C10 0.05 20 -0.05 30 0 Z " fill="#000000" transform="translate(0,0)"/>';
+  const out = straightenPaths(svg, 0.5);
+  assert.match(out, /d="M0 0 L30 0 Z "/);
+  // fill and transform stay untouched
+  assert.match(out, /fill="#000000" transform="translate\(0,0\)"/);
+});
+
+test("straightenPaths keeps genuinely curved cubics", () => {
+  const svg = '<path d="M0 0 C10 10 20 10 30 0 Z "/>';
+  assert.equal(straightenPaths(svg, 0.5), svg);
+});
+
+test("straightenPaths merges collinear line runs", () => {
+  const svg = '<path d="M0 0 L10 0.1 L20 -0.1 L30 0 L30 30 Z "/>';
+  const out = straightenPaths(svg, 0.5);
+  assert.match(out, /d="M0 0 L30 0 L30 30 Z "/);
+});
+
+test("straightenPaths merges lines produced from converted cubics", () => {
+  const svg = '<path d="M0 0 C5 0.05 10 -0.05 15 0 L30 0.1 L45 0 L45 45 Z "/>';
+  const out = straightenPaths(svg, 0.5);
+  assert.match(out, /d="M0 0 L45 0 L45 45 Z "/);
+});
+
+test("straightenPaths does not merge across corners", () => {
+  const svg = '<path d="M0 0 L10 0 L10 10 L0 10 Z "/>';
+  assert.equal(straightenPaths(svg, 0.5), svg);
+});
+
+test("straightenPaths handles compound subpaths independently", () => {
+  const svg = '<path d="M0 0 L10 0.1 L20 0 L20 20 Z M5 5 L8 5.05 L11 5 L11 11 Z "/>';
+  const out = straightenPaths(svg, 0.5);
+  assert.match(out, /d="M0 0 L20 0 L20 20 Z M5 5 L11 5 L11 11 Z "/);
+});
+
+test("straightenPaths at tolerance 0 returns input unchanged", () => {
+  const svg = '<path d="M0 0 C10 0.05 20 -0.05 30 0 Z "/>';
+  assert.equal(straightenPaths(svg, 0), svg);
+});
+
+test("straightenPaths output still parses for DXF/PDF export", async () => {
+  const { parseSvgPaths } = await import("../js/vectorexport.js");
+  const svg = [
+    '<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 200 200">',
+    '<path d="M0 0 L100 0.2 L200 0 C200 50 200 150 200 200 L0 200 Z " fill="#123456" transform="translate(3,4)"/>',
+    "</svg>",
+  ].join("\n");
+  const out = straightenPaths(svg, 0.5);
+  const parsed = parseSvgPaths(out);
+  assert.equal(parsed.paths.length, 1);
+  const sub = parsed.paths[0].subpaths[0];
+  assert.equal(sub.closed, true);
+  // translate still applies and the wobbly top edge collapsed to one line
+  assert.deepEqual(sub.start, { x: 3, y: 4 });
+  assert.deepEqual(sub.segments[0], { kind: "line", to: { x: 203, y: 4 } });
+});
+
+test("straighten setting has a default, validates, and appears in profiles", () => {
+  assert.equal(DEFAULTS.straighten, 0);
+  assert.deepEqual(sanitizeSettings({ straighten: 1.5 }), { straighten: 1.5 });
+  assert.deepEqual(sanitizeSettings({ straighten: -1 }), {});
+  assert.deepEqual(sanitizeSettings({ straighten: 99 }), {});
+  for (const [name, profile] of Object.entries(EXPORT_PROFILES)) {
+    assert.ok(Number.isFinite(profile.straighten), `${name} missing straighten`);
+  }
+});
+
+test("compressSvgPaths bakes translate into coordinates and drops the transform", () => {
+  const svg = '<path d="M10 10 L20 10 Z " fill="#000000" transform="translate(5,5)"/>';
+  const out = compressSvgPaths(svg);
+  assert.match(out, /d="M15 15h10z"/);
+  assert.doesNotMatch(out, /transform=/);
+  assert.match(out, /fill="#000000"/);
+});
+
+test("compressSvgPaths converts to relative commands with h/v shorthands", () => {
+  const svg = '<path d="M10 10 L20 10 L20 20 L10 20 Z "/>';
+  assert.equal(compressSvgPaths(svg), '<path d="M10 10h10v10h-10z"/>');
+});
+
+test("compressSvgPaths uses implicit command repetition and tight separators", () => {
+  const svg = '<path d="M0 0 L5 1 L10 3 L4 -2 Z "/>';
+  assert.equal(compressSvgPaths(svg), '<path d="M0 0l5 1 5 2-6-5z"/>');
+});
+
+test("compressSvgPaths converts smooth curve pairs to s", () => {
+  const svg = '<path d="M0 0 C10 0 20 10 30 10 C40 10 50 0 60 0 Z "/>';
+  assert.equal(compressSvgPaths(svg), '<path d="M0 0c10 0 20 10 30 10s20-10 30-10z"/>');
+});
+
+test("compressSvgPaths keeps compound subpaths with relative m", () => {
+  const svg = '<path d="M0 0 L10 0 L10 10 Z M20 20 L30 20 L30 30 Z "/>';
+  assert.equal(compressSvgPaths(svg), '<path d="M0 0h10v10zm20 20h10v10z"/>');
+});
+
+test("compressSvgPaths trims number noise", () => {
+  const svg = '<path d="M0.50 -0.25 L10.50 -0.25 Z "/>';
+  assert.equal(compressSvgPaths(svg), '<path d="M.5-.25h10z"/>');
+});
+
+test("compressSvgPaths leaves non-translate transforms and odd commands alone", () => {
+  const svg = '<path d="M0 0 A5 5 0 0 1 10 10" transform="rotate(45)"/>';
+  assert.equal(compressSvgPaths(svg), svg);
+});
+
+test("compressSvgPaths shrinks realistic traced output", () => {
+  const svg = '<path d="M100 100 L200.25 100.5 L200.25 200.75 L100 200.75 Z M300 300 C310 300 320 310 320 320 L300 320 Z " fill="#123456" transform="translate(7,9)"/>';
+  const out = compressSvgPaths(svg);
+  assert.ok(out.length < svg.length * 0.75, `only got ${out.length}/${svg.length}`);
+});
+
+test("applyExportOptions minify also compresses path data", () => {
+  const svg = '<?xml version="1.0"?>\n<svg width="10" height="10" viewBox="0 0 10 10">\n<path d="M0 0 L5 0 L5 5 Z " fill="#000000" transform="translate(1,1)"/>\n</svg>';
+  const out = applyExportOptions(svg, { minify: true });
+  assert.doesNotMatch(out, /<\?xml|transform=/);
+  assert.match(out, /d="M1 1h5v5z"/);
 });

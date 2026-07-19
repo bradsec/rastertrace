@@ -296,6 +296,11 @@
         </div>
 
         <div class="field">
+          <div class="label-row"><label for="straighten" title="Snap slightly wobbly or bumpy edges to true straight lines. Higher values straighten more aggressively; corners and real curves are kept">Straighten lines</label> <output id="straighten-out" for="straighten">Off</output></div>
+          <input type="range" id="straighten" min="0" max="4" step="0.5" value="0">
+        </div>
+
+        <div class="field">
           <label for="hierarchical" title="Stacked: shapes layer on top of each other (smallest files). Cutout: non-overlapping shapes that tile edge to edge; best for laser cutting, vinyl, and CNC">Layering</label>
           <select id="hierarchical">
             <option value="stacked">Stacked (default)</option>
@@ -484,6 +489,6 @@
     </form>
   </dialog>
 
-  <script type="module" src="js/app.js?v=61"></script>
+  <script type="module" src="js/app.js?v=62"></script>
 </body>
 </html>

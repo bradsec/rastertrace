@@ -1,5 +1,5 @@
 // UI wiring: state, controls, preview, download.
-import { capBitmap, decodeImage, invertBitmap, rasterize, rotateBitmap, Tracer } from "./pipeline.js?v=39";
+import { capBitmap, decodeImage, invertBitmap, rasterize, rotateBitmap, Tracer } from "./pipeline.js?v=40";
 import { parseSvgPaths, toDxf, toPdf } from "./vectorexport.js?v=39";
 import { applyEraserMask, snapPointToAngle, svgViewBox } from "./eraser.js?v=3";
 import {
@@ -40,6 +40,8 @@ const els = {
   layerDiffOut: $("layer-diff-out"),
   cornerThreshold: $("corner-threshold"),
   cornerThresholdOut: $("corner-threshold-out"),
+  straighten: $("straighten"),
+  straightenOut: $("straighten-out"),
   hierarchical: $("hierarchical"),
   upscale: $("upscale"),
   pathPrecision: $("path-precision"),
@@ -199,7 +201,7 @@ function formatDimensionsFromInches(width, height) {
   return `${displayWidth.toFixed(digits)}×${displayHeight.toFixed(digits)} ${unit}`;
 }
 
-const tracer = new Tracer(new URL("./worker.js?v=39", import.meta.url));
+const tracer = new Tracer(new URL("./worker.js?v=40", import.meta.url));
 
 function currentSettings() {
   return {
@@ -207,6 +209,7 @@ function currentSettings() {
     speckle: Number(els.speckle.value),
     layerDiff: Number(els.layerDiff.value),
     cornerThreshold: Number(els.cornerThreshold.value),
+    straighten: Number(els.straighten.value),
     hierarchical: els.hierarchical.value,
     upscale: els.upscale.value === "auto" || els.upscale.value === "ultra"
       ? els.upscale.value
@@ -238,6 +241,7 @@ function updateOutputs() {
   els.speckleOut.textContent = els.speckle.value;
   els.layerDiffOut.textContent = els.layerDiff.value;
   els.cornerThresholdOut.textContent = els.cornerThreshold.value;
+  els.straightenOut.textContent = Number(els.straighten.value) === 0 ? "Off" : els.straighten.value;
   els.fuzzOut.textContent = els.fuzz.value;
   els.edgeTrimOut.textContent = els.edgeTrim.value;
   els.defringeOut.textContent = els.defringe.value;
@@ -278,6 +282,7 @@ function applyExportProfile(name) {
   els.speckle.value = String(profile.speckle);
   els.layerDiff.value = String(profile.layerDiff);
   els.cornerThreshold.value = String(profile.cornerThreshold);
+  els.straighten.value = String(profile.straighten);
   document.querySelector(`input[name="mode"][value="${profile.mode}"]`).checked = true;
   els.hierarchical.value = profile.hierarchical;
   els.upscale.value = String(profile.upscale);
@@ -308,6 +313,7 @@ function snapshotSettings() {
     speckle: Number(els.speckle.value),
     layerDiff: Number(els.layerDiff.value),
     cornerThreshold: Number(els.cornerThreshold.value),
+    straighten: Number(els.straighten.value),
     hierarchical: els.hierarchical.value,
     upscale: els.upscale.value === "auto" || els.upscale.value === "ultra"
       ? els.upscale.value
@@ -366,6 +372,7 @@ function restoreSettings() {
   set(els.speckle, "speckle");
   set(els.layerDiff, "layerDiff");
   set(els.cornerThreshold, "cornerThreshold");
+  set(els.straighten, "straighten");
   set(els.hierarchical, "hierarchical");
   set(els.upscale, "upscale");
   if (saved.mode) {
@@ -426,6 +433,7 @@ function resetSettings() {
   els.speckle.value = String(DEFAULTS.speckle);
   els.layerDiff.value = String(DEFAULTS.layerDiff);
   els.cornerThreshold.value = String(DEFAULTS.cornerThreshold);
+  els.straighten.value = String(DEFAULTS.straighten);
   els.hierarchical.value = DEFAULTS.hierarchical;
   els.upscale.value = String(DEFAULTS.upscale);
   document.querySelector(`input[name="mode"][value="${DEFAULTS.mode}"]`).checked = true;
@@ -1027,6 +1035,11 @@ els.hierarchical.addEventListener("change", () => {
   scheduleRetrace();
 });
 els.cornerThreshold.addEventListener("input", () => {
+  clearProfile();
+  updateOutputs();
+  scheduleRetrace();
+});
+els.straighten.addEventListener("input", () => {
   clearProfile();
   updateOutputs();
   scheduleRetrace();

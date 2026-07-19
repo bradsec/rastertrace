@@ -65,6 +65,7 @@ export const DEFAULTS = Object.freeze({
   pathPrecision: 3,
   lengthThreshold: 4,
   spliceThreshold: 45,
+  straighten: 0,
 });
 
 // Keyed by color count. Speckle and layer difference scale inversely:
@@ -88,16 +89,17 @@ export const PRESETS = Object.freeze({
 // afterwards. pathPrecision/spliceThreshold feed the tracer directly;
 // minify/stencil toggle post-processing and binary color mode.
 export const EXPORT_PROFILES = Object.freeze({
-  web: { colors: 16, speckle: 10, layerDiff: 24, mode: "spline", cornerThreshold: 60, hierarchical: "stacked", pathPrecision: 1, upscale: 2, minify: true, stencil: false },
-  balanced: { colors: 256, speckle: 8, layerDiff: 16, mode: "spline", cornerThreshold: 60, hierarchical: "stacked", pathPrecision: 2, upscale: 2, minify: false, stencil: false },
-  detail: { colors: 64, speckle: 2, layerDiff: 8, mode: "spline", cornerThreshold: 45, hierarchical: "stacked", pathPrecision: 4, spliceThreshold: 30, upscale: "auto", minify: false, stencil: false },
-  print: { colors: 8, speckle: 12, layerDiff: 28, mode: "spline", cornerThreshold: 45, hierarchical: "stacked", pathPrecision: 3, upscale: "auto", minify: false, stencil: false },
-  laser: { colors: 2, speckle: 12, layerDiff: 48, mode: "spline", cornerThreshold: 30, hierarchical: "stacked", pathPrecision: 3, upscale: "auto", minify: false, stencil: true },
+  web: { colors: 16, speckle: 10, layerDiff: 24, mode: "spline", cornerThreshold: 60, hierarchical: "stacked", pathPrecision: 1, upscale: 2, straighten: 1, minify: true, stencil: false },
+  balanced: { colors: 256, speckle: 8, layerDiff: 16, mode: "spline", cornerThreshold: 60, hierarchical: "stacked", pathPrecision: 2, upscale: 2, straighten: 0.5, minify: false, stencil: false },
+  detail: { colors: 64, speckle: 2, layerDiff: 8, mode: "spline", cornerThreshold: 45, hierarchical: "stacked", pathPrecision: 4, spliceThreshold: 30, upscale: "auto", straighten: 0, minify: false, stencil: false },
+  print: { colors: 8, speckle: 12, layerDiff: 28, mode: "spline", cornerThreshold: 45, hierarchical: "stacked", pathPrecision: 3, upscale: "auto", straighten: 1, minify: false, stencil: false },
+  laser: { colors: 2, speckle: 12, layerDiff: 48, mode: "spline", cornerThreshold: 30, hierarchical: "stacked", pathPrecision: 3, upscale: "auto", straighten: 1.5, minify: false, stencil: true },
 });
 
 /**
  * Post-process a finalized SVG for export. Options:
- * - minify: drop the XML declaration and generator comment.
+ * - minify: drop the XML declaration and generator comment, and compress
+ *   path data (relative commands, baked translates).
  * - physicalWidth + physicalUnit ("px"|"mm"|"cm"|"in"): rewrite the root
  *   width/height to the requested unit, height from the pixel aspect ratio,
  *   keeping the viewBox so the file still scales.
@@ -106,7 +108,7 @@ export const EXPORT_PROFILES = Object.freeze({
 export function applyExportOptions(svgText, { physicalWidth, physicalUnit, title, minify } = {}) {
   let out = svgText;
   if (minify) {
-    out = out.replace(/^<\?xml[^?]*\?>\s*/, "").replace(/^<!--.*?-->\s*/s, "");
+    out = compressSvgPaths(out.replace(/^<\?xml[^?]*\?>\s*/, "").replace(/^<!--.*?-->\s*/s, ""));
   }
   if (physicalWidth > 0 && physicalUnit) {
     out = out.replace(
@@ -120,6 +122,166 @@ export function applyExportOptions(svgText, { physicalWidth, physicalUnit, title
   if (title) {
     const escaped = String(title).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
     out = out.replace(/(<svg[^>]*)>/, (_, head) => `${head} role="img">\n<title>${escaped}</title>`);
+  }
+  return out;
+}
+
+// Compact decimal for compressed path data: at most 4 places, trailing
+// zeros trimmed, "0.5" as ".5", "-0" as "0".
+function compactNum(n) {
+  let s = n.toFixed(4).replace(/(\.\d*?)0+$/, "$1").replace(/\.$/, "");
+  if (s === "-0") s = "0";
+  return s.replace(/^(-?)0\./, "$1.");
+}
+
+/**
+ * Shrink traced SVG path data for export: bakes each path's
+ * translate() into its coordinates, converts absolute M/L/C/Z commands
+ * to relative ones with h/v/s shorthands and implicit repetition, and
+ * trims number formatting. Paths with any other command or transform are
+ * left untouched. The output is for the SVG download only; it no longer
+ * matches the absolute shape parseSvgPaths expects.
+ */
+export function compressSvgPaths(svgText) {
+  return svgText.replace(/<path\b[^>]*\/>/g, (path) => {
+    const d = path.match(/\sd="([^"]*)"/)?.[1];
+    if (!d) return path;
+    const tr = path.match(/\stransform="([^"]*)"/)?.[1];
+    let dx = 0;
+    let dy = 0;
+    if (tr) {
+      const m = tr.match(/^translate\((-?[\d.]+)[, ](-?[\d.]+)\)$/);
+      if (!m) return path;
+      dx = Number(m[1]);
+      dy = Number(m[2]);
+    }
+    const compressed = compressPathData(d, dx, dy);
+    if (compressed === null) return path;
+    return path
+      .replace(/(\sd=")[^"]*(")/, (_, head, tail) => head + compressed + tail)
+      .replace(/\s+transform="[^"]*"/, "");
+  });
+}
+
+function compressPathData(d, dx, dy) {
+  const tokens = d.match(/-?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?|[A-Za-z]/g) || [];
+  let out = "";
+  let lastNum = "";
+  let lastCmd = "";
+  // Position a renderer of the emitted data has reached: deltas are
+  // computed against it so rounding never accumulates into drift.
+  let ex = 0;
+  let ey = 0;
+  let startX = 0;
+  let startY = 0;
+  let prevC2 = null; // absolute second control point of a preceding c/s
+  let i = 0;
+  const read = () => Number(tokens[i++]);
+
+  const cmd = (letter) => {
+    if (letter === lastCmd && (letter === "l" || letter === "c" || letter === "s")) return;
+    out += letter;
+    lastCmd = letter;
+    lastNum = "";
+  };
+  const num = (n) => {
+    const s = compactNum(n);
+    if (lastNum && !s.startsWith("-") && !(s.startsWith(".") && lastNum.includes("."))) {
+      out += " ";
+    }
+    out += s;
+    lastNum = s;
+  };
+
+  let op = null;
+  while (i < tokens.length) {
+    if (/^[A-Za-z]$/.test(tokens[i])) {
+      op = tokens[i++];
+      if (op === "Z" || op === "z") {
+        cmd("z");
+        ex = startX;
+        ey = startY;
+        prevC2 = null;
+        op = null;
+        continue;
+      }
+    }
+    switch (op) {
+      case "M": {
+        const x = read() + dx;
+        const y = read() + dy;
+        if (out === "") {
+          out = "M";
+          lastCmd = "M";
+          lastNum = "";
+          num(x);
+          num(y);
+        } else {
+          cmd("m");
+          lastCmd = ""; // pairs after m are implicit lineto, not m
+          num(x - ex);
+          num(y - ey);
+          lastCmd = "l";
+        }
+        ex = x;
+        ey = y;
+        startX = x;
+        startY = y;
+        prevC2 = null;
+        op = "L";
+        break;
+      }
+      case "L": {
+        const x = read() + dx;
+        const y = read() + dy;
+        const rx = Number(compactNum(x - ex));
+        const ry = Number(compactNum(y - ey));
+        if (ry === 0 && rx !== 0) {
+          cmd("h");
+          num(rx);
+        } else if (rx === 0 && ry !== 0) {
+          cmd("v");
+          num(ry);
+        } else {
+          cmd("l");
+          num(rx);
+          num(ry);
+        }
+        ex += rx;
+        ey += ry;
+        prevC2 = null;
+        break;
+      }
+      case "C": {
+        const c1x = read() + dx;
+        const c1y = read() + dy;
+        const c2x = read() + dx;
+        const c2y = read() + dy;
+        const x = read() + dx;
+        const y = read() + dy;
+        const smooth =
+          prevC2 &&
+          Math.abs(2 * ex - prevC2.x - c1x) < 5e-5 &&
+          Math.abs(2 * ey - prevC2.y - c1y) < 5e-5;
+        const coords = smooth ? [c2x, c2y, x, y] : [c1x, c1y, c2x, c2y, x, y];
+        cmd(smooth ? "s" : "c");
+        const emitted = [];
+        for (let k = 0; k < coords.length; k += 2) {
+          const rx = Number(compactNum(coords[k] - ex));
+          const ry = Number(compactNum(coords[k + 1] - ey));
+          num(rx);
+          num(ry);
+          emitted.push([rx, ry]);
+        }
+        const [lx, ly] = emitted[emitted.length - 1];
+        prevC2 = { x: ex + emitted[emitted.length - 2][0], y: ey + emitted[emitted.length - 2][1] };
+        ex += lx;
+        ey += ly;
+        break;
+      }
+      default:
+        return null; // unexpected command: leave the path untouched
+    }
   }
   return out;
 }
@@ -182,6 +344,7 @@ const SETTING_CHECKS = {
   pathPrecision: (v) => Number.isFinite(v) && v >= 1 && v <= 4,
   lengthThreshold: (v) => Number.isFinite(v) && v >= 3.5 && v <= 10,
   spliceThreshold: (v) => Number.isFinite(v) && v >= 10 && v <= 90,
+  straighten: (v) => Number.isFinite(v) && v >= 0 && v <= 4,
   exportSize: (v) => v === "px" || v === "physical",
   physicalWidth: (v) => Number.isFinite(v) && v > 0 && v <= 100000,
   physicalUnit: (v) => ["px", "mm", "cm", "in"].includes(v),
@@ -960,6 +1123,111 @@ export function groupSvgFills(svgText) {
     i = j + 1;
   }
   return out + svgText.slice(cursor);
+}
+
+/** Perpendicular distance from point p to the line through a and b. */
+function distanceToChord(p, a, b) {
+  const vx = b.x - a.x;
+  const vy = b.y - a.y;
+  const len = Math.hypot(vx, vy);
+  if (len < 1e-9) return Math.hypot(p.x - a.x, p.y - a.y);
+  return Math.abs((p.x - a.x) * vy - (p.y - a.y) * vx) / len;
+}
+
+const num = (n) => String(Number(n));
+
+/**
+ * Straighten traced path data: cubics whose control points sit within
+ * `tolerance` of their chord become lines, and runs of consecutive lines
+ * whose interior points sit within `tolerance` of the run's chord merge
+ * into one line. Corners survive because merging stops as soon as a
+ * point leaves the tolerance band. Output keeps the tracer's absolute
+ * M/L/C/Z shape, so parseSvgPaths and the eraser keep working.
+ */
+export function straightenPaths(svgText, tolerance) {
+  if (!(tolerance > 0)) return svgText;
+  return svgText.replace(/(<path\b[^>]*?\sd=")([^"]*)(")/g, (_, head, d, tail) => {
+    return head + straightenPathData(d, tolerance) + tail;
+  });
+}
+
+function straightenPathData(d, tolerance) {
+  const tokens = d.match(/-?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?|[A-Za-z]/g) || [];
+  let out = "";
+  let i = 0;
+  let cmd = null;
+  let point = { x: 0, y: 0 };
+  // Lines buffered for merging: linePoints[0] is the run's anchor.
+  let linePoints = [];
+  const read = () => Number(tokens[i++]);
+
+  const flushLines = () => {
+    while (linePoints.length > 1) {
+      const anchor = linePoints[0];
+      // Longest prefix whose interior points all fit the tolerance band.
+      let end = 1;
+      for (let j = 2; j < linePoints.length; j++) {
+        let fits = true;
+        for (let k = 1; k < j && fits; k++) {
+          fits = distanceToChord(linePoints[k], anchor, linePoints[j]) <= tolerance;
+        }
+        if (fits) end = j;
+        else break;
+      }
+      out += `L${num(linePoints[end].x)} ${num(linePoints[end].y)} `;
+      linePoints = linePoints.slice(end);
+    }
+    linePoints = [];
+  };
+
+  while (i < tokens.length) {
+    if (/^[A-Za-z]$/.test(tokens[i])) {
+      cmd = tokens[i++];
+      if (cmd === "Z" || cmd === "z") {
+        flushLines();
+        out += "Z ";
+        cmd = null;
+        continue;
+      }
+    }
+    switch (cmd) {
+      case "M": {
+        flushLines();
+        point = { x: read(), y: read() };
+        out += `M${num(point.x)} ${num(point.y)} `;
+        cmd = "L"; // extra pairs after M are implicit lines
+        break;
+      }
+      case "L": {
+        const to = { x: read(), y: read() };
+        if (!linePoints.length) linePoints.push(point);
+        linePoints.push(to);
+        point = to;
+        break;
+      }
+      case "C": {
+        const c1 = { x: read(), y: read() };
+        const c2 = { x: read(), y: read() };
+        const to = { x: read(), y: read() };
+        const straight =
+          distanceToChord(c1, point, to) <= tolerance &&
+          distanceToChord(c2, point, to) <= tolerance;
+        if (straight) {
+          if (!linePoints.length) linePoints.push(point);
+          linePoints.push(to);
+        } else {
+          flushLines();
+          out += `C${num(c1.x)} ${num(c1.y)} ${num(c2.x)} ${num(c2.y)} ${num(to.x)} ${num(to.y)} `;
+        }
+        point = to;
+        break;
+      }
+      default:
+        return d; // unexpected command: leave the path untouched
+    }
+  }
+  flushLines();
+  return out;
 }
 
 /**

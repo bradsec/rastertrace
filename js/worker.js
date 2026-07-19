@@ -10,9 +10,10 @@ import {
   modeFilter,
   quantize,
   removeBackground,
+  straightenPaths,
   thresholdImage,
   toGrayscale,
-} from "./preprocess.js?v=39";
+} from "./preprocess.js?v=40";
 
 // Explicit versioned URL: the glue's own wasm fetch drops the ?v= query,
 // so a rebuilt binary would otherwise be served from stale browser cache
@@ -105,7 +106,12 @@ self.onmessage = async (event) => {
       settings.pathPrecision ?? 3,
     );
 
-    const finalSvg = finalizeSvg(svg, sourceWidth, sourceHeight);
+    // Straighten after finalize so the tolerance applies to the same
+    // path data every export format consumes.
+    const finalSvg = straightenPaths(
+      finalizeSvg(svg, sourceWidth, sourceHeight),
+      settings.straighten ?? 0,
+    );
     self.postMessage({
       id,
       svg: finalSvg,
