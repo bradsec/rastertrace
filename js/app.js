@@ -12,7 +12,7 @@ import {
 } from "./preprocess.js?v=41";
 import { $, els, hooks, preferences, showError, state } from "./context.js?v=1";
 import { refreshExport, setResultActions } from "./exporters.js?v=2";
-import { clearSelection, setEraser, setSelectionTool, setView } from "./cleanup-tools.js?v=1";
+import { clearSelection, setEraser, setSelectionTool, setView } from "./cleanup-tools.js?v=2";
 import {
   applyExportProfile,
   applyMeasurementUnit,
@@ -28,8 +28,8 @@ import {
   updateOutputs,
   updateStencilFields,
   updateTransparencyFields,
-} from "./settings.js?v=1";
-import { actualSizeView, resetView } from "./view.js?v=1";
+} from "./settings.js?v=2";
+import { actualSizeView, resetView } from "./view.js?v=2";
 
 const EMPTY_IMAGE_SRC = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==";
 
