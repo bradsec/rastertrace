@@ -2,7 +2,7 @@
 // so offline is just caching. Assets are immutable (cache-busted with
 // ?v=NN), navigations and package.json are network-first so updates
 // still land on the next online load.
-const CACHE = "rastertrace-v4";
+const CACHE = "rastertrace-v5";
 
 self.addEventListener("install", () => {
   self.skipWaiting();
@@ -35,7 +35,12 @@ async function cacheFirst(request) {
   const hit = await cache.match(request);
   if (hit) return hit;
   const response = await fetch(request);
-  if (response.ok) {
+  // Never cache an HTML body under an asset URL: the host serves
+  // index.html with a 200 for paths that do not exist yet, so a request
+  // racing a deploy would otherwise pin that fallback page under a
+  // script URL forever and break every later load.
+  const isHtmlFallback = (response.headers.get("content-type") || "").includes("text/html");
+  if (response.ok && !isHtmlFallback) {
     cache.put(request, response.clone());
     // A new ?v= means the old version of the same file is dead weight.
     const url = new URL(request.url);

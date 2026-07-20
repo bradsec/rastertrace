@@ -489,6 +489,32 @@
     </form>
   </dialog>
 
-  <script type="module" src="js/app.js?v=64"></script>
+  <!-- Boot guard: if the module graph fails to load (e.g. the service
+       worker cached an HTML fallback under a script URL during a deploy),
+       app.js never runs and cannot recover itself. This inline script
+       purges every cache and service worker and reloads once. -->
+  <script>
+    window.addEventListener("load", () => {
+      setTimeout(async () => {
+        if (window.__rastertraceBooted) return;
+        const marker = "rastertrace-boot-recovered";
+        try {
+          if (sessionStorage.getItem(marker)) return;
+          sessionStorage.setItem(marker, "1");
+        } catch {
+          return; // no sessionStorage: cannot guard against a reload loop
+        }
+        try {
+          for (const key of await caches.keys()) await caches.delete(key);
+          const registrations = (await navigator.serviceWorker?.getRegistrations?.()) ?? [];
+          await Promise.all(registrations.map((registration) => registration.unregister()));
+        } catch {
+          // caches API unavailable: the reload alone may still fetch fresh files
+        }
+        location.reload();
+      }, 3000);
+    });
+  </script>
+  <script type="module" src="js/app.js?v=65"></script>
 </body>
 </html>
