@@ -83,7 +83,11 @@ body {
 .menu-popover { position: absolute; top: calc(100% - 4px); left: 0; display: grid; width: max-content;
   max-width: calc(100vw - 16px); padding: 5px; border: 1px solid var(--border-strong); border-radius: 6px;
   background: #282c31; box-shadow: 0 14px 36px rgb(0 0 0 / 45%);
-  font: 13px/1.4 ui-sans-serif, system-ui, sans-serif; }
+  font: 13px/1.4 ui-sans-serif, system-ui, sans-serif;
+  /* Above later header siblings: disabled tools' opacity creates stacking
+     contexts that otherwise paint over the popover when the toolbar wraps
+     under the menu bar on narrow screens. */
+  z-index: 2; }
 .menu-popover button, .menu-popover > a { display: flex; width: 100%; min-height: 30px; align-items: center;
   justify-content: space-between; gap: 24px; padding: 5px 8px; border: 0; border-radius: var(--r);
   background: transparent; color: inherit; font: inherit; text-align: left; text-decoration: none;
