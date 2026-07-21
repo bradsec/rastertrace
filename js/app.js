@@ -10,7 +10,7 @@ import {
   MAX_TRACE_SIDE_ULTRA,
   PRESETS,
 } from "./preprocess.js?v=42";
-import { $, els, hooks, preferences, showError, state } from "./context.js?v=1";
+import { $, els, hooks, preferences, showError, state } from "./context.js?v=2";
 import { refreshExport, setResultActions } from "./exporters.js?v=2";
 import { clearSelection, setEraser, setSelectionTool, setView } from "./cleanup-tools.js?v=2";
 import {
@@ -28,7 +28,7 @@ import {
   updateOutputs,
   updateStencilFields,
   updateTransparencyFields,
-} from "./settings.js?v=2";
+} from "./settings.js?v=3";
 import { actualSizeView, resetView } from "./view.js?v=2";
 
 const EMPTY_IMAGE_SRC = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==";
@@ -532,6 +532,12 @@ els.stencilThreshold.addEventListener("input", () => {
   updateOutputs();
   scheduleRetrace();
 });
+for (const radio of document.querySelectorAll('input[name="stencil-ink"]')) {
+  radio.addEventListener("change", () => {
+    clearProfile();
+    scheduleRetrace();
+  });
+}
 els.hierarchical.addEventListener("change", () => {
   clearProfile();
   scheduleRetrace();

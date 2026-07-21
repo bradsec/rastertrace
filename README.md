@@ -14,8 +14,8 @@ Convert raster images to clean, scalable SVG vectors entirely in your browser. [
 - 3x3 majority filter to clean quantization dither
 - Optional edge-preserving median denoise for photographic sources
 - Background removal: auto-detect from border sampling, hex color, or eyedropper pick from the image; perceptual match tolerance; edge trim chokes the cutout and defringe repaints leftover fringe without shrinking thin details
-- Purpose-based export profiles: Web optimized, Balanced, High detail, Print & cutting, and Laser stencil set colors, cleanup, path detail, and output options together (all controls stay editable)
-- Stencil mode: true black/white binary tracing for laser cutting, stamps, and silhouettes, with an adjustable brightness threshold to pick up or drop midtones
+- Purpose-based export profiles: Web optimized, Balanced, High detail, Max detail, Pixel exact, Print & cutting, Mono stencil (black/white), and Laser stencil set colors, cleanup, path detail, and output options together (all controls stay editable)
+- Stencil mode: true black/white binary tracing for laser cutting, stamps, and silhouettes, with an adjustable brightness threshold and a choice of black-on-transparent or white-on-black ink
 - SVG size export: preserve source pixels or write a custom width/height in px, mm, cm, or in, with the viewBox preserved
 - Minified output option (also compresses path data with relative commands for roughly 30% smaller SVG files), or accessible output with `role="img"` and a `<title>` from the file name
 - Straighten lines slider: snaps slightly wobbly or bumpy traced edges to true straight lines while keeping corners and real curves

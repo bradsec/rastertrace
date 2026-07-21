@@ -179,7 +179,11 @@
             <option value="web">Web optimized (smallest)</option>
             <option value="balanced">Balanced</option>
             <option value="detail">High detail</option>
+            <option value="maxDetail">Max detail (smooth)</option>
+            <option value="pixelExact">Pixel exact</option>
             <option value="print">Print &amp; cutting</option>
+            <option value="monoBlack">Mono stencil (black)</option>
+            <option value="monoWhite">Mono stencil (white)</option>
             <option value="laser">Laser stencil (B/W)</option>
           </select>
         </div>
@@ -330,6 +334,11 @@
             <div class="label-row"><label for="stencil-threshold" title="Brightness cut-off: pixels darker than this become black shapes. Lower keeps only the darkest areas; raise to pick up midtones">Stencil threshold</label> <output id="stencil-threshold-out" for="stencil-threshold">128</output></div>
             <input type="range" id="stencil-threshold" min="1" max="254" step="1" value="128">
           </div>
+          <div class="subfield" id="stencil-ink-field" hidden>
+            <span class="label-row"><label>Stencil ink</label></span>
+            <label class="choice"><input type="radio" name="stencil-ink" value="black" checked> <span title="Dark areas become black shapes on a transparent background">Black on transparent</span></label>
+            <label class="choice"><input type="radio" name="stencil-ink" value="white"> <span title="Dark areas become white shapes on a solid black background">White on black</span></label>
+          </div>
           <label class="choice"><input type="checkbox" id="grayscale"> <span title="Convert to shades of gray before tracing">Grayscale</span></label>
           <label class="choice"><input type="checkbox" id="denoise"> <span title="Smooths photo noise before color reduction. Softens pixel art and fine texture">Denoise (photos; softens pixel art)</span></label>
           <label class="choice"><input type="checkbox" id="crisp"> <span title="Sharper corner rounding for hard-edged sources. Best for text and logos">Crisp edges (text &amp; logos)</span></label>
@@ -397,7 +406,7 @@
             <div><dt>Corner rounding</dt><dd>Angles smoother than this trace as curves. Lower keeps text and logo corners sharp; higher flows.</dd></div>
             <div><dt>Layering</dt><dd>Stacked layers shapes on top of each other (smallest files). Cutout makes non-overlapping shapes that tile edge to edge, for cutting machines.</dd></div>
             <div><dt>Advanced tracing</dt><dd>Path precision: decimal places in coordinates (1-2 small web files, 3-4 fabrication). Segment length and spline splitting trade curve fidelity for simplicity.</dd></div>
-            <div><dt>Stencil &amp; threshold</dt><dd>Black &amp; white trace: pixels darker than the threshold become black shapes, everything else drops out. Best for laser cutting, stamps, silhouettes.</dd></div>
+            <div><dt>Stencil, threshold &amp; ink</dt><dd>Black &amp; white trace: pixels darker than the threshold become shapes, everything else drops out. Ink chooses black shapes on a transparent background, or white shapes on a black backing. Best for laser cutting, stamps, silhouettes.</dd></div>
             <div><dt>Grayscale, Denoise, Crisp</dt><dd>Grayscale converts to gray tones before tracing. Denoise smooths photo noise (softens pixel art). Crisp edges sharpens corner tracing for text and logos.</dd></div>
             <div><dt>Background removal</dt><dd>Makes the background transparent: connected-from-edges, auto-detected color, or a picked color. Tolerance widens the match; edge trim and defringe clean the cutout boundary.</dd></div>
           </dl>
@@ -437,8 +446,12 @@
               <p>The Web profile combines fewer colors, path precision 1, and minified output. Same-fill shapes are always grouped to save bytes. Fewer colors and higher speckle filtering shrink files far more than any other setting.</p>
             </div>
             <div>
+              <h3>Shape fidelity</h3>
+              <p>Max detail traces smooth curves that hug the source edges closely, with minimal despeckle. Pixel exact skips curve fitting entirely: the boundary of every quantized color region is traced literally, pixel for pixel.</p>
+            </div>
+            <div>
               <h3>Laser &amp; cutting</h3>
-              <p>For laser work use the Laser stencil profile: black &amp; white trace, aggressive despeckle, physical size. Set upscale to <em>Ultra (fit 4096)</em> for the cleanest edges, and try <em>Cutout</em> layering for vinyl and CNC. Photos usually engrave better exported as a prepared raster image than as a traced SVG.</p>
+              <p>For laser work use the Laser stencil profile: black &amp; white trace, aggressive despeckle, physical size. Set upscale to <em>Ultra (fit 4096)</em> for the cleanest edges, and try <em>Cutout</em> layering for vinyl and CNC. Photos usually engrave better exported as a prepared raster image than as a traced SVG. For general-purpose crisp silhouettes (stickers, decals, icon marks) use Mono stencil (black) or Mono stencil (white) instead.</p>
             </div>
           </div>
           <div class="dialog-actions"><button value="close">Close</button></div>
@@ -515,6 +528,6 @@
       }, 3000);
     });
   </script>
-  <script type="module" src="js/app.js?v=67"></script>
+  <script type="module" src="js/app.js?v=68"></script>
 </body>
 </html>

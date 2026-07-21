@@ -5,7 +5,7 @@
 // module first.
 import { snapPointToAngle, svgViewBox } from "./eraser.js?v=4";
 import { toHexColor } from "./preprocess.js?v=42";
-import { els, hooks, state } from "./context.js?v=1";
+import { els, hooks, state } from "./context.js?v=2";
 import { refreshExport } from "./exporters.js?v=2";
 
 export function setView(view) {

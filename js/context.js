@@ -40,6 +40,7 @@ export const els = {
   stencilThresholdField: $("stencil-threshold-field"),
   stencilThreshold: $("stencil-threshold"),
   stencilThresholdOut: $("stencil-threshold-out"),
+  stencilInkField: $("stencil-ink-field"),
   grayscale: $("grayscale"),
   crisp: $("crisp"),
   transparent: $("transparent"),

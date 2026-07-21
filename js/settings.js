@@ -7,7 +7,7 @@ import {
   PRESETS,
   sanitizeSettings,
 } from "./preprocess.js?v=42";
-import { els, preferences } from "./context.js?v=1";
+import { els, preferences } from "./context.js?v=2";
 import { refreshExport, updatePhysicalHeightOut } from "./exporters.js?v=2";
 import { setEyedropper } from "./cleanup-tools.js?v=2";
 
@@ -76,6 +76,7 @@ export function currentSettings() {
     crisp: els.crisp.checked,
     stencil: els.stencil.checked,
     stencilThreshold: Number(els.stencilThreshold.value),
+    stencilInk: document.querySelector('input[name="stencil-ink"]:checked').value,
     pathPrecision: Number(els.pathPrecision.value),
     lengthThreshold: Number(els.lengthThreshold.value),
     spliceThreshold: Number(els.spliceThreshold.value),
@@ -109,6 +110,7 @@ export function updateOutputs() {
 
 export function updateStencilFields() {
   els.stencilThresholdField.hidden = !els.stencil.checked;
+  els.stencilInkField.hidden = !els.stencil.checked;
   // The Laser profile's main dial belongs at the top, under the profile
   // select; anywhere else it lives in the Tracing panel next to the
   // stencil checkbox. Moving the node keeps value and listeners.
@@ -143,6 +145,7 @@ export function applyExportProfile(name) {
   els.hierarchical.value = profile.hierarchical;
   els.upscale.value = String(profile.upscale);
   els.stencil.checked = profile.stencil;
+  document.querySelector(`input[name="stencil-ink"][value="${profile.stencilInk || "black"}"]`).checked = true;
   els.pathPrecision.value = String(profile.pathPrecision);
   if (profile.spliceThreshold) els.spliceThreshold.value = String(profile.spliceThreshold);
   els.minify.checked = profile.minify;
@@ -180,6 +183,7 @@ function snapshotSettings() {
     crisp: els.crisp.checked,
     stencil: els.stencil.checked,
     stencilThreshold: Number(els.stencilThreshold.value),
+    stencilInk: document.querySelector('input[name="stencil-ink"]:checked').value,
     transparent: els.transparent.value,
     knockoutColor: els.knockoutColor.value,
     fuzz: Number(els.fuzz.value),
@@ -239,6 +243,9 @@ export function restoreSettings() {
   check(els.crisp, "crisp");
   check(els.stencil, "stencil");
   set(els.stencilThreshold, "stencilThreshold");
+  if (saved.stencilInk) {
+    document.querySelector(`input[name="stencil-ink"][value="${saved.stencilInk}"]`).checked = true;
+  }
   set(els.transparent, "transparent");
   set(els.knockoutColor, "knockoutColor");
   set(els.fuzz, "fuzz");
@@ -303,6 +310,7 @@ export function resetSettings() {
   els.defringe.value = String(DEFAULTS.defringe);
   els.stencil.checked = false;
   els.stencilThreshold.value = "128";
+  document.querySelector('input[name="stencil-ink"][value="black"]').checked = true;
   els.pathPrecision.value = "3";
   els.lengthThreshold.value = "4";
   els.spliceThreshold.value = "45";
