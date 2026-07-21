@@ -8,8 +8,8 @@ import {
   sanitizeSettings,
 } from "./preprocess.js?v=42";
 import { els, preferences } from "./context.js?v=2";
-import { refreshExport, updatePhysicalHeightOut } from "./exporters.js?v=2";
-import { setEyedropper } from "./cleanup-tools.js?v=2";
+import { refreshExport, updatePhysicalHeightOut } from "./exporters.js?v=3";
+import { setEyedropper } from "./cleanup-tools.js?v=3";
 
 const PREFERENCES_KEY = "rastertrace-preferences";
 const PHYSICAL_UNITS = new Set(["in", "cm", "mm"]);
