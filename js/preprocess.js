@@ -98,7 +98,16 @@ export const EXPORT_PROFILES = Object.freeze({
   balanced: { colors: 256, speckle: 8, layerDiff: 16, mode: "spline", cornerThreshold: 60, hierarchical: "stacked", pathPrecision: 2, upscale: 2, straighten: 0.5, minify: false, stencil: false },
   detail: { colors: 64, speckle: 2, layerDiff: 8, mode: "spline", cornerThreshold: 45, hierarchical: "stacked", pathPrecision: 4, spliceThreshold: 30, upscale: "auto", straighten: 0, minify: false, stencil: false },
   maxDetail: { colors: 128, speckle: 1, layerDiff: 6, mode: "spline", cornerThreshold: 25, hierarchical: "stacked", pathPrecision: 4, spliceThreshold: 20, upscale: "auto", straighten: 0, minify: false, stencil: false },
-  pixelExact: { colors: 64, speckle: 1, layerDiff: 6, mode: "none", cornerThreshold: 60, hierarchical: "stacked", pathPrecision: 4, spliceThreshold: 45, upscale: "auto", straighten: 0, minify: false, stencil: false },
+  // mode "none" (below) skips all curve/corner simplification, so colors
+  // and speckle are the only levers bounding path count. 64 colors let a
+  // photographic/noisy source explode into 100k+ paths and 50+ second
+  // traces (observed: a 1.92 MP noisy source hit 134,243 paths, 34.5 MB,
+  // 52s at colors:64/speckle:1; 8/12 tamed the same source to 1,719
+  // paths, 5.9 MB, 9.9s) risking a browser tab crash, especially when the
+  // slow in-flight trace gets killed and restarted by a further settings
+  // change (js/pipeline.js Tracer.cancelPending). 8/12 mirrors the
+  // print profile's proven low-color-count pairing.
+  pixelExact: { colors: 8, speckle: 12, layerDiff: 6, mode: "none", cornerThreshold: 60, hierarchical: "stacked", pathPrecision: 4, spliceThreshold: 45, upscale: "auto", straighten: 0, minify: false, stencil: false },
   print: { colors: 8, speckle: 12, layerDiff: 28, mode: "spline", cornerThreshold: 45, hierarchical: "stacked", pathPrecision: 3, upscale: "auto", straighten: 1, minify: false, stencil: false },
   monoBlack: { colors: 2, speckle: 6, layerDiff: 48, mode: "spline", cornerThreshold: 25, hierarchical: "stacked", pathPrecision: 4, upscale: "auto", straighten: 1, minify: false, stencil: true, stencilInk: "black" },
   monoWhite: { colors: 2, speckle: 6, layerDiff: 48, mode: "spline", cornerThreshold: 25, hierarchical: "stacked", pathPrecision: 4, upscale: "auto", straighten: 1, minify: false, stencil: true, stencilInk: "white" },

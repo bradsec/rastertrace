@@ -2,9 +2,9 @@
 // the traced SVG, drives the result stats and action buttons, and saves
 // SVG/PNG/PDF/DXF through the File System Access API or a download.
 import { applyEraserMask } from "./eraser.js?v=4";
-import { applyExportOptions, countPaths } from "./preprocess.js?v=42";
+import { applyExportOptions, countPaths } from "./preprocess.js?v=43";
 import { parseSvgPaths, toDxf, toPdf } from "./vectorexport.js?v=39";
-import { els, preferences, showError, state } from "./context.js?v=2";
+import { els, preferences, showError, state } from "./context.js?v=3";
 
 const DISPLAY_UNITS_PER_INCH = { px: 96, in: 1, cm: 2.54, mm: 25.4 };
 

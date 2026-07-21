@@ -31,7 +31,7 @@ Object.defineProperty(globalThis, "navigator", {
   value: { clipboard: { async writeText(value) { copied = value; } } },
 });
 
-const { state } = await import("../js/context.js?v=2");
+const { state } = await import("../js/context.js?v=3");
 await import("../js/exporters.js?v=test");
 
 test("copy SVG rebuilds cleanup instead of using stale export state", async () => {

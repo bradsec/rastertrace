@@ -1,7 +1,7 @@
 // App core: the trace loop, image loading and transforms, menu and
 // control wiring, and startup. Shared state lives in context.js; tools,
 // settings, export, and zoom/pan live in their own modules.
-import { capBitmap, decodeImage, invertBitmap, rasterize, rotateBitmap, Tracer } from "./pipeline.js?v=42";
+import { capBitmap, decodeImage, invertBitmap, rasterize, rotateBitmap, Tracer } from "./pipeline.js?v=43";
 import {
   analyzeFlatness,
   fitTraceScale,
@@ -9,10 +9,10 @@ import {
   MAX_TRACE_SIDE,
   MAX_TRACE_SIDE_ULTRA,
   PRESETS,
-} from "./preprocess.js?v=42";
-import { $, els, hooks, preferences, showError, state } from "./context.js?v=2";
-import { refreshExport, setResultActions } from "./exporters.js?v=3";
-import { clearSelection, setEraser, setSelectionTool, setView } from "./cleanup-tools.js?v=3";
+} from "./preprocess.js?v=43";
+import { $, els, hooks, preferences, showError, state } from "./context.js?v=3";
+import { refreshExport, setResultActions } from "./exporters.js?v=4";
+import { clearSelection, setEraser, setSelectionTool, setView } from "./cleanup-tools.js?v=4";
 import {
   applyExportProfile,
   applyMeasurementUnit,
@@ -28,12 +28,12 @@ import {
   updateOutputs,
   updateStencilFields,
   updateTransparencyFields,
-} from "./settings.js?v=3";
-import { actualSizeView, resetView } from "./view.js?v=3";
+} from "./settings.js?v=4";
+import { actualSizeView, resetView } from "./view.js?v=4";
 
 const EMPTY_IMAGE_SRC = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==";
 
-const tracer = new Tracer(new URL("./worker.js?v=42", import.meta.url));
+const tracer = new Tracer(new URL("./worker.js?v=43", import.meta.url));
 
 let elapsedTimer = 0;
 

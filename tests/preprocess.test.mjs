@@ -401,7 +401,17 @@ test("fillTransparent paints transparent pixels opaque with the color", () => {
 });
 
 test("EXPORT_PROFILES cover expected keys with sane values", () => {
-  for (const name of ["web", "balanced", "detail", "print", "laser"]) {
+  for (const name of [
+    "web",
+    "balanced",
+    "detail",
+    "maxDetail",
+    "pixelExact",
+    "print",
+    "monoBlack",
+    "monoWhite",
+    "laser",
+  ]) {
     const p = EXPORT_PROFILES[name];
     assert.ok(p, `${name} profile exists`);
     assert.ok(p.pathPrecision >= 1 && p.pathPrecision <= 4);
@@ -409,6 +419,21 @@ test("EXPORT_PROFILES cover expected keys with sane values", () => {
   }
   assert.equal(EXPORT_PROFILES.laser.stencil, true);
   assert.equal(EXPORT_PROFILES.web.minify, true);
+  assert.equal(EXPORT_PROFILES.monoBlack.stencilInk, "black");
+  assert.equal(EXPORT_PROFILES.monoWhite.stencilInk, "white");
+});
+
+// mode "none" skips all curve/corner simplification, so a high color count
+// is the only thing standing between a photographic source and a runaway
+// trace: colors:64 measured at 134,243 paths / 34.5 MB / 52s on a 1.92 MP
+// noisy source, versus 2,972 paths / 6.6 MB / 9.8s at colors:8. Guard the
+// profile default against silently regressing back to an unsafe value.
+test("pixelExact keeps colors low to bound mode:none path explosion", () => {
+  assert.equal(EXPORT_PROFILES.pixelExact.mode, "none");
+  assert.ok(
+    EXPORT_PROFILES.pixelExact.colors <= 16,
+    `pixelExact.colors is ${EXPORT_PROFILES.pixelExact.colors}, expected <= 16 to bound path count on photographic sources`,
+  );
 });
 
 test("sanitizeSettings keeps only known keys with valid values", () => {

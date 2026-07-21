@@ -1,7 +1,7 @@
 // Shared DOM references and mutable app state, imported by every UI
 // module. Keeps no logic beyond tiny helpers so it can never participate
 // in an import cycle.
-import { MAX_TRACE_SIDE } from "./preprocess.js?v=42";
+import { MAX_TRACE_SIDE } from "./preprocess.js?v=43";
 
 export const $ = (id) => document.getElementById(id);
 

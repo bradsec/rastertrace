@@ -6,10 +6,10 @@ import {
   parseHexColor,
   PRESETS,
   sanitizeSettings,
-} from "./preprocess.js?v=42";
-import { els, preferences } from "./context.js?v=2";
-import { refreshExport, updatePhysicalHeightOut } from "./exporters.js?v=3";
-import { setEyedropper } from "./cleanup-tools.js?v=3";
+} from "./preprocess.js?v=43";
+import { els, preferences } from "./context.js?v=3";
+import { refreshExport, updatePhysicalHeightOut } from "./exporters.js?v=4";
+import { setEyedropper } from "./cleanup-tools.js?v=4";
 
 const PREFERENCES_KEY = "rastertrace-preferences";
 const PHYSICAL_UNITS = new Set(["in", "cm", "mm"]);
