@@ -33,7 +33,7 @@ import { actualSizeView, resetView } from "./view.js?v=2";
 
 const EMPTY_IMAGE_SRC = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==";
 
-const tracer = new Tracer(new URL("./worker.js?v=41", import.meta.url));
+const tracer = new Tracer(new URL("./worker.js?v=42", import.meta.url));
 
 let elapsedTimer = 0;
 
