@@ -46,7 +46,10 @@ Object.defineProperty(globalThis, "navigator", {
   },
 });
 
-const { state } = await import("../js/context.js?v=6");
+// The query must match the specifier exporters.js uses: Node keys its module
+// cache on the full specifier, so a mismatch hands the test a second, unused
+// copy of the shared state object.
+const { state } = await import("../js/context.js?v=7");
 await import("../js/exporters.js?v=test");
 
 test("copy SVG rebuilds cleanup instead of using stale export state", async () => {

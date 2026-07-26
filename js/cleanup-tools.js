@@ -3,10 +3,10 @@
 // Listener order matters: the selection and eraser pointer handlers must
 // register before the pan handlers in view.js, so app.js imports this
 // module first.
-import { brushSizeForShortcut, snapPointToAngle, svgViewBox } from "./eraser.js?v=7";
-import { parseHexColor, sampleRasterColor, toHexColor } from "./preprocess.js?v=46";
-import { els, hooks, state } from "./context.js?v=6";
-import { refreshExport } from "./exporters.js?v=11";
+import { brushSizeForShortcut, snapPointToAngle, svgViewBox } from "./eraser.js?v=8";
+import { parseHexColor, sampleRasterColor, toHexColor } from "./preprocess.js?v=47";
+import { els, hooks, state } from "./context.js?v=7";
+import { refreshExport } from "./exporters.js?v=12";
 
 export function setView(view) {
   const showResult = view === "result";

@@ -293,6 +293,120 @@ test("modeFilter ignores transparent pixels and preserves alpha", () => {
   assert.equal(getPixel(img, 0, 0)[3], 0);
 });
 
+// PP-002/PP-003: the 3x3 filters run on fixed buffers rather than per-pixel
+// arrays and Maps. Reference implementations pin the exact output so a
+// future rewrite cannot silently drift.
+function referenceMedian(img, passes) {
+  const { data, width, height } = img;
+  const out = new Uint8ClampedArray(data.length);
+  for (let pass = 0; pass < passes; pass++) {
+    out.set(data);
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        const i = (y * width + x) * 4;
+        if (data[i + 3] < 128) continue;
+        const win = [[], [], []];
+        for (let ny = Math.max(0, y - 1); ny <= Math.min(height - 1, y + 1); ny++) {
+          for (let nx = Math.max(0, x - 1); nx <= Math.min(width - 1, x + 1); nx++) {
+            const j = (ny * width + nx) * 4;
+            if (data[j + 3] < 128) continue;
+            for (let c = 0; c < 3; c++) win[c].push(data[j + c]);
+          }
+        }
+        for (let c = 0; c < 3; c++) {
+          win[c].sort((a, b) => a - b);
+          out[i + c] = win[c][win[c].length >> 1];
+        }
+      }
+    }
+    data.set(out);
+  }
+  return img;
+}
+
+function referenceMode(img) {
+  const { data, width, height } = img;
+  const out = new Uint8ClampedArray(data);
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const i = (y * width + x) * 4;
+      if (data[i + 3] < 128) continue;
+      const counts = new Map();
+      let best = -1;
+      let bestCount = 0;
+      for (let ny = Math.max(0, y - 1); ny <= Math.min(height - 1, y + 1); ny++) {
+        for (let nx = Math.max(0, x - 1); nx <= Math.min(width - 1, x + 1); nx++) {
+          const j = (ny * width + nx) * 4;
+          if (data[j + 3] < 128) continue;
+          const key = (data[j] << 16) | (data[j + 1] << 8) | data[j + 2];
+          const n = (counts.get(key) || 0) + 1;
+          counts.set(key, n);
+          if (n > bestCount) {
+            bestCount = n;
+            best = key;
+          }
+        }
+      }
+      if (best >= 0 && bestCount >= 5) {
+        out[i] = (best >> 16) & 0xff;
+        out[i + 1] = (best >> 8) & 0xff;
+        out[i + 2] = best & 0xff;
+      }
+    }
+  }
+  data.set(out);
+  return img;
+}
+
+// Deterministic pseudo-random source: reproducible failures, no test flake.
+function noisyImage(width, height, seed) {
+  const data = new Uint8ClampedArray(width * height * 4);
+  let s = seed;
+  const next = () => {
+    s = (s * 1103515245 + 12345) & 0x7fffffff;
+    return s;
+  };
+  for (let i = 0; i < data.length; i += 4) {
+    data[i] = next() % 256;
+    data[i + 1] = next() % 256;
+    data[i + 2] = next() % 256;
+    data[i + 3] = next() % 4 === 0 ? 0 : 255;
+  }
+  return { data, width, height };
+}
+
+test("medianFilter matches the reference window sort on noisy images", () => {
+  for (let seed = 1; seed <= 12; seed++) {
+    const width = 1 + (seed % 7);
+    const height = 1 + ((seed * 3) % 6);
+    const source = noisyImage(width, height, seed);
+    const fast = { ...source, data: new Uint8ClampedArray(source.data) };
+    const reference = { ...source, data: new Uint8ClampedArray(source.data) };
+    medianFilter(fast, 2);
+    referenceMedian(reference, 2);
+    assert.deepEqual([...fast.data], [...reference.data], `seed ${seed} (${width}x${height})`);
+  }
+});
+
+test("modeFilter matches the reference Map tally on noisy images", () => {
+  for (let seed = 1; seed <= 12; seed++) {
+    const width = 1 + (seed % 7);
+    const height = 1 + ((seed * 3) % 6);
+    const source = noisyImage(width, height, seed);
+    // Collapse onto a small palette so 3x3 majorities actually occur.
+    for (let i = 0; i < source.data.length; i += 4) {
+      source.data[i] &= 0xc0;
+      source.data[i + 1] &= 0xc0;
+      source.data[i + 2] &= 0xc0;
+    }
+    const fast = { ...source, data: new Uint8ClampedArray(source.data) };
+    const reference = { ...source, data: new Uint8ClampedArray(source.data) };
+    modeFilter(fast);
+    referenceMode(reference);
+    assert.deepEqual([...fast.data], [...reference.data], `seed ${seed} (${width}x${height})`);
+  }
+});
+
 test("finalizeSvg restores source size and adds viewBox", () => {
   const svg =
     '<svg version="1.1" xmlns="http://www.w3.org/2000/svg" width="200" height="400">\n</svg>';

@@ -1209,31 +1209,45 @@ export function quantize(img, colors) {
 export function medianFilter(img, passes = 1) {
   const { data, width, height } = img;
   const out = new Uint8ClampedArray(data.length);
-  const win = [[], [], []];
+  // A 3x3 window holds at most nine samples per channel. One fixed buffer
+  // plus an insertion sort avoids three Array#sort calls with a JS
+  // comparator per pixel, which dominated the cost of this filter.
+  const win = new Uint8Array(27);
 
   for (let pass = 0; pass < passes; pass++) {
     out.set(data);
     for (let y = 0; y < height; y++) {
+      const yStart = y > 0 ? -1 : 0;
+      const yEnd = y < height - 1 ? 1 : 0;
       for (let x = 0; x < width; x++) {
         const i = (y * width + x) * 4;
         if (data[i + 3] < ALPHA_THRESHOLD) continue;
-        win[0].length = win[1].length = win[2].length = 0;
-        for (let dy = -1; dy <= 1; dy++) {
-          const ny = y + dy;
-          if (ny < 0 || ny >= height) continue;
-          for (let dx = -1; dx <= 1; dx++) {
-            const nx = x + dx;
-            if (nx < 0 || nx >= width) continue;
-            const j = (ny * width + nx) * 4;
+        const xStart = x > 0 ? -1 : 0;
+        const xEnd = x < width - 1 ? 1 : 0;
+        let count = 0;
+        for (let dy = yStart; dy <= yEnd; dy++) {
+          let j = ((y + dy) * width + x + xStart) * 4;
+          for (let dx = xStart; dx <= xEnd; dx++, j += 4) {
             if (data[j + 3] < ALPHA_THRESHOLD) continue;
-            win[0].push(data[j]);
-            win[1].push(data[j + 1]);
-            win[2].push(data[j + 2]);
+            win[count] = data[j];
+            win[count + 9] = data[j + 1];
+            win[count + 18] = data[j + 2];
+            count += 1;
           }
         }
+        const mid = count >> 1;
         for (let c = 0; c < 3; c++) {
-          win[c].sort((a, b) => a - b);
-          out[i + c] = win[c][win[c].length >> 1];
+          const base = c * 9;
+          for (let k = base + 1; k < base + count; k++) {
+            const value = win[k];
+            let m = k - 1;
+            while (m >= base && win[m] > value) {
+              win[m + 1] = win[m];
+              m -= 1;
+            }
+            win[m + 1] = value;
+          }
+          out[i + c] = win[base + mid];
         }
       }
     }
@@ -1251,25 +1265,34 @@ export function medianFilter(img, passes = 1) {
 export function modeFilter(img) {
   const { data, width, height } = img;
   const out = new Uint8ClampedArray(data);
-  const counts = new Map();
+  // At most nine neighbors, so a linear scan over fixed buffers beats
+  // hashing each key through a Map that has to be cleared per pixel.
+  const keys = new Int32Array(9);
+  const tally = new Int32Array(9);
   for (let y = 0; y < height; y++) {
+    const yStart = y > 0 ? -1 : 0;
+    const yEnd = y < height - 1 ? 1 : 0;
     for (let x = 0; x < width; x++) {
       const i = (y * width + x) * 4;
       if (data[i + 3] < ALPHA_THRESHOLD) continue;
-      counts.clear();
+      const xStart = x > 0 ? -1 : 0;
+      const xEnd = x < width - 1 ? 1 : 0;
+      let unique = 0;
       let best = -1;
       let bestCount = 0;
-      for (let dy = -1; dy <= 1; dy++) {
-        const ny = y + dy;
-        if (ny < 0 || ny >= height) continue;
-        for (let dx = -1; dx <= 1; dx++) {
-          const nx = x + dx;
-          if (nx < 0 || nx >= width) continue;
-          const j = (ny * width + nx) * 4;
+      for (let dy = yStart; dy <= yEnd; dy++) {
+        let j = ((y + dy) * width + x + xStart) * 4;
+        for (let dx = xStart; dx <= xEnd; dx++, j += 4) {
           if (data[j + 3] < ALPHA_THRESHOLD) continue;
           const key = (data[j] << 16) | (data[j + 1] << 8) | data[j + 2];
-          const n = (counts.get(key) || 0) + 1;
-          counts.set(key, n);
+          let slot = 0;
+          while (slot < unique && keys[slot] !== key) slot += 1;
+          if (slot === unique) {
+            keys[slot] = key;
+            tally[slot] = 0;
+            unique += 1;
+          }
+          const n = ++tally[slot];
           if (n > bestCount) {
             bestCount = n;
             best = key;

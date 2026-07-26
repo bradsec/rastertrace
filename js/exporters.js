@@ -1,10 +1,10 @@
 // Export pipeline and save handlers: applies export post-processing to
 // the traced SVG, drives the result stats and action buttons, and saves
 // SVG/PNG/PDF/DXF through the File System Access API or a download.
-import { applyCleanupActions } from "./eraser.js?v=7";
-import { applyExportOptions, countPaths, physicalWidthValue } from "./preprocess.js?v=46";
-import { parseSvgPaths, toDxf, toPdf } from "./vectorexport.js?v=39";
-import { els, preferences, showError, state } from "./context.js?v=6";
+import { applyCleanupActions } from "./eraser.js?v=8";
+import { applyExportOptions, countPaths, physicalWidthValue } from "./preprocess.js?v=47";
+import { parseSvgPaths, toDxf, toPdf } from "./vectorexport.js?v=40";
+import { els, preferences, showError, state } from "./context.js?v=7";
 
 const DISPLAY_UNITS_PER_INCH = { px: 96, in: 1, cm: 2.54, mm: 25.4 };
 

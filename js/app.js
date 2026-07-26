@@ -10,7 +10,7 @@ import {
   rotateBitmap,
   sniffImageSize,
   Tracer,
-} from "./pipeline.js?v=46";
+} from "./pipeline.js?v=47";
 import {
   analyzeFlatness,
   fitTraceScale,
@@ -20,16 +20,16 @@ import {
   parseHexColor,
   PRESETS,
   toHexColor,
-} from "./preprocess.js?v=46";
-import { $, els, hooks, preferences, showError, state } from "./context.js?v=6";
-import { refreshExport, setResultActions } from "./exporters.js?v=11";
+} from "./preprocess.js?v=47";
+import { $, els, hooks, preferences, showError, state } from "./context.js?v=7";
+import { refreshExport, setResultActions } from "./exporters.js?v=12";
 import {
   clearSelection,
   setBlobFill,
   setEraser,
   setSelectionTool,
   setView,
-} from "./cleanup-tools.js?v=13";
+} from "./cleanup-tools.js?v=14";
 import {
   applyExportProfile,
   applyMeasurementUnit,
@@ -45,12 +45,12 @@ import {
   updateOutputs,
   updateStencilFields,
   updateTransparencyFields,
-} from "./settings.js?v=13";
-import { actualSizeView, resetView } from "./view.js?v=13";
+} from "./settings.js?v=14";
+import { actualSizeView, resetView } from "./view.js?v=14";
 
 const EMPTY_IMAGE_SRC = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==";
 
-const tracer = new Tracer(new URL("./worker.js?v=47", import.meta.url));
+const tracer = new Tracer(new URL("./worker.js?v=48", import.meta.url));
 
 let elapsedTimer = 0;
 
