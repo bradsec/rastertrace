@@ -35,6 +35,27 @@ test("applyEraserMask renders a click as a circular erasure", () => {
   assert.match(result, /<circle cx="40" cy="20" r="5"/);
 });
 
+test("applyEraserMask snaps pixel-exact clicks to a square trace-pixel boundary", () => {
+  const result = applyEraserMask('<svg viewBox="0 0 80 40"></svg>', [{
+    diameter: 0.25,
+    points: [{ x: 0.506, y: 0.51 }],
+  }], { pixelExact: true });
+  assert.match(result, /<rect x="35" y="15" width="11" height="11"/);
+  assert.match(result, /shape-rendering="crispEdges"/);
+  assert.doesNotMatch(result, /<circle/);
+});
+
+test("applyEraserMask routes pixel-exact strokes along the trace-pixel grid", () => {
+  const result = applyEraserMask('<svg viewBox="0 0 20 10"></svg>', [{
+    diameter: 0.1,
+    points: [{ x: 0.12, y: 0.22 }, { x: 0.38, y: 0.67 }],
+  }], { pixelExact: true });
+  assert.match(result, /d="M2\.5 2\.5H7\.5V6\.5"/);
+  assert.match(result, /stroke-width="1"/);
+  assert.match(result, /stroke-linecap="square"/);
+  assert.match(result, /stroke-linejoin="miter"/);
+});
+
 test("applyEraserMask inserts the mask inside an SVG with an XML declaration", () => {
   const result = applyEraserMask('<?xml version="1.0"?><svg viewBox="0 0 10 10"><path/></svg>', [{
     diameter: 0.2,

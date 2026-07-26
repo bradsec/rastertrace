@@ -32,7 +32,37 @@ function pointInBox(point, box) {
   };
 }
 
-function erasureMarkup(erasure, box) {
+function pixelCenter(value, origin) {
+  return origin + Math.floor(value - origin) + 0.5;
+}
+
+function pixelExactStrokeMarkup(erasure, box) {
+  const points = erasure.points.map((point) => {
+    const absolute = pointInBox(point, box);
+    return {
+      x: pixelCenter(absolute.x, box.x),
+      y: pixelCenter(absolute.y, box.y),
+    };
+  });
+  // An odd number of trace pixels keeps a centreline on pixel centres and
+  // both outside edges on pixel boundaries.
+  const requested = Math.max(1, erasure.diameter * Math.min(box.width, box.height));
+  const diameter = Math.max(1, 2 * Math.round((requested - 1) / 2) + 1);
+  if (points.length === 1) {
+    return `<rect x="${n(points[0].x - diameter / 2)}" y="${n(points[0].y - diameter / 2)}" width="${diameter}" height="${diameter}" fill="#000" shape-rendering="crispEdges"/>`;
+  }
+
+  // Route between snapped pixel centres using axis-aligned segments. The
+  // square, mitered stroke therefore exposes only trace-pixel boundaries.
+  let d = `M${n(points[0].x)} ${n(points[0].y)}`;
+  for (let i = 1; i < points.length; i++) {
+    const point = points[i];
+    d += `H${n(point.x)}V${n(point.y)}`;
+  }
+  return `<path d="${d}" fill="none" stroke="#000" stroke-width="${diameter}" stroke-linecap="square" stroke-linejoin="miter" shape-rendering="crispEdges"/>`;
+}
+
+function erasureMarkup(erasure, box, pixelExact) {
   if (erasure.type === "rect") {
     return `<rect x="${n(box.x + erasure.x * box.width)}" y="${n(box.y + erasure.y * box.height)}" width="${n(erasure.width * box.width)}" height="${n(erasure.height * box.height)}" fill="#000"/>`;
   }
@@ -43,6 +73,7 @@ function erasureMarkup(erasure, box) {
     const points = erasure.points.map((point) => pointInBox(point, box));
     return `<polygon points="${points.map((point) => `${n(point.x)},${n(point.y)}`).join(" ")}" fill="#000"/>`;
   }
+  if (pixelExact) return pixelExactStrokeMarkup(erasure, box);
 
   const points = erasure.points.map((point) => pointInBox(point, box));
   const diameter = Math.max(0.01, erasure.diameter * Math.min(box.width, box.height));
@@ -53,7 +84,7 @@ function erasureMarkup(erasure, box) {
   return `<path d="${d}" fill="none" stroke="#000" stroke-width="${n(diameter)}" stroke-linecap="round" stroke-linejoin="round"/>`;
 }
 
-export function applyEraserMask(svg, strokes) {
+export function applyEraserMask(svg, strokes, { pixelExact = false } = {}) {
   if (!strokes.length) return svg;
   const box = svgViewBox(svg);
   if (!box) return svg;
@@ -62,7 +93,7 @@ export function applyEraserMask(svg, strokes) {
   const closeStart = svg.lastIndexOf("</svg>");
   if (openEnd < 0 || closeStart < openEnd) return svg;
 
-  const marks = strokes.map((stroke) => erasureMarkup(stroke, box)).join("");
+  const marks = strokes.map((stroke) => erasureMarkup(stroke, box, pixelExact)).join("");
   const mask = `<defs><mask id="${MASK_ID}" maskUnits="userSpaceOnUse" x="${n(box.x)}" y="${n(box.y)}" width="${n(box.width)}" height="${n(box.height)}" mask-type="luminance" style="mask-type:luminance" color-interpolation="sRGB"><rect x="${n(box.x)}" y="${n(box.y)}" width="${n(box.width)}" height="${n(box.height)}" fill="#fff"/>${marks}</mask></defs>`;
   return `${svg.slice(0, openEnd + 1)}${mask}<g mask="url(#${MASK_ID})">${svg.slice(openEnd + 1, closeStart)}</g>${svg.slice(closeStart)}`;
 }

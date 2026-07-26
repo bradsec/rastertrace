@@ -1,8 +1,8 @@
 // Export pipeline and save handlers: applies export post-processing to
 // the traced SVG, drives the result stats and action buttons, and saves
 // SVG/PNG/PDF/DXF through the File System Access API or a download.
-import { applyEraserMask } from "./eraser.js?v=4";
-import { applyExportOptions, countPaths } from "./preprocess.js?v=43";
+import { applyEraserMask } from "./eraser.js?v=5";
+import { applyExportOptions, countPaths } from "./preprocess.js?v=44";
 import { parseSvgPaths, toDxf, toPdf } from "./vectorexport.js?v=39";
 import { els, preferences, showError, state } from "./context.js?v=3";
 
@@ -80,7 +80,15 @@ export function updatePhysicalHeightOut() {
  */
 export function refreshExport() {
   if (!state.svgRaw) return { paths: 0 };
-  state.svg = applyEraserMask(applyExportOptions(state.svgRaw, exportOptions()), state.eraseStrokes);
+  const selectedMode = /** @type {HTMLInputElement | null} */ (
+    document.querySelector('input[name="mode"]:checked')
+  );
+  const pixelExact = selectedMode?.value === "none";
+  state.svg = applyEraserMask(
+    applyExportOptions(state.svgRaw, exportOptions()),
+    state.eraseStrokes,
+    { pixelExact },
+  );
 
   // Rendered via <img> + blob URL: sandboxes the generated markup and
   // avoids inflating the DOM with thousands of inline path nodes.

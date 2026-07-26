@@ -6,9 +6,10 @@ import {
   parseHexColor,
   PRESETS,
   sanitizeSettings,
-} from "./preprocess.js?v=43";
+  toGrayscaleColor,
+} from "./preprocess.js?v=44";
 import { els, preferences } from "./context.js?v=3";
-import { refreshExport, updatePhysicalHeightOut } from "./exporters.js?v=4";
+import { refreshExport, updatePhysicalHeightOut } from "./exporters.js?v=5";
 import { setEyedropper } from "./cleanup-tools.js?v=4";
 
 /** @returns {HTMLInputElement} */
@@ -63,6 +64,15 @@ export function applyMeasurementUnit(unit, preserveSize = true) {
 }
 
 export function currentSettings() {
+  let transparent =
+    els.transparent.value === "auto" || els.transparent.value === "edges"
+      ? els.transparent.value
+      : els.transparent.value === "custom"
+        ? parseHexColor(els.knockoutColor.value)
+        : null;
+  if (Array.isArray(transparent) && (els.grayscale.checked || els.stencil.checked)) {
+    transparent = toGrayscaleColor(transparent);
+  }
   return {
     colors: Number(els.colors.value),
     speckle: Number(els.speckle.value),
@@ -83,12 +93,7 @@ export function currentSettings() {
     pathPrecision: Number(els.pathPrecision.value),
     lengthThreshold: Number(els.lengthThreshold.value),
     spliceThreshold: Number(els.spliceThreshold.value),
-    transparent:
-      els.transparent.value === "auto" || els.transparent.value === "edges"
-        ? els.transparent.value
-        : els.transparent.value === "custom"
-          ? parseHexColor(els.knockoutColor.value)
-          : null,
+    transparent,
     fuzz: Number(els.fuzz.value),
     edgeTrim: Number(els.edgeTrim.value),
     defringe: Number(els.defringe.value),

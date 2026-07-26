@@ -8,10 +8,12 @@ import {
   isStaleModuleError,
   MAX_TRACE_SIDE,
   MAX_TRACE_SIDE_ULTRA,
+  parseHexColor,
   PRESETS,
-} from "./preprocess.js?v=43";
+  toHexColor,
+} from "./preprocess.js?v=44";
 import { $, els, hooks, preferences, showError, state } from "./context.js?v=3";
-import { refreshExport, setResultActions } from "./exporters.js?v=4";
+import { refreshExport, setResultActions } from "./exporters.js?v=5";
 import { clearSelection, setEraser, setSelectionTool, setView } from "./cleanup-tools.js?v=4";
 import {
   applyExportProfile,
@@ -33,7 +35,7 @@ import { actualSizeView, resetView } from "./view.js?v=4";
 
 const EMPTY_IMAGE_SRC = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==";
 
-const tracer = new Tracer(new URL("./worker.js?v=44", import.meta.url));
+const tracer = new Tracer(new URL("./worker.js?v=45", import.meta.url));
 
 let elapsedTimer = 0;
 
@@ -408,6 +410,10 @@ async function invert() {
     state.bitmap = await invertBitmap(state.bitmap);
     state.inverted = !state.inverted;
     els.invertImage.setAttribute("aria-pressed", String(state.inverted));
+    const knockout = parseHexColor(els.knockoutColor.value);
+    if (knockout) {
+      els.knockoutColor.value = toHexColor(knockout.map((channel) => 255 - channel));
+    }
     state.raster = null;
     await updateSourceView();
     retrace();

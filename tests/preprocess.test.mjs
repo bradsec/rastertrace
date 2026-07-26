@@ -34,6 +34,7 @@ import {
   sanitizeSettings,
   snapToImageColor,
   thresholdImage,
+  toGrayscaleColor,
   toGrayscale,
   toHexColor,
 } from "../js/preprocess.js";
@@ -138,6 +139,12 @@ test("toGrayscale preserves alpha", () => {
   assert.equal(r, g);
   assert.equal(g, b);
   assert.equal(a, 200);
+});
+
+test("toGrayscaleColor matches the image grayscale conversion", () => {
+  const img = makeImage(1, 1, [40, 120, 200, 255]);
+  toGrayscale(img);
+  assert.deepEqual(toGrayscaleColor([40, 120, 200]), getPixel(img, 0, 0).slice(0, 3));
 });
 
 test("dominantOpaqueColor ignores transparent pixels", () => {

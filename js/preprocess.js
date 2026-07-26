@@ -819,8 +819,19 @@ export function dominantOpaqueColor(img) {
       best = key;
     }
   }
+
   if (best === null) return [255, 255, 255];
   return [(best >> 16) & 0xff, (best >> 8) & 0xff, best & 0xff];
+}
+
+/**
+ * Convert an RGB color with the same luma calculation as toGrayscale.
+ * @param {[number, number, number]} color
+ * @returns {[number, number, number]}
+ */
+export function toGrayscaleColor([r, g, b]) {
+  const gray = Math.round(0.299 * r + 0.587 * g + 0.114 * b);
+  return [gray, gray, gray];
 }
 
 /**
