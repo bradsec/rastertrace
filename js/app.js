@@ -744,7 +744,3 @@ fetch("package.json")
     }
   })
   .catch(() => {});
-
-// Signals the index.html boot guard that the module graph loaded and
-// initialization ran; without it the guard purges caches and reloads.
-window.__rastertraceBooted = true;
