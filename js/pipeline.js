@@ -1,6 +1,10 @@
 // Browser-side pipeline: decode, premultiplied upscale, worker round-trip.
 import { assertRasterBudget, MAX_TRACE_SIDE } from "./preprocess.js?v=45";
 
+export const MAX_IMAGE_BYTES = 50 * 1024 * 1024;
+export const MAX_SOURCE_PIXELS = 100_000_000;
+export const MAX_SOURCE_SIDE = 32_768;
+
 export async function sniffImageSize(file) {
   const bytes = new Uint8Array(await file.slice(0, 256 * 1024).arrayBuffer());
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
@@ -100,9 +104,25 @@ export function fitDecodeSize(width, height, maxSide = MAX_TRACE_SIDE) {
  * unsupported or corrupt files.
  */
 export async function decodeImage(file, maxSide = MAX_TRACE_SIDE, knownSize = null) {
+  if (file.size > MAX_IMAGE_BYTES) {
+    throw new Error(`Image files must be ${MAX_IMAGE_BYTES / 1024 / 1024} MB or smaller.`);
+  }
+  const size = knownSize ?? (await sniffImageSize(file));
+  if (!size) {
+    throw new Error("Use a PNG, JPEG, WebP, GIF, or BMP image.");
+  }
+  if (
+    !Number.isInteger(size.width) ||
+    !Number.isInteger(size.height) ||
+    size.width <= 0 ||
+    size.height <= 0 ||
+    size.width > MAX_SOURCE_SIDE ||
+    size.height > MAX_SOURCE_SIDE ||
+    size.width * size.height > MAX_SOURCE_PIXELS
+  ) {
+    throw new Error("Image dimensions are invalid or exceed the 100 megapixel source limit.");
+  }
   try {
-    const size = knownSize ?? (await sniffImageSize(file));
-    if (!size) return await createImageBitmap(file);
     const resized = fitDecodeSize(size.width, size.height, maxSide);
     return await createImageBitmap(file, {
       resizeWidth: resized.width,

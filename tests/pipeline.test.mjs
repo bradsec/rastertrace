@@ -41,6 +41,35 @@ test("decodeImage uses known intrinsic dimensions for a bounded decode", async (
   }
 });
 
+test("decodeImage rejects unknown formats before browser decoding", async () => {
+  const original = globalThis.createImageBitmap;
+  let decoded = false;
+  globalThis.createImageBitmap = async () => {
+    decoded = true;
+  };
+  try {
+    await assert.rejects(decodeImage(blob([1, 2, 3])), /Use a PNG, JPEG, WebP, GIF, or BMP/);
+    assert.equal(decoded, false);
+  } finally {
+    globalThis.createImageBitmap = original;
+  }
+});
+
+test("decodeImage rejects invalid and excessive source dimensions", async () => {
+  await assert.rejects(
+    decodeImage({ size: 50 * 1024 * 1024 + 1 }, 2048, { width: 1, height: 1 }),
+    /50 MB or smaller/,
+  );
+  await assert.rejects(
+    decodeImage(blob([]), 2048, { width: 0, height: 100 }),
+    /dimensions are invalid/,
+  );
+  await assert.rejects(
+    decodeImage(blob([]), 2048, { width: 20_000, height: 20_000 }),
+    /100 megapixel/,
+  );
+});
+
 test("bitmapOperationIsCurrent rejects stale loads and replaced bitmaps", () => {
   const bitmap = {};
   const state = { loadToken: 3, bitmap };

@@ -10,7 +10,7 @@ import {
   rotateBitmap,
   sniffImageSize,
   Tracer,
-} from "./pipeline.js?v=44";
+} from "./pipeline.js?v=45";
 import {
   analyzeFlatness,
   fitTraceScale,

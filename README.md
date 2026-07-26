@@ -8,7 +8,7 @@ Convert raster images to clean, scalable SVG vectors entirely in your browser. [
 
 ## Features
 
-- PNG, JPEG, WebP, GIF, BMP input (anything the browser decodes)
+- PNG, JPEG, WebP, GIF, and BMP input, up to 50 MB and 100 megapixels
 - Premultiplied-alpha upscaling (no edge halos), binary alpha (no fringe fragmentation)
 - Median-cut + k-means color quantization in perceptual Oklab space with transparent-area backfill
 - 3x3 majority filter to clean quantization dither
