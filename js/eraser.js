@@ -1,7 +1,10 @@
 const MASK_ID = "rastertrace-eraser-mask";
+const CLEANUP_MASK_ID = "rastertrace-cleanup-mask";
 
 export function svgViewBox(svg) {
-  const match = svg.match(/\bviewBox\s*=\s*["']\s*([-+\d.eE]+)[ ,]+([-+\d.eE]+)[ ,]+([-+\d.eE]+)[ ,]+([-+\d.eE]+)\s*["']/i);
+  const match = svg.match(
+    /\bviewBox\s*=\s*["']\s*([-+\d.eE]+)[ ,]+([-+\d.eE]+)[ ,]+([-+\d.eE]+)[ ,]+([-+\d.eE]+)\s*["']/i,
+  );
   if (!match) return null;
   const values = match.slice(1).map(Number);
   if (!values.every(Number.isFinite) || values[2] <= 0 || values[3] <= 0) return null;
@@ -16,8 +19,8 @@ export function snapPointToAngle(anchor, point, width, height, increment = Math.
   if (!distance) return point;
   const angle = Math.round(Math.atan2(dy, dx) / increment) * increment;
   return {
-    x: anchor.x + Math.cos(angle) * distance / width,
-    y: anchor.y + Math.sin(angle) * distance / height,
+    x: anchor.x + (Math.cos(angle) * distance) / width,
+    y: anchor.y + (Math.sin(angle) * distance) / height,
   };
 }
 
@@ -80,8 +83,29 @@ function erasureMarkup(erasure, box, pixelExact) {
   if (points.length === 1) {
     return `<circle cx="${n(points[0].x)}" cy="${n(points[0].y)}" r="${n(diameter / 2)}" fill="#000"/>`;
   }
-  const d = points.map((point, index) => `${index ? "L" : "M"}${n(point.x)} ${n(point.y)}`).join(" ");
+  const d = points
+    .map((point, index) => `${index ? "L" : "M"}${n(point.x)} ${n(point.y)}`)
+    .join(" ");
   return `<path d="${d}" fill="none" stroke="#000" stroke-width="${n(diameter)}" stroke-linecap="round" stroke-linejoin="round"/>`;
+}
+
+function fillMarkup(stroke, box, pixelExact) {
+  const mark = erasureMarkup(stroke, box, pixelExact);
+  return mark
+    .replace(/fill="#000"/g, `fill="${stroke.color}"`)
+    .replace(/stroke="#000"/g, `stroke="${stroke.color}"`);
+}
+
+function svgParts(svg) {
+  const rootStart = svg.search(/<svg\b/i);
+  const openEnd = rootStart < 0 ? -1 : svg.indexOf(">", rootStart);
+  const closeStart = svg.lastIndexOf("</svg>");
+  if (openEnd < 0 || closeStart < openEnd) return null;
+  return {
+    before: svg.slice(0, openEnd + 1),
+    content: svg.slice(openEnd + 1, closeStart),
+    after: svg.slice(closeStart),
+  };
 }
 
 export function applyEraserMask(svg, strokes, { pixelExact = false } = {}) {
@@ -96,4 +120,32 @@ export function applyEraserMask(svg, strokes, { pixelExact = false } = {}) {
   const marks = strokes.map((stroke) => erasureMarkup(stroke, box, pixelExact)).join("");
   const mask = `<defs><mask id="${MASK_ID}" maskUnits="userSpaceOnUse" x="${n(box.x)}" y="${n(box.y)}" width="${n(box.width)}" height="${n(box.height)}" mask-type="luminance" style="mask-type:luminance" color-interpolation="sRGB"><rect x="${n(box.x)}" y="${n(box.y)}" width="${n(box.width)}" height="${n(box.height)}" fill="#fff"/>${marks}</mask></defs>`;
   return `${svg.slice(0, openEnd + 1)}${mask}<g mask="url(#${MASK_ID})">${svg.slice(openEnd + 1, closeStart)}</g>${svg.slice(closeStart)}`;
+}
+
+/**
+ * Apply ordered eraser and fill strokes to an SVG. An eraser wraps all
+ * artwork produced before it, while a later fill remains visible above
+ * that mask. This mirrors the order in which cleanup actions were drawn.
+ */
+export function applyCleanupActions(svg, actions, { pixelExact = false } = {}) {
+  if (!actions.length) return svg;
+  const box = svgViewBox(svg);
+  const parts = svgParts(svg);
+  if (!box || !parts) return svg;
+
+  let content = parts.content;
+  let defs = "";
+  let maskIndex = 0;
+  for (const action of actions) {
+    if (action.mode === "fill") {
+      content += fillMarkup(action, box, pixelExact);
+      continue;
+    }
+    const id = `${CLEANUP_MASK_ID}-${maskIndex++}`;
+    const mark = erasureMarkup(action, box, pixelExact);
+    defs += `<mask id="${id}" maskUnits="userSpaceOnUse" x="${n(box.x)}" y="${n(box.y)}" width="${n(box.width)}" height="${n(box.height)}" mask-type="luminance" style="mask-type:luminance" color-interpolation="sRGB"><rect x="${n(box.x)}" y="${n(box.y)}" width="${n(box.width)}" height="${n(box.height)}" fill="#fff"/>${mark}</mask>`;
+    content = `<g mask="url(#${id})">${content}</g>`;
+  }
+  const definitions = defs ? `<defs>${defs}</defs>` : "";
+  return `${parts.before}${definitions}${content}${parts.after}`;
 }

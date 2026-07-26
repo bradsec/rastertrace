@@ -10,8 +10,12 @@ function element() {
     textContent: "",
     src: "",
     title: "",
-    addEventListener(type, listener) { listeners.set(type, listener); },
-    listener(type) { return listeners.get(type); },
+    addEventListener(type, listener) {
+      listeners.set(type, listener);
+    },
+    listener(type) {
+      return listeners.get(type);
+    },
   };
 }
 
@@ -21,17 +25,27 @@ globalThis.document = {
     if (!elements.has(id)) elements.set(id, element());
     return elements.get(id);
   },
-  querySelector() { return element(); },
-  querySelectorAll() { return []; },
+  querySelector() {
+    return element();
+  },
+  querySelectorAll() {
+    return [];
+  },
 };
 
 let copied = "";
 Object.defineProperty(globalThis, "navigator", {
   configurable: true,
-  value: { clipboard: { async writeText(value) { copied = value; } } },
+  value: {
+    clipboard: {
+      async writeText(value) {
+        copied = value;
+      },
+    },
+  },
 });
 
-const { state } = await import("../js/context.js?v=3");
+const { state } = await import("../js/context.js?v=4");
 await import("../js/exporters.js?v=test");
 
 test("copy SVG rebuilds cleanup instead of using stale export state", async () => {

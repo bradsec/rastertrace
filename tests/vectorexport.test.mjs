@@ -27,7 +27,10 @@ test("parseSvgPaths reads dims, fills, subpaths, and applies translate", () => {
   assert.equal(outer.segments[0].kind, "cubic");
   assert.deepEqual(outer.segments[0].to, { x: 70, y: 70 });
   assert.deepEqual(hole.start, { x: 40, y: 50 });
-  assert.equal(hole.segments.every((s) => s.kind === "line"), true);
+  assert.equal(
+    hole.segments.every((s) => s.kind === "line"),
+    true,
+  );
 });
 
 test("parseSvgPaths takes fill from an enclosing group", () => {
@@ -50,17 +53,27 @@ test("parseSvgPaths takes fill from an enclosing group", () => {
 });
 
 test("parseSvgPaths handles implicit command repetition", () => {
-  const svg = '<svg width="10" height="10" viewBox="0 0 10 10">\n<path d="M0 0 C1 0 2 0 3 0 4 0 5 0 6 0 L7 0 8 0 Z " fill="#000000"/>\n</svg>';
+  const svg =
+    '<svg width="10" height="10" viewBox="0 0 10 10">\n<path d="M0 0 C1 0 2 0 3 0 4 0 5 0 6 0 L7 0 8 0 Z " fill="#000000"/>\n</svg>';
   const parsed = parseSvgPaths(svg);
   const seg = parsed.paths[0].subpaths[0].segments;
-  assert.deepEqual(seg.map((s) => s.kind), ["cubic", "cubic", "line", "line"]);
+  assert.deepEqual(
+    seg.map((s) => s.kind),
+    ["cubic", "cubic", "line", "line"],
+  );
   assert.deepEqual(seg[1].to, { x: 6, y: 0 });
 });
 
 test("flattenCubic stays within tolerance and keeps endpoints", () => {
   // Cubic approximation of a quarter circle radius 100 centered at origin
   const k = 100 * 0.5523;
-  const pts = flattenCubic({ x: 100, y: 0 }, { x: 100, y: k }, { x: k, y: 100 }, { x: 0, y: 100 }, 0.25);
+  const pts = flattenCubic(
+    { x: 100, y: 0 },
+    { x: 100, y: k },
+    { x: k, y: 100 },
+    { x: 0, y: 100 },
+    0.25,
+  );
   const last = pts[pts.length - 1];
   assert.deepEqual({ x: Math.round(last.x), y: Math.round(last.y) }, { x: 0, y: 100 });
   assert.ok(pts.length >= 4, "curve subdivides");

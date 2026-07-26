@@ -1,7 +1,14 @@
 // App core: the trace loop, image loading and transforms, menu and
 // control wiring, and startup. Shared state lives in context.js; tools,
 // settings, export, and zoom/pan live in their own modules.
-import { capBitmap, decodeImage, invertBitmap, rasterize, rotateBitmap, Tracer } from "./pipeline.js?v=43";
+import {
+  capBitmap,
+  decodeImage,
+  invertBitmap,
+  rasterize,
+  rotateBitmap,
+  Tracer,
+} from "./pipeline.js?v=43";
 import {
   analyzeFlatness,
   fitTraceScale,
@@ -12,9 +19,15 @@ import {
   PRESETS,
   toHexColor,
 } from "./preprocess.js?v=44";
-import { $, els, hooks, preferences, showError, state } from "./context.js?v=3";
-import { refreshExport, setResultActions } from "./exporters.js?v=6";
-import { clearSelection, setEraser, setSelectionTool, setView } from "./cleanup-tools.js?v=4";
+import { $, els, hooks, preferences, showError, state } from "./context.js?v=4";
+import { refreshExport, setResultActions } from "./exporters.js?v=7";
+import {
+  clearSelection,
+  setBlobFill,
+  setEraser,
+  setSelectionTool,
+  setView,
+} from "./cleanup-tools.js?v=5";
 import {
   applyExportProfile,
   applyMeasurementUnit,
@@ -30,8 +43,8 @@ import {
   updateOutputs,
   updateStencilFields,
   updateTransparencyFields,
-} from "./settings.js?v=4";
-import { actualSizeView, resetView } from "./view.js?v=4";
+} from "./settings.js?v=5";
+import { actualSizeView, resetView } from "./view.js?v=5";
 
 const EMPTY_IMAGE_SRC = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==";
 
@@ -67,9 +80,10 @@ async function retrace() {
     // "auto"/"ultra" trace at the full budget for their ceiling: upscale
     // to the cap regardless of source size (never below 1x).
     const maxSide = settings.upscale === "ultra" ? MAX_TRACE_SIDE_ULTRA : MAX_TRACE_SIDE;
-    const upscale = settings.upscale === "auto" || settings.upscale === "ultra"
-      ? Math.max(1, maxSide / Math.max(state.bitmap.width, state.bitmap.height))
-      : settings.upscale;
+    const upscale =
+      settings.upscale === "auto" || settings.upscale === "ultra"
+        ? Math.max(1, maxSide / Math.max(state.bitmap.width, state.bitmap.height))
+        : Number(settings.upscale);
     const scale = fitTraceScale(state.bitmap.width, state.bitmap.height, upscale, maxSide);
     // Nearest-neighbor pairs with pixel-exact tracing only; crisp mode is
     // corner sharpness, not resampling (NN jaggies anti-aliased sources).
@@ -77,7 +91,12 @@ async function retrace() {
     if (!state.raster || state.raster.scale !== scale || state.raster.nearest !== nearest) {
       state.raster = { scale, nearest, imageData: rasterize(state.bitmap, scale, nearest) };
     }
-    const result = await tracer.trace(state.raster.imageData, settings, state.sourceWidth, state.sourceHeight);
+    const result = await tracer.trace(
+      state.raster.imageData,
+      settings,
+      state.sourceWidth,
+      state.sourceHeight,
+    );
     if (!result) return; // superseded by a newer request
     state.svgRaw = result.svg;
     const { paths } = refreshExport();
@@ -167,9 +186,9 @@ function applyDetectedSettings(bitmap) {
     .sort((a, b) => a - b)
     .find((k) => k >= colorCount);
   const preset = PRESETS[presetKey];
-  els.colors.value = colorCount;
-  els.speckle.value = preset.speckle;
-  els.layerDiff.value = preset.layerDiff;
+  els.colors.value = String(colorCount);
+  els.speckle.value = String(preset.speckle);
+  els.layerDiff.value = String(preset.layerDiff);
   els.preset.value = "";
   updateOutputs();
   state.flatNote = `Detected flat image (~${colorCount} colors), color settings applied.`;
@@ -193,6 +212,7 @@ async function loadFile(file) {
   clearSelection();
   setSelectionTool(null);
   setEraser(false);
+  setBlobFill(false);
   setResultActions(false);
   if (state.downloadUrl) URL.revokeObjectURL(state.downloadUrl);
   if (state.sourceUrl) URL.revokeObjectURL(state.sourceUrl);
@@ -233,6 +253,7 @@ async function loadFile(file) {
     clearSelection();
     setSelectionTool(null);
     setEraser(false);
+    setBlobFill(false);
     applyDetectedSettings(bitmap);
     state.fileName = file.name || "image";
     if (state.sourceUrl) URL.revokeObjectURL(state.sourceUrl);
@@ -283,7 +304,9 @@ const menuActionTargets = {
   "zoom-out": els.zoomOut,
 };
 for (const [action, target] of Object.entries(menuActionTargets)) {
-  document.querySelector(`[data-action="${action}"]`).addEventListener("click", () => target.click());
+  document
+    .querySelector(`[data-action="${action}"]`)
+    .addEventListener("click", () => target.click());
 }
 
 const panels = /** @type {NodeListOf<HTMLDetailsElement>} */ (
@@ -307,11 +330,11 @@ for (const panel of panels) {
 }
 
 document.querySelector('[data-action="about"]').addEventListener("click", () => {
-  $("about-dialog").showModal();
+  /** @type {HTMLDialogElement} */ ($("about-dialog")).showModal();
 });
 for (const guide of ["tracing", "cleanup", "export"]) {
   document.querySelector(`[data-action="${guide}-guide"]`).addEventListener("click", () => {
-    $(`${guide}-guide-dialog`).showModal();
+    /** @type {HTMLDialogElement} */ ($(`${guide}-guide-dialog`)).showModal();
   });
 }
 document.querySelector('[data-action="preferences"]').addEventListener("click", () => {
@@ -335,16 +358,27 @@ const closeMenus = (except) => {
   for (const menu of appMenus) if (menu !== except) menu.open = false;
 };
 for (const menu of appMenus) {
-  menu.addEventListener("toggle", () => { if (menu.open) closeMenus(menu); });
+  menu.addEventListener("toggle", () => {
+    if (menu.open) closeMenus(menu);
+  });
   menu.querySelector("summary").addEventListener("pointerenter", (event) => {
-    if (event.pointerType === "mouse" && !menu.open && appMenus.some((other) => other.open)) menu.open = true;
+    if (event.pointerType === "mouse" && !menu.open && appMenus.some((other) => other.open))
+      menu.open = true;
   });
 }
-document.addEventListener("pointerdown", (event) => {
-  if (!(event.target instanceof Element) || !event.target.closest(".app-menu")) closeMenus();
-}, { capture: true });
+document.addEventListener(
+  "pointerdown",
+  (event) => {
+    if (!(event.target instanceof Element) || !event.target.closest(".app-menu")) closeMenus();
+  },
+  { capture: true },
+);
 document.addEventListener("click", (event) => {
-  if (event.target instanceof Element && event.target.closest(".menu-popover button, .menu-popover a")) closeMenus();
+  if (
+    event.target instanceof Element &&
+    event.target.closest(".menu-popover button, .menu-popover a")
+  )
+    closeMenus();
 });
 window.addEventListener("keydown", (event) => {
   if (event.key === "Escape") {
@@ -412,7 +446,9 @@ async function invert() {
     els.invertImage.setAttribute("aria-pressed", String(state.inverted));
     const knockout = parseHexColor(els.knockoutColor.value);
     if (knockout) {
-      els.knockoutColor.value = toHexColor(knockout.map((channel) => 255 - channel));
+      els.knockoutColor.value = toHexColor(
+        /** @type {[number, number, number]} */ (knockout.map((channel) => 255 - channel)),
+      );
     }
     state.raster = null;
     await updateSourceView();
@@ -502,7 +538,10 @@ els.knockoutColor.addEventListener("input", scheduleRetrace);
  */
 async function ensureUltraBitmap() {
   if (!state.file || !state.bitmap || state.decodedSide >= MAX_TRACE_SIDE_ULTRA) return;
-  if (Math.max(state.sourceWidth, state.sourceHeight) <= Math.max(state.bitmap.width, state.bitmap.height)) {
+  if (
+    Math.max(state.sourceWidth, state.sourceHeight) <=
+    Math.max(state.bitmap.width, state.bitmap.height)
+  ) {
     state.decodedSide = MAX_TRACE_SIDE_ULTRA;
     return;
   }

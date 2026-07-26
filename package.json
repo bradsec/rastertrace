@@ -2,18 +2,23 @@
   "name": "rastertrace-webapp",
   "version": "1.1.55",
   "private": true,
+  "description": "RasterTrace browser-based raster to SVG converter",
   "license": "MIT",
   "repository": "github:bradsec/rastertrace",
   "type": "module",
-  "description": "RasterTrace browser-based raster to SVG converter",
   "scripts": {
     "test": "node --test",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "node scripts/typecheck.mjs",
+    "lint": "oxlint js tests scripts --import-plugin --jsdoc-plugin --deny-warnings",
+    "format": "oxfmt --write .",
+    "format:check": "oxfmt --check .",
     "serve": "python3 -m http.server 8137",
     "build:wasm": "cd wasm && wasm-pack build --target web --out-dir ../pkg --release && rm -f ../pkg/.gitignore"
   },
   "devDependencies": {
     "@material-design-icons/svg": "^0.14.15",
+    "oxfmt": "0.60.0",
+    "oxlint": "1.75.0",
     "typescript": "^7.0.2"
   }
 }

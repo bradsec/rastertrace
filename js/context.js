@@ -74,8 +74,8 @@ export const els = {
   greenScreen: /** @type {HTMLButtonElement} */ ($("green-screen")),
   status: $("status"),
   preview: $("preview"),
-  resultView: $("result-view"),
-  sourceView: $("source-view"),
+  resultView: /** @type {HTMLImageElement} */ ($("result-view")),
+  sourceView: /** @type {HTMLImageElement} */ ($("source-view")),
   tracingVeil: $("tracing-veil"),
   veilStage: $("veil-stage"),
   veilElapsed: $("veil-elapsed"),
@@ -101,6 +101,10 @@ export const els = {
   eraserRedo: /** @type {HTMLButtonElement} */ ($("eraser-redo")),
   eraserClear: /** @type {HTMLButtonElement} */ ($("eraser-clear")),
   eraserCursor: $("eraser-cursor"),
+  blobFillTool: /** @type {HTMLButtonElement} */ ($("blob-fill-tool")),
+  blobFillColor: /** @type {HTMLInputElement} */ ($("blob-fill-color")),
+  blobFillHex: /** @type {HTMLInputElement} */ ($("blob-fill-hex")),
+  blobFillPick: /** @type {HTMLButtonElement} */ ($("blob-fill-pick")),
   marqueeRect: /** @type {HTMLButtonElement} */ ($("marquee-rect")),
   marqueeEllipse: /** @type {HTMLButtonElement} */ ($("marquee-ellipse")),
   polygonLasso: /** @type {HTMLButtonElement} */ ($("polygon-lasso")),
@@ -130,7 +134,9 @@ export const state = {
   loadToken: 0, // guards against overlapping loads (drop while decoding)
   flatNote: null, // status prefix when load-time detection fired
   erasing: false,
-  eraseStrokes: [], // normalized to the SVG viewBox so retracing preserves placement
+  blobFilling: false,
+  blobPicking: false,
+  eraseStrokes: [], // ordered cleanup actions, normalized so retracing preserves placement
   eraseRedo: [],
   selectionTool: null,
   selection: null,

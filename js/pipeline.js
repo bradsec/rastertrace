@@ -17,10 +17,19 @@ export async function sniffImageSize(file) {
   }
   if (bytes.length >= 30 && ascii(0, 4) === "RIFF" && ascii(8, 4) === "WEBP") {
     const type = ascii(12, 4);
-    if (type === "VP8 ") return { width: view.getUint16(26, true) & 0x3fff, height: view.getUint16(28, true) & 0x3fff };
-    if (type === "VP8L") return { width: 1 + (((bytes[25] & 0x3f) << 8) | bytes[24]), height: 1 + (((bytes[27] & 0x0f) << 10) | (bytes[26] << 2) | ((bytes[25] & 0xc0) >> 6)) };
+    if (type === "VP8 ")
+      return {
+        width: view.getUint16(26, true) & 0x3fff,
+        height: view.getUint16(28, true) & 0x3fff,
+      };
+    if (type === "VP8L")
+      return {
+        width: 1 + (((bytes[25] & 0x3f) << 8) | bytes[24]),
+        height: 1 + (((bytes[27] & 0x0f) << 10) | (bytes[26] << 2) | ((bytes[25] & 0xc0) >> 6)),
+      };
     if (type === "VP8X") {
-      const read24 = (offset) => bytes[offset] | (bytes[offset + 1] << 8) | (bytes[offset + 2] << 16);
+      const read24 = (offset) =>
+        bytes[offset] | (bytes[offset + 1] << 8) | (bytes[offset + 2] << 16);
       return { width: 1 + read24(24), height: 1 + read24(27) };
     }
   }
@@ -266,9 +275,7 @@ export class Tracer {
     };
     return new Promise((resolve, reject) => {
       this.pending.set(id, { resolve, reject, postedAt: Date.now() });
-      this.worker.postMessage({ id, img, settings, sourceWidth, sourceHeight }, [
-        img.data.buffer,
-      ]);
+      this.worker.postMessage({ id, img, settings, sourceWidth, sourceHeight }, [img.data.buffer]);
     });
   }
 }

@@ -3,8 +3,8 @@
 // register after the selection and eraser handlers in cleanup-tools.js
 // (which stop propagation while a tool is active), so app.js imports
 // this module last.
-import { els, state } from "./context.js?v=3";
-import { renderSelection } from "./cleanup-tools.js?v=4";
+import { els, state } from "./context.js?v=4";
+import { renderSelection } from "./cleanup-tools.js?v=5";
 
 const view = { scale: 1, tx: 0, ty: 0 };
 const ZOOM_MIN = 0.001;
@@ -23,9 +23,8 @@ function actualZoomPercent() {
 
 function applyView() {
   els.panStage.style.transform = `translate(${view.tx}px, ${view.ty}px) scale(${view.scale})`;
-  els.zoomReset.textContent = view.scale === 1 && view.tx === 0 && view.ty === 0
-    ? "Fit"
-    : `${actualZoomPercent()}%`;
+  els.zoomReset.textContent =
+    view.scale === 1 && view.tx === 0 && view.ty === 0 ? "Fit" : `${actualZoomPercent()}%`;
   renderSelection();
 }
 
@@ -78,7 +77,7 @@ for (const type of ["touchstart", "touchmove"]) {
   els.preview.addEventListener(
     type,
     (e) => {
-      if (e.touches.length > 1) e.preventDefault();
+      if (/** @type {TouchEvent} */ (e).touches.length > 1) e.preventDefault();
     },
     { passive: false },
   );
@@ -109,7 +108,8 @@ function pinchState() {
 }
 
 els.preview.addEventListener("pointerdown", (e) => {
-  if (state.picking || state.erasing || e.button !== 0) return;
+  if (state.picking || state.erasing || state.blobFilling || state.blobPicking || e.button !== 0)
+    return;
   pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
   if (pointers.size === 1) {
     gesture = { x: e.clientX, y: e.clientY };
@@ -147,7 +147,7 @@ els.preview.addEventListener("pointermove", (e) => {
 
 for (const type of ["pointerup", "pointercancel"]) {
   els.preview.addEventListener(type, (e) => {
-    if (!pointers.delete(e.pointerId)) return;
+    if (!pointers.delete(/** @type {PointerEvent} */ (e).pointerId)) return;
     if (pointers.size === 2) {
       // Back down to two fingers (from 3+): restart the pinch from the
       // current positions, or the stale snapshot would cause a jump.

@@ -94,10 +94,60 @@ export const PRESETS = Object.freeze({
 // afterwards. pathPrecision/spliceThreshold feed the tracer directly;
 // minify/stencil toggle post-processing and binary color mode.
 export const EXPORT_PROFILES = Object.freeze({
-  web: { colors: 16, speckle: 10, layerDiff: 24, mode: "spline", cornerThreshold: 60, hierarchical: "stacked", pathPrecision: 1, upscale: 2, straighten: 1, minify: true, stencil: false },
-  balanced: { colors: 256, speckle: 8, layerDiff: 16, mode: "spline", cornerThreshold: 60, hierarchical: "stacked", pathPrecision: 2, upscale: 2, straighten: 0.5, minify: false, stencil: false },
-  detail: { colors: 64, speckle: 2, layerDiff: 8, mode: "spline", cornerThreshold: 45, hierarchical: "stacked", pathPrecision: 4, spliceThreshold: 30, upscale: "auto", straighten: 0, minify: false, stencil: false },
-  maxDetail: { colors: 128, speckle: 1, layerDiff: 6, mode: "spline", cornerThreshold: 25, hierarchical: "stacked", pathPrecision: 4, spliceThreshold: 20, upscale: "auto", straighten: 0, minify: false, stencil: false },
+  web: {
+    colors: 16,
+    speckle: 10,
+    layerDiff: 24,
+    mode: "spline",
+    cornerThreshold: 60,
+    hierarchical: "stacked",
+    pathPrecision: 1,
+    upscale: 2,
+    straighten: 1,
+    minify: true,
+    stencil: false,
+  },
+  balanced: {
+    colors: 256,
+    speckle: 8,
+    layerDiff: 16,
+    mode: "spline",
+    cornerThreshold: 60,
+    hierarchical: "stacked",
+    pathPrecision: 2,
+    upscale: 2,
+    straighten: 0.5,
+    minify: false,
+    stencil: false,
+  },
+  detail: {
+    colors: 64,
+    speckle: 2,
+    layerDiff: 8,
+    mode: "spline",
+    cornerThreshold: 45,
+    hierarchical: "stacked",
+    pathPrecision: 4,
+    spliceThreshold: 30,
+    upscale: "auto",
+    straighten: 0,
+    minify: false,
+    stencil: false,
+  },
+  maxDetail: {
+    colors: 128,
+    speckle: 1,
+    layerDiff: 6,
+    mode: "spline",
+    cornerThreshold: 25,
+    hierarchical: "stacked",
+    pathPrecision: 4,
+    spliceThreshold: 20,
+    upscale: "auto",
+    straighten: 0,
+    minify: false,
+    stencil: false,
+  },
   // mode "none" (below) skips all curve/corner simplification, so colors
   // and speckle are the only levers bounding path count. 64 colors let a
   // photographic/noisy source explode into 100k+ paths and 50+ second
@@ -107,11 +157,74 @@ export const EXPORT_PROFILES = Object.freeze({
   // slow in-flight trace gets killed and restarted by a further settings
   // change (js/pipeline.js Tracer.cancelPending). 8/12 mirrors the
   // print profile's proven low-color-count pairing.
-  pixelExact: { colors: 8, speckle: 12, layerDiff: 6, mode: "none", cornerThreshold: 60, hierarchical: "stacked", pathPrecision: 4, spliceThreshold: 45, upscale: "auto", straighten: 0, minify: false, stencil: false },
-  print: { colors: 8, speckle: 12, layerDiff: 28, mode: "spline", cornerThreshold: 45, hierarchical: "stacked", pathPrecision: 3, upscale: "auto", straighten: 1, minify: false, stencil: false },
-  monoBlack: { colors: 2, speckle: 6, layerDiff: 48, mode: "spline", cornerThreshold: 25, hierarchical: "stacked", pathPrecision: 4, upscale: "auto", straighten: 1, minify: false, stencil: true, stencilInk: "black" },
-  monoWhite: { colors: 2, speckle: 6, layerDiff: 48, mode: "spline", cornerThreshold: 25, hierarchical: "stacked", pathPrecision: 4, upscale: "auto", straighten: 1, minify: false, stencil: true, stencilInk: "white" },
-  laser: { colors: 2, speckle: 12, layerDiff: 48, mode: "spline", cornerThreshold: 30, hierarchical: "stacked", pathPrecision: 3, upscale: "auto", straighten: 1.5, minify: false, stencil: true },
+  pixelExact: {
+    colors: 8,
+    speckle: 12,
+    layerDiff: 6,
+    mode: "none",
+    cornerThreshold: 60,
+    hierarchical: "stacked",
+    pathPrecision: 4,
+    spliceThreshold: 45,
+    upscale: "auto",
+    straighten: 0,
+    minify: false,
+    stencil: false,
+  },
+  print: {
+    colors: 8,
+    speckle: 12,
+    layerDiff: 28,
+    mode: "spline",
+    cornerThreshold: 45,
+    hierarchical: "stacked",
+    pathPrecision: 3,
+    upscale: "auto",
+    straighten: 1,
+    minify: false,
+    stencil: false,
+  },
+  monoBlack: {
+    colors: 2,
+    speckle: 6,
+    layerDiff: 48,
+    mode: "spline",
+    cornerThreshold: 25,
+    hierarchical: "stacked",
+    pathPrecision: 4,
+    upscale: "auto",
+    straighten: 1,
+    minify: false,
+    stencil: true,
+    stencilInk: "black",
+  },
+  monoWhite: {
+    colors: 2,
+    speckle: 6,
+    layerDiff: 48,
+    mode: "spline",
+    cornerThreshold: 25,
+    hierarchical: "stacked",
+    pathPrecision: 4,
+    upscale: "auto",
+    straighten: 1,
+    minify: false,
+    stencil: true,
+    stencilInk: "white",
+  },
+  laser: {
+    colors: 2,
+    speckle: 12,
+    layerDiff: 48,
+    mode: "spline",
+    cornerThreshold: 30,
+    hierarchical: "stacked",
+    pathPrecision: 3,
+    upscale: "auto",
+    straighten: 1.5,
+    minify: false,
+    stencil: true,
+  },
 });
 
 /**
@@ -141,8 +254,14 @@ export function applyExportOptions(svgText, { physicalWidth, physicalUnit, title
     );
   }
   if (title) {
-    const escaped = String(title).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-    out = out.replace(/(<svg[^>]*)>/, (_, head) => `${head} role="img">\n<title>${escaped}</title>`);
+    const escaped = String(title)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;");
+    out = out.replace(
+      /(<svg[^>]*)>/,
+      (_, head) => `${head} role="img">\n<title>${escaped}</title>`,
+    );
   }
   return out;
 }
@@ -150,7 +269,10 @@ export function applyExportOptions(svgText, { physicalWidth, physicalUnit, title
 // Compact decimal for compressed path data: at most 4 places, trailing
 // zeros trimmed, "0.5" as ".5", "-0" as "0".
 function compactNum(n) {
-  let s = n.toFixed(4).replace(/(\.\d*?)0+$/, "$1").replace(/\.$/, "");
+  let s = n
+    .toFixed(4)
+    .replace(/(\.\d*?)0+$/, "$1")
+    .replace(/\.$/, "");
   if (s === "-0") s = "0";
   return s.replace(/^(-?)0\./, "$1.");
 }
@@ -352,10 +474,7 @@ export function applyStencilInk(svgText, ink) {
   const recolored = svgText.replace(/fill="#000000"/g, 'fill="#ffffff"');
   const [, w, h] = recolored.match(/viewBox="0 0 ([\d.]+) ([\d.]+)"/) || [];
   if (!w || !h) return recolored;
-  return recolored.replace(
-    /(<svg[^>]*>)/,
-    `$1<rect width="${w}" height="${h}" fill="#000000"/>`,
-  );
+  return recolored.replace(/(<svg[^>]*>)/, `$1<rect width="${w}" height="${h}" fill="#000000"/>`);
 }
 
 // Validators for persisted settings. localStorage is untrusted input:
@@ -416,9 +535,7 @@ export function parseHexColor(value) {
 
 /** Format [r, g, b] as "#RRGGBB". */
 export function toHexColor([r, g, b]) {
-  return (
-    "#" + [r, g, b].map((c) => c.toString(16).padStart(2, "0").toUpperCase()).join("")
-  );
+  return "#" + [r, g, b].map((c) => c.toString(16).padStart(2, "0").toUpperCase()).join("");
 }
 
 /**
@@ -495,7 +612,12 @@ export function detectBackgroundColor(img) {
     take(width - 1, y);
   }
   const k = Math.min(4, width, height);
-  for (const [cx, cy] of [[0, 0], [width - k, 0], [0, height - k], [width - k, height - k]]) {
+  for (const [cx, cy] of [
+    [0, 0],
+    [width - k, 0],
+    [0, height - k],
+    [width - k, height - k],
+  ]) {
     for (let y = cy; y < cy + k; y++) {
       for (let x = cx; x < cx + k; x++) take(x, y);
     }
@@ -631,11 +753,7 @@ export function snapToImageColor(img, [r, g, b], maxDistance) {
     const key = (data[i] << 16) | (data[i + 1] << 8) | data[i + 2];
     if (seen.has(key)) continue;
     seen.add(key);
-    const d = Math.max(
-      Math.abs(data[i] - r),
-      Math.abs(data[i + 1] - g),
-      Math.abs(data[i + 2] - b),
-    );
+    const d = Math.max(Math.abs(data[i] - r), Math.abs(data[i + 1] - g), Math.abs(data[i + 2] - b));
     if (d < bestDist) {
       bestDist = d;
       best = [data[i], data[i + 1], data[i + 2]];
@@ -886,7 +1004,7 @@ export function analyzeFlatness(img) {
       const r = (key >> 16) & 0xff;
       const g = (key >> 8) & 0xff;
       const b = key & 0xff;
-      const clusterKey = (r >> 6) << 4 | (g >> 6) << 2 | (b >> 6);
+      const clusterKey = ((r >> 6) << 4) | ((g >> 6) << 2) | (b >> 6);
       clusters.set(clusterKey, (clusters.get(clusterKey) || 0) + count);
     }
     const clusterCounts = [...clusters.values()].sort((a, b) => b - a);
@@ -1155,19 +1273,23 @@ export function groupSvgFills(svgText) {
   while (i < matches.length) {
     const fill = fillOf(matches[i][0]);
     let j = i;
-    while (
-      fill &&
-      j + 1 < matches.length &&
-      fillOf(matches[j + 1][0]) === fill &&
-      /^\s*$/.test(svgText.slice(matches[j].index + matches[j][0].length, matches[j + 1].index))
-    ) {
-      j++;
+    if (fill) {
+      while (
+        j + 1 < matches.length &&
+        fillOf(matches[j + 1][0]) === fill &&
+        /^\s*$/.test(svgText.slice(matches[j].index + matches[j][0].length, matches[j + 1].index))
+      ) {
+        j++;
+      }
     }
     if (j > i) {
       out += svgText.slice(cursor, matches[i].index) + `<g fill="${fill}">\n`;
       for (let k = i; k <= j; k++) {
         out += matches[k][0].replace(/\s+fill="[^"]*"/, "");
-        out += k < j ? svgText.slice(matches[k].index + matches[k][0].length, matches[k + 1].index) : "\n";
+        out +=
+          k < j
+            ? svgText.slice(matches[k].index + matches[k][0].length, matches[k + 1].index)
+            : "\n";
       }
       out += "</g>";
       cursor = matches[j].index + matches[j][0].length;

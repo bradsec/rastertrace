@@ -27,8 +27,8 @@ function fmt(n) {
 export function parseSvgPaths(svgText) {
   const vb = svgText.match(/viewBox="0 0 ([\d.]+) ([\d.]+)"/);
   const wh = svgText.match(/<svg[^>]*? width="([\d.]+)"[^>]*? height="([\d.]+)"/);
-  const width = Number(vb ? vb[1] : wh?.[1] ?? 0);
-  const height = Number(vb ? vb[2] : wh?.[2] ?? 0);
+  const width = Number(vb ? vb[1] : (wh?.[1] ?? 0));
+  const height = Number(vb ? vb[2] : (wh?.[2] ?? 0));
 
   // Walk groups and paths in document order: finalizeSvg moves the fill
   // of grouped same-fill paths onto the enclosing <g>, so a path without
@@ -203,7 +203,12 @@ export function toDxf(parsed, { scale = 1 } = {}) {
       }
       out += g(0, "POLYLINE") + g(8, layer) + g(66, 1) + g(70, sub.closed ? 1 : 0);
       for (const p of points) {
-        out += g(0, "VERTEX") + g(8, layer) + g(10, fmt(p.x * scale)) + g(20, fmt((height - p.y) * scale)) + g(30, 0);
+        out +=
+          g(0, "VERTEX") +
+          g(8, layer) +
+          g(10, fmt(p.x * scale)) +
+          g(20, fmt((height - p.y) * scale)) +
+          g(30, 0);
       }
       out += g(0, "SEQEND");
     }

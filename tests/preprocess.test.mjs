@@ -279,7 +279,8 @@ test("modeFilter ignores transparent pixels and preserves alpha", () => {
 });
 
 test("finalizeSvg restores source size and adds viewBox", () => {
-  const svg = '<svg version="1.1" xmlns="http://www.w3.org/2000/svg" width="200" height="400">\n</svg>';
+  const svg =
+    '<svg version="1.1" xmlns="http://www.w3.org/2000/svg" width="200" height="400">\n</svg>';
   const out = finalizeSvg(svg, 100, 200);
   assert.match(out, /width="100" height="200" viewBox="0 0 200 400"/);
 });
@@ -298,7 +299,10 @@ test("groupSvgFills wraps adjacent same-fill paths and strips per-path fill", ()
     "</svg>",
   ].join("\n");
   const out = groupSvgFills(svg);
-  assert.match(out, /<g fill="#FF0000">\n<path d="M0 0" transform="translate\(0,0\)"\/>\n<path d="M1 1" transform="translate\(1,1\)"\/>\n<\/g>/);
+  assert.match(
+    out,
+    /<g fill="#FF0000">\n<path d="M0 0" transform="translate\(0,0\)"\/>\n<path d="M1 1" transform="translate\(1,1\)"\/>\n<\/g>/,
+  );
   // Lone green path stays ungrouped with its own fill.
   assert.match(out, /<path d="M2 2" fill="#00FF00" transform="translate\(2,2\)"\/>/);
   assert.equal(countPaths(out), 3);
@@ -345,13 +349,15 @@ test("finalizeSvg groups same-fill paths in vtracer output", () => {
 });
 
 test("applyStencilInk leaves black ink unchanged", () => {
-  const svg = '<svg width="10" height="10" viewBox="0 0 10 10">\n<path d="M0 0" fill="#000000"/>\n</svg>';
+  const svg =
+    '<svg width="10" height="10" viewBox="0 0 10 10">\n<path d="M0 0" fill="#000000"/>\n</svg>';
   assert.equal(applyStencilInk(svg, "black"), svg);
 });
 
 test("applyStencilInk recolors to white and backs with black, sized to the viewBox", () => {
   // width/height (10x10) differ from viewBox (40x40) to catch upscale cases.
-  const svg = '<svg width="10" height="10" viewBox="0 0 40 40">\n<path d="M0 0" fill="#000000"/>\n</svg>';
+  const svg =
+    '<svg width="10" height="10" viewBox="0 0 40 40">\n<path d="M0 0" fill="#000000"/>\n</svg>';
   const out = applyStencilInk(svg, "white");
   assert.match(out, /<svg[^>]*><rect width="40" height="40" fill="#000000"\/>/);
   assert.match(out, /<path d="M0 0" fill="#ffffff"\/>/);
@@ -359,13 +365,15 @@ test("applyStencilInk recolors to white and backs with black, sized to the viewB
 });
 
 test("applyStencilInk recolors grouped fills too", () => {
-  const svg = '<svg width="10" height="10" viewBox="0 0 10 10">\n<g fill="#000000">\n<path d="M0 0"/>\n<path d="M1 1"/>\n</g>\n</svg>';
+  const svg =
+    '<svg width="10" height="10" viewBox="0 0 10 10">\n<g fill="#000000">\n<path d="M0 0"/>\n<path d="M1 1"/>\n</g>\n</svg>';
   const out = applyStencilInk(svg, "white");
   assert.match(out, /<g fill="#ffffff">/);
 });
 
 test("applyExportOptions rewrites physical size keeping viewBox", () => {
-  const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="200" height="100" viewBox="0 0 400 200">\n<path d="M0 0"/>\n</svg>';
+  const svg =
+    '<svg xmlns="http://www.w3.org/2000/svg" width="200" height="100" viewBox="0 0 400 200">\n<path d="M0 0"/>\n</svg>';
   const out = applyExportOptions(svg, { physicalWidth: 100, physicalUnit: "mm" });
   assert.match(out, /width="100mm" height="50mm" viewBox="0 0 400 200"/);
 });
@@ -389,7 +397,8 @@ test("applyExportOptions adds role and title as first child, escaped", () => {
 });
 
 test("applyExportOptions minify strips xml declaration and comments", () => {
-  const svg = '<?xml version="1.0" encoding="UTF-8"?>\n<!-- Generator: visioncortex VTracer 0.6.5 -->\n<svg width="10" height="10" viewBox="0 0 10 10">\n</svg>';
+  const svg =
+    '<?xml version="1.0" encoding="UTF-8"?>\n<!-- Generator: visioncortex VTracer 0.6.5 -->\n<svg width="10" height="10" viewBox="0 0 10 10">\n</svg>';
   const out = applyExportOptions(svg, { minify: true });
   assert.equal(out, '<svg width="10" height="10" viewBox="0 0 10 10">\n</svg>');
 });
@@ -803,13 +812,8 @@ test("analyzeFlatness detects dominant clusters in noisy flat art", () => {
   const img = makeImage(100, 100);
   for (let y = 0; y < 100; y++) {
     for (let x = 0; x < 100; x++) {
-      const noise = (x * 17 + y * 31) % 41 - 20;
-      const base =
-        y < 45
-          ? [8, 8, 8]
-          : y < 85
-            ? [236, 232, 220]
-            : [145, 145, 135];
+      const noise = ((x * 17 + y * 31) % 41) - 20;
+      const base = y < 45 ? [8, 8, 8] : y < 85 ? [236, 232, 220] : [145, 145, 135];
       setPixel(img, x, y, [
         Math.max(0, Math.min(255, base[0] + noise)),
         Math.max(0, Math.min(255, base[1] + noise)),
@@ -845,7 +849,8 @@ test("analyzeFlatness counts colors needed for 95% coverage", () => {
 });
 
 test("straightenPaths converts near-straight cubics to lines", () => {
-  const svg = '<path d="M0 0 C10 0.05 20 -0.05 30 0 Z " fill="#000000" transform="translate(0,0)"/>';
+  const svg =
+    '<path d="M0 0 C10 0.05 20 -0.05 30 0 Z " fill="#000000" transform="translate(0,0)"/>';
   const out = straightenPaths(svg, 0.5);
   assert.match(out, /d="M0 0 L30 0 Z "/);
   // fill and transform stay untouched
@@ -951,13 +956,15 @@ test("compressSvgPaths leaves non-translate transforms and odd commands alone", 
 });
 
 test("compressSvgPaths shrinks realistic traced output", () => {
-  const svg = '<path d="M100 100 L200.25 100.5 L200.25 200.75 L100 200.75 Z M300 300 C310 300 320 310 320 320 L300 320 Z " fill="#123456" transform="translate(7,9)"/>';
+  const svg =
+    '<path d="M100 100 L200.25 100.5 L200.25 200.75 L100 200.75 Z M300 300 C310 300 320 310 320 320 L300 320 Z " fill="#123456" transform="translate(7,9)"/>';
   const out = compressSvgPaths(svg);
   assert.ok(out.length < svg.length * 0.75, `only got ${out.length}/${svg.length}`);
 });
 
 test("applyExportOptions minify also compresses path data", () => {
-  const svg = '<?xml version="1.0"?>\n<svg width="10" height="10" viewBox="0 0 10 10">\n<path d="M0 0 L5 0 L5 5 Z " fill="#000000" transform="translate(1,1)"/>\n</svg>';
+  const svg =
+    '<?xml version="1.0"?>\n<svg width="10" height="10" viewBox="0 0 10 10">\n<path d="M0 0 L5 0 L5 5 Z " fill="#000000" transform="translate(1,1)"/>\n</svg>';
   const out = applyExportOptions(svg, { minify: true });
   assert.doesNotMatch(out, /<\?xml|transform=/);
   assert.match(out, /d="M1 1h5v5z"/);
@@ -965,7 +972,12 @@ test("applyExportOptions minify also compresses path data", () => {
 
 test("isStaleModuleError matches module load failures only", () => {
   assert.equal(isStaleModuleError("Importing binding name 'straightenPaths' is not found."), true);
-  assert.equal(isStaleModuleError("The requested module './preprocess.js?v=40' does not provide an export named 'straightenPaths'"), true);
+  assert.equal(
+    isStaleModuleError(
+      "The requested module './preprocess.js?v=40' does not provide an export named 'straightenPaths'",
+    ),
+    true,
+  );
   assert.equal(isStaleModuleError("SyntaxError: Unexpected token '<'"), true);
   assert.equal(isStaleModuleError("Image is too large to trace at 4x"), false);
   assert.equal(isStaleModuleError("Conversion failed."), false);

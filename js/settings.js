@@ -8,9 +8,9 @@ import {
   sanitizeSettings,
   toGrayscaleColor,
 } from "./preprocess.js?v=44";
-import { els, preferences } from "./context.js?v=3";
-import { refreshExport, updatePhysicalHeightOut } from "./exporters.js?v=6";
-import { setEyedropper } from "./cleanup-tools.js?v=4";
+import { els, preferences } from "./context.js?v=4";
+import { refreshExport, updatePhysicalHeightOut } from "./exporters.js?v=7";
+import { setEyedropper } from "./cleanup-tools.js?v=5";
 
 /** @returns {HTMLInputElement} */
 const radioEl = (selector) => /** @type {HTMLInputElement} */ (document.querySelector(selector));
@@ -42,7 +42,7 @@ export function savePreferences() {
 }
 
 function convertPhysicalValue(value, fromUnit, toUnit) {
-  return value * MM_PER_UNIT[fromUnit] / MM_PER_UNIT[toUnit];
+  return (value * MM_PER_UNIT[fromUnit]) / MM_PER_UNIT[toUnit];
 }
 
 export function applyMeasurementUnit(unit, preserveSize = true) {
@@ -71,7 +71,7 @@ export function currentSettings() {
         ? parseHexColor(els.knockoutColor.value)
         : null;
   if (Array.isArray(transparent) && (els.grayscale.checked || els.stencil.checked)) {
-    transparent = toGrayscaleColor(transparent);
+    transparent = toGrayscaleColor(/** @type {[number, number, number]} */ (transparent));
   }
   return {
     colors: Number(els.colors.value),
@@ -80,9 +80,10 @@ export function currentSettings() {
     cornerThreshold: Number(els.cornerThreshold.value),
     straighten: Number(els.straighten.value),
     hierarchical: els.hierarchical.value,
-    upscale: els.upscale.value === "auto" || els.upscale.value === "ultra"
-      ? els.upscale.value
-      : Number(els.upscale.value),
+    upscale:
+      els.upscale.value === "auto" || els.upscale.value === "ultra"
+        ? els.upscale.value
+        : Number(els.upscale.value),
     mode: radioEl('input[name="mode"]:checked').value,
     grayscale: els.grayscale.checked,
     denoise: els.denoise.checked,
@@ -182,9 +183,10 @@ function snapshotSettings() {
     cornerThreshold: Number(els.cornerThreshold.value),
     straighten: Number(els.straighten.value),
     hierarchical: els.hierarchical.value,
-    upscale: els.upscale.value === "auto" || els.upscale.value === "ultra"
-      ? els.upscale.value
-      : Number(els.upscale.value),
+    upscale:
+      els.upscale.value === "auto" || els.upscale.value === "ultra"
+        ? els.upscale.value
+        : Number(els.upscale.value),
     mode: radioEl('input[name="mode"]:checked').value,
     grayscale: els.grayscale.checked,
     denoise: els.denoise.checked,
@@ -290,7 +292,8 @@ export function updateTransparencyFields() {
   els.fuzzField.hidden = mode === "";
   els.edgeTrimField.hidden = mode === "";
   els.defringeField.hidden = mode === "";
-  els.backgroundSummary.textContent = els.transparent.selectedOptions[0]?.textContent || "Keep background";
+  els.backgroundSummary.textContent =
+    els.transparent.selectedOptions[0]?.textContent || "Keep background";
 }
 
 export function updateExportFields() {

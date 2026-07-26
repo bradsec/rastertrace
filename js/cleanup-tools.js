@@ -3,15 +3,16 @@
 // Listener order matters: the selection and eraser pointer handlers must
 // register before the pan handlers in view.js, so app.js imports this
 // module first.
-import { snapPointToAngle, svgViewBox } from "./eraser.js?v=5";
-import { toHexColor } from "./preprocess.js?v=44";
-import { els, hooks, state } from "./context.js?v=3";
-import { refreshExport } from "./exporters.js?v=6";
+import { snapPointToAngle, svgViewBox } from "./eraser.js?v=6";
+import { parseHexColor, toHexColor } from "./preprocess.js?v=44";
+import { els, hooks, state } from "./context.js?v=4";
+import { refreshExport } from "./exporters.js?v=7";
 
 export function setView(view) {
   const showResult = view === "result";
   if (!showResult) {
     if (state.erasing) setEraser(false);
+    if (state.blobFilling) setBlobFill(false);
     clearSelection();
     setSelectionTool(null);
   }
@@ -43,17 +44,25 @@ document.addEventListener("keydown", (e) => {
 
 document.addEventListener("keydown", (event) => {
   const target = event.target;
-  const editing = target instanceof HTMLElement
-    && (/^(INPUT|SELECT|TEXTAREA)$/.test(target.tagName) || target.isContentEditable);
+  const editing =
+    target instanceof HTMLElement &&
+    (/^(INPUT|SELECT|TEXTAREA)$/.test(target.tagName) || target.isContentEditable);
   if (editing) return;
   const key = event.key.toLowerCase();
   if (!event.ctrlKey && !event.metaKey && !event.altKey && key === "e" && state.svg) {
     event.preventDefault();
     setEraser(!state.erasing);
+  } else if (!event.ctrlKey && !event.metaKey && !event.altKey && key === "b" && state.svg) {
+    event.preventDefault();
+    setBlobFill(!state.blobFilling);
   } else if (!event.ctrlKey && !event.metaKey && !event.altKey && key === "m" && state.svg) {
     event.preventDefault();
     const tool = event.shiftKey
-      ? (state.selectionTool === "rect" ? "ellipse" : state.selectionTool === "ellipse" ? "rect" : "ellipse")
+      ? state.selectionTool === "rect"
+        ? "ellipse"
+        : state.selectionTool === "ellipse"
+          ? "rect"
+          : "ellipse"
       : "rect";
     clearSelection();
     setSelectionTool(tool);
@@ -64,9 +73,14 @@ document.addEventListener("keydown", (event) => {
   } else if (event.key === "Enter" && state.selection?.type === "polygon") {
     event.preventDefault();
     finishPolygon();
-  } else if (event.key === "Escape" && state.erasing) {
+  } else if (event.key === "Escape" && (state.erasing || state.blobFilling || state.blobPicking)) {
     setEraser(false);
-  } else if (event.key === "Escape" && state.selection?.type === "polygon" && !state.selection.finalized) {
+    setBlobFill(false);
+  } else if (
+    event.key === "Escape" &&
+    state.selection?.type === "polygon" &&
+    !state.selection.finalized
+  ) {
     event.preventDefault();
     state.selection.points.pop();
     state.selection.hover = null;
@@ -82,14 +96,22 @@ document.addEventListener("keydown", (event) => {
     event.preventDefault();
     deleteSelection();
   } else if (event.key === "[" || event.key === "]") {
-    if (!state.erasing) return;
+    if (!state.erasing && !state.blobFilling) return;
     event.preventDefault();
     const factor = event.key === "]" ? 1.2 : 1 / 1.2;
     setEraserSize(Number(els.eraserSize.value) * factor);
-  } else if ((event.ctrlKey || event.metaKey) && (event.key.toLowerCase() === "y" || (event.shiftKey && event.key.toLowerCase() === "z")) && state.eraseRedo.length) {
+  } else if (
+    (event.ctrlKey || event.metaKey) &&
+    (event.key.toLowerCase() === "y" || (event.shiftKey && event.key.toLowerCase() === "z")) &&
+    state.eraseRedo.length
+  ) {
     event.preventDefault();
     els.eraserRedo.click();
-  } else if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "z" && state.eraseStrokes.length) {
+  } else if (
+    (event.ctrlKey || event.metaKey) &&
+    event.key.toLowerCase() === "z" &&
+    state.eraseStrokes.length
+  ) {
     event.preventDefault();
     els.eraserUndo.click();
   }
@@ -127,8 +149,13 @@ export function setSelectionTool(tool) {
   state.selectionTool = tool;
   if (tool) {
     state.erasing = false;
+    state.blobFilling = false;
+    state.blobPicking = false;
     els.eraserTool.setAttribute("aria-pressed", "false");
+    els.blobFillTool.setAttribute("aria-pressed", "false");
+    els.blobFillPick.setAttribute("aria-pressed", "false");
     els.preview.classList.remove("erasing");
+    els.preview.classList.remove("blob-filling", "blob-picking");
     els.eraserCursor.hidden = true;
     setView("result");
   }
@@ -137,9 +164,11 @@ export function setSelectionTool(tool) {
   els.polygonLasso.setAttribute("aria-pressed", String(tool === "polygon"));
   els.preview.classList.toggle("selecting", Boolean(tool));
   if (tool === "polygon") {
-    els.status.textContent = "Click around an area. Hold Shift for 45° segments; double-click or press Enter to close.";
+    els.status.textContent =
+      "Click around an area. Hold Shift for 45° segments; double-click or press Enter to close.";
   } else if (tool) {
-    els.status.textContent = "Drag anywhere in the preview. Hold Shift for a square or circle; Alt/Option draws from the center.";
+    els.status.textContent =
+      "Drag anywhere in the preview. Hold Shift for a square or circle; Alt/Option draws from the center.";
   }
 }
 
@@ -149,8 +178,8 @@ function marqueeGeometry(selection) {
   let dy = selection.current.y - selection.start.y;
   if (selection.constrain && box) {
     const side = Math.max(Math.abs(dx * box.width), Math.abs(dy * box.height));
-    dx = Math.sign(dx || 1) * side / box.width;
-    dy = Math.sign(dy || 1) * side / box.height;
+    dx = (Math.sign(dx || 1) * side) / box.width;
+    dy = (Math.sign(dy || 1) * side) / box.height;
   }
   const x2 = selection.start.x + dx;
   const y2 = selection.start.y + dy;
@@ -187,22 +216,31 @@ export function renderSelection() {
   const px = (point) => ({ x: point.x * imageRect.width, y: point.y * imageRect.height });
   let shape;
   if (selection.type === "polygon") {
-    shape = document.createElementNS("http://www.w3.org/2000/svg", selection.finalized ? "polygon" : "polyline");
-    const points = selection.hover && !selection.finalized
-      ? [...selection.points, selection.hover]
-      : selection.points;
-    shape.setAttribute("points", points.map((point) => {
-      const screenPoint = px(point);
-      return `${screenPoint.x},${screenPoint.y}`;
-    }).join(" "));
+    shape = document.createElementNS(
+      "http://www.w3.org/2000/svg",
+      selection.finalized ? "polygon" : "polyline",
+    );
+    const points =
+      selection.hover && !selection.finalized
+        ? [...selection.points, selection.hover]
+        : selection.points;
+    shape.setAttribute(
+      "points",
+      points
+        .map((point) => {
+          const screenPoint = px(point);
+          return `${screenPoint.x},${screenPoint.y}`;
+        })
+        .join(" "),
+    );
   } else {
     const geometry = marqueeGeometry(selection);
     if (selection.type === "ellipse") {
       shape = document.createElementNS("http://www.w3.org/2000/svg", "ellipse");
       shape.setAttribute("cx", String((geometry.x + geometry.width / 2) * imageRect.width));
       shape.setAttribute("cy", String((geometry.y + geometry.height / 2) * imageRect.height));
-      shape.setAttribute("rx", String(geometry.width * imageRect.width / 2));
-      shape.setAttribute("ry", String(geometry.height * imageRect.height / 2));
+      shape.setAttribute("rx", String((geometry.width * imageRect.width) / 2));
+      shape.setAttribute("ry", String((geometry.height * imageRect.height) / 2));
     } else {
       shape = document.createElementNS("http://www.w3.org/2000/svg", "rect");
       shape.setAttribute("x", String(geometry.x * imageRect.width));
@@ -286,9 +324,18 @@ function deleteSelection() {
   els.status.textContent = "Selected area removed. Ctrl/Cmd+Z restores it.";
 }
 
-els.marqueeRect.addEventListener("click", () => { clearSelection(); setSelectionTool("rect"); });
-els.marqueeEllipse.addEventListener("click", () => { clearSelection(); setSelectionTool("ellipse"); });
-els.polygonLasso.addEventListener("click", () => { clearSelection(); setSelectionTool("polygon"); });
+els.marqueeRect.addEventListener("click", () => {
+  clearSelection();
+  setSelectionTool("rect");
+});
+els.marqueeEllipse.addEventListener("click", () => {
+  clearSelection();
+  setSelectionTool("ellipse");
+});
+els.polygonLasso.addEventListener("click", () => {
+  clearSelection();
+  setSelectionTool("polygon");
+});
 
 let selectionPointer = null;
 
@@ -319,7 +366,9 @@ function selectionIntersectsImage(selection) {
   } else {
     bounds = marqueeGeometry(selection);
   }
-  return bounds.x < 1 && bounds.y < 1 && bounds.x + bounds.width > 0 && bounds.y + bounds.height > 0;
+  return (
+    bounds.x < 1 && bounds.y < 1 && bounds.x + bounds.width > 0 && bounds.y + bounds.height > 0
+  );
 }
 
 function constrainedPolygonPoint(point, shiftKey) {
@@ -330,75 +379,101 @@ function constrainedPolygonPoint(point, shiftKey) {
   return snapPointToAngle(selection.points.at(-1), point, box.width, box.height);
 }
 
-els.preview.addEventListener("pointerdown", (event) => {
-  if (!state.selectionTool || event.button !== 0) return;
-  event.preventDefault();
-  event.stopImmediatePropagation();
-  const point = selectionPoint(event, "free");
-  // An active selection tool owns the whole preview, including the empty
-  // canvas around the image, so selection gestures never pan the artwork.
-  if (!point) return;
-  if (state.selectionTool === "polygon") {
-    if (event.detail > 1) {
-      finishPolygon();
+els.preview.addEventListener(
+  "pointerdown",
+  (event) => {
+    if (!state.selectionTool || event.button !== 0) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    const point = selectionPoint(event, "free");
+    // An active selection tool owns the whole preview, including the empty
+    // canvas around the image, so selection gestures never pan the artwork.
+    if (!point) return;
+    if (state.selectionTool === "polygon") {
+      if (event.detail > 1) {
+        finishPolygon();
+        return;
+      }
+      if (!state.selection || state.selection.finalized) {
+        state.selection = { type: "polygon", points: [], hover: null, finalized: false };
+      }
+      state.selection.points.push(
+        constrainedPolygonPoint({ x: point.x, y: point.y }, event.shiftKey),
+      );
+      renderSelection();
       return;
     }
-    if (!state.selection || state.selection.finalized) {
-      state.selection = { type: "polygon", points: [], hover: null, finalized: false };
+    state.selection = {
+      type: state.selectionTool,
+      start: { x: point.x, y: point.y },
+      current: { x: point.x, y: point.y },
+      constrain: event.shiftKey,
+      fromCenter: event.altKey,
+      finalized: false,
+    };
+    selectionPointer = event.pointerId;
+    els.preview.setPointerCapture(event.pointerId);
+    renderSelection();
+  },
+  true,
+);
+
+els.preview.addEventListener(
+  "dblclick",
+  (event) => {
+    if (state.selectionTool !== "polygon") return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    finishPolygon();
+  },
+  true,
+);
+
+els.preview.addEventListener(
+  "pointermove",
+  (event) => {
+    if (
+      state.selectionTool === "polygon" &&
+      state.selection?.type === "polygon" &&
+      !state.selection.finalized
+    ) {
+      const point = selectionPoint(event, "free");
+      state.selection.hover = constrainedPolygonPoint(point, event.shiftKey);
+      renderSelection();
     }
-    state.selection.points.push(constrainedPolygonPoint({ x: point.x, y: point.y }, event.shiftKey));
-    renderSelection();
-    return;
-  }
-  state.selection = {
-    type: state.selectionTool,
-    start: { x: point.x, y: point.y },
-    current: { x: point.x, y: point.y },
-    constrain: event.shiftKey,
-    fromCenter: event.altKey,
-    finalized: false,
-  };
-  selectionPointer = event.pointerId;
-  els.preview.setPointerCapture(event.pointerId);
-  renderSelection();
-}, true);
-
-els.preview.addEventListener("dblclick", (event) => {
-  if (state.selectionTool !== "polygon") return;
-  event.preventDefault();
-  event.stopImmediatePropagation();
-  finishPolygon();
-}, true);
-
-els.preview.addEventListener("pointermove", (event) => {
-  if (state.selectionTool === "polygon" && state.selection?.type === "polygon" && !state.selection.finalized) {
+    if (selectionPointer !== event.pointerId || !state.selection) return;
     const point = selectionPoint(event, "free");
-    state.selection.hover = constrainedPolygonPoint(point, event.shiftKey);
+    if (!point) return;
+    state.selection.current = { x: point.x, y: point.y };
+    state.selection.constrain = event.shiftKey;
+    state.selection.fromCenter = event.altKey;
     renderSelection();
-  }
-  if (selectionPointer !== event.pointerId || !state.selection) return;
-  const point = selectionPoint(event, "free");
-  if (!point) return;
-  state.selection.current = { x: point.x, y: point.y };
-  state.selection.constrain = event.shiftKey;
-  state.selection.fromCenter = event.altKey;
-  renderSelection();
-}, true);
+  },
+  true,
+);
 
 for (const type of ["pointerup", "pointercancel"]) {
-  els.preview.addEventListener(type, (event) => {
-    if (selectionPointer !== event.pointerId) return;
-    selectionPointer = null;
-    if (!state.selection) return;
-    const geometry = marqueeGeometry(state.selection);
-    if (geometry.width < 0.001 || geometry.height < 0.001 || !selectionIntersectsImage(state.selection)) {
-      clearSelection();
-      return;
-    }
-    state.selection.finalized = true;
-    renderSelection();
-    els.status.textContent = "Selection ready. Press Delete or Backspace to remove it.";
-  }, true);
+  els.preview.addEventListener(
+    type,
+    (event) => {
+      if (selectionPointer !== /** @type {PointerEvent} */ (event).pointerId) return;
+      selectionPointer = null;
+      if (!state.selection) return;
+      const geometry = marqueeGeometry(state.selection);
+      if (
+        geometry.width < 0.001 ||
+        geometry.height < 0.001 ||
+        !selectionIntersectsImage(state.selection)
+      ) {
+        clearSelection();
+        return;
+      }
+      state.selection.finalized = true;
+      renderSelection();
+      els.status.textContent = "Selection ready. Press Delete or Backspace to remove it.";
+    },
+    true,
+  );
 }
 
 // -- Vector eraser: normalized freehand strokes become an SVG mask -----
@@ -406,6 +481,11 @@ for (const type of ["pointerup", "pointercancel"]) {
 export function setEraser(active) {
   state.erasing = active && Boolean(state.svg);
   if (state.erasing) {
+    state.blobFilling = false;
+    state.blobPicking = false;
+    els.blobFillTool.setAttribute("aria-pressed", "false");
+    els.blobFillPick.setAttribute("aria-pressed", "false");
+    els.preview.classList.remove("blob-filling", "blob-picking");
     clearSelection();
     setSelectionTool(null);
   }
@@ -414,18 +494,80 @@ export function setEraser(active) {
   els.eraserCursor.hidden = true;
   if (state.erasing) {
     setView("result");
-    els.status.textContent = "Drag over the vector to erase. [ and ] change the diameter. E or Esc exits.";
+    els.status.textContent =
+      "Drag over the vector to erase. [ and ] change the diameter. E or Esc exits.";
+  }
+}
+
+export function setBlobFill(active) {
+  state.blobFilling = active && Boolean(state.svg);
+  state.blobPicking = false;
+  if (state.blobFilling) {
+    state.erasing = false;
+    els.eraserTool.setAttribute("aria-pressed", "false");
+    els.preview.classList.remove("erasing");
+    clearSelection();
+    setSelectionTool(null);
+  }
+  els.blobFillTool.setAttribute("aria-pressed", String(state.blobFilling));
+  els.blobFillPick.setAttribute("aria-pressed", "false");
+  els.preview.classList.toggle("blob-filling", state.blobFilling);
+  els.preview.classList.remove("blob-picking");
+  els.eraserCursor.hidden = true;
+  if (state.blobFilling) {
+    setView("result");
+    els.status.textContent =
+      "Drag over the vector to paint. [ and ] change the diameter. B or Esc exits.";
   }
 }
 
 function setEraserSize(value) {
-  const size = Math.min(Number(els.eraserSize.max), Math.max(Number(els.eraserSize.min), Math.round(value)));
+  const size = Math.min(
+    Number(els.eraserSize.max),
+    Math.max(Number(els.eraserSize.min), Math.round(value)),
+  );
   els.eraserSize.value = String(size);
   els.eraserSizeOut.textContent = `${size} px`;
 }
 
 els.eraserTool.addEventListener("click", () => setEraser(!state.erasing));
+els.blobFillTool.addEventListener("click", () => setBlobFill(!state.blobFilling));
 els.eraserSize.addEventListener("input", () => setEraserSize(Number(els.eraserSize.value)));
+
+function setBlobColor(value) {
+  const color = value.trim();
+  if (!parseHexColor(color)) {
+    els.blobFillHex.setAttribute("aria-invalid", "true");
+    return false;
+  }
+  const normalized = `${color.startsWith("#") ? "" : "#"}${color}`.toLowerCase();
+  els.blobFillColor.value = normalized;
+  els.blobFillHex.value = normalized;
+  els.blobFillHex.removeAttribute("aria-invalid");
+  els.preview.style.setProperty("--blob-cursor-color", normalized);
+  return true;
+}
+
+els.blobFillColor.addEventListener("input", () => setBlobColor(els.blobFillColor.value));
+els.blobFillHex.addEventListener("change", () => {
+  if (!setBlobColor(els.blobFillHex.value)) {
+    els.status.textContent = "Enter a six-digit hex color such as #336699.";
+  }
+});
+els.blobFillPick.addEventListener("click", () => {
+  if (!state.svg) return;
+  state.blobPicking = !state.blobPicking;
+  if (state.blobPicking) {
+    setBlobFill(true);
+    state.blobPicking = true;
+    els.blobFillPick.setAttribute("aria-pressed", "true");
+    els.preview.classList.remove("blob-filling");
+    els.preview.classList.add("blob-picking");
+    els.status.textContent = "Click the image to sample a fill color. Esc cancels.";
+  } else {
+    setBlobFill(true);
+  }
+});
 els.eraserUndo.addEventListener("click", () => {
   const action = state.eraseStrokes.pop();
   if (!action) return;
@@ -448,7 +590,7 @@ els.eraserClear.addEventListener("click", () => {
   els.status.textContent = "Original traced result restored.";
 });
 
-function eraserPoint(event) {
+function cleanupPoint(event) {
   const rect = els.resultView.getBoundingClientRect();
   if (!rect.width || !rect.height) return null;
   const x = (event.clientX - rect.left) / rect.width;
@@ -456,14 +598,16 @@ function eraserPoint(event) {
   return { x, y, rect };
 }
 
-function moveEraserCursor(event) {
-  if (!state.erasing) return;
-  const point = eraserPoint(event);
+function moveCleanupCursor(event) {
+  if (!state.erasing && !state.blobFilling && !state.blobPicking) return;
+  const point = cleanupPoint(event);
   els.eraserCursor.hidden = !point;
   if (!point) return;
   const previewRect = els.preview.getBoundingClientRect();
   const box = svgViewBox(state.svgRaw || "");
-  const screenSize = box ? Number(els.eraserSize.value) * point.rect.width / box.width : Number(els.eraserSize.value);
+  const screenSize = box
+    ? (Number(els.eraserSize.value) * point.rect.width) / box.width
+    : Number(els.eraserSize.value);
   els.eraserCursor.style.width = `${screenSize}px`;
   els.eraserCursor.style.height = `${screenSize}px`;
   els.eraserCursor.style.left = `${event.clientX - previewRect.left}px`;
@@ -481,11 +625,13 @@ function redrawErasure() {
   });
 }
 
-els.preview.addEventListener("pointerleave", () => { els.eraserCursor.hidden = true; });
+els.preview.addEventListener("pointerleave", () => {
+  els.eraserCursor.hidden = true;
+});
 els.preview.addEventListener("pointermove", (event) => {
-  moveEraserCursor(event);
+  moveCleanupCursor(event);
   if (erasePointer !== event.pointerId) return;
-  const point = eraserPoint(event);
+  const point = cleanupPoint(event);
   if (!point) return;
   const stroke = state.eraseStrokes.at(-1);
   const previous = stroke.points.at(-1);
@@ -494,28 +640,65 @@ els.preview.addEventListener("pointermove", (event) => {
   redrawErasure();
 });
 
-els.preview.addEventListener("pointerdown", (event) => {
-  if (!state.erasing || event.button !== 0) return;
-  event.preventDefault();
-  event.stopImmediatePropagation();
-  const point = eraserPoint(event);
-  if (!point) return;
-  const box = svgViewBox(state.svgRaw || "");
-  if (!box) return;
-  state.eraseRedo = [];
-  state.eraseStrokes.push({
-    diameter: Number(els.eraserSize.value) / Math.min(box.width, box.height),
-    points: [{ x: point.x, y: point.y }],
-  });
-  erasePointer = event.pointerId;
-  els.preview.setPointerCapture(event.pointerId);
-  redrawErasure();
-}, true);
+els.preview.addEventListener(
+  "pointerdown",
+  (event) => {
+    if (state.blobPicking || (!state.erasing && !state.blobFilling) || event.button !== 0) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    const point = cleanupPoint(event);
+    if (!point) return;
+    const box = svgViewBox(state.svgRaw || "");
+    if (!box) return;
+    state.eraseRedo = [];
+    state.eraseStrokes.push({
+      mode: state.blobFilling ? "fill" : "erase",
+      ...(state.blobFilling ? { color: els.blobFillColor.value } : {}),
+      diameter: Number(els.eraserSize.value) / Math.min(box.width, box.height),
+      points: [{ x: point.x, y: point.y }],
+    });
+    erasePointer = event.pointerId;
+    els.preview.setPointerCapture(event.pointerId);
+    redrawErasure();
+  },
+  true,
+);
+
+els.preview.addEventListener(
+  "pointerdown",
+  (event) => {
+    if (!state.blobPicking || event.button !== 0 || !state.bitmap) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    const point = cleanupPoint(event);
+    if (!point || point.x < 0 || point.x > 1 || point.y < 0 || point.y > 1) return;
+    const x = Math.min(
+      state.bitmap.width - 1,
+      Math.max(0, Math.floor(point.x * state.bitmap.width)),
+    );
+    const y = Math.min(
+      state.bitmap.height - 1,
+      Math.max(0, Math.floor(point.y * state.bitmap.height)),
+    );
+    const canvas = new OffscreenCanvas(1, 1);
+    const context = canvas.getContext("2d");
+    context.drawImage(state.bitmap, x, y, 1, 1, 0, 0, 1, 1);
+    const [r, g, b] = context.getImageData(0, 0, 1, 1).data;
+    setBlobColor(toHexColor([r, g, b]).toLowerCase());
+    setBlobFill(true);
+    els.status.textContent = `Fill color sampled: ${els.blobFillColor.value}.`;
+  },
+  true,
+);
 
 for (const type of ["pointerup", "pointercancel"]) {
-  els.preview.addEventListener(type, (event) => {
-    if (erasePointer !== event.pointerId) return;
-    erasePointer = null;
-    refreshExport();
-  }, true);
+  els.preview.addEventListener(
+    type,
+    (event) => {
+      if (erasePointer !== /** @type {PointerEvent} */ (event).pointerId) return;
+      erasePointer = null;
+      refreshExport();
+    },
+    true,
+  );
 }

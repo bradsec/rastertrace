@@ -1,10 +1,10 @@
 // Export pipeline and save handlers: applies export post-processing to
 // the traced SVG, drives the result stats and action buttons, and saves
 // SVG/PNG/PDF/DXF through the File System Access API or a download.
-import { applyEraserMask } from "./eraser.js?v=5";
+import { applyCleanupActions } from "./eraser.js?v=6";
 import { applyExportOptions, countPaths } from "./preprocess.js?v=44";
 import { parseSvgPaths, toDxf, toPdf } from "./vectorexport.js?v=39";
-import { els, preferences, showError, state } from "./context.js?v=3";
+import { els, preferences, showError, state } from "./context.js?v=4";
 
 const DISPLAY_UNITS_PER_INCH = { px: 96, in: 1, cm: 2.54, mm: 25.4 };
 
@@ -22,27 +22,33 @@ export function setResultActions(enabled) {
   }
   els.eraserTool.disabled = !enabled;
   els.eraserSize.disabled = !enabled;
+  els.blobFillTool.disabled = !enabled;
+  els.blobFillColor.disabled = !enabled;
+  els.blobFillHex.disabled = !enabled;
+  els.blobFillPick.disabled = !enabled;
   els.marqueeRect.disabled = !enabled;
   els.marqueeEllipse.disabled = !enabled;
   els.polygonLasso.disabled = !enabled;
-  const erased = enabled && state.eraseStrokes.length > 0;
-  els.eraserUndo.disabled = !erased;
+  const cleaned = enabled && state.eraseStrokes.length > 0;
+  els.eraserUndo.disabled = !cleaned;
   els.eraserRedo.disabled = !enabled || !state.eraseRedo.length;
-  els.eraserClear.disabled = !erased;
-  if (erased) {
+  els.eraserClear.disabled = !cleaned;
+  if (cleaned) {
     els.downloadPdf.disabled = true;
     els.downloadDxf.disabled = true;
-    els.downloadPdf.title = "Clear eraser strokes before exporting PDF";
-    els.downloadDxf.title = "Clear eraser strokes before exporting DXF";
+    els.downloadPdf.title = "Clear cleanup actions before exporting PDF";
+    els.downloadDxf.title = "Clear cleanup actions before exporting DXF";
   } else {
-    els.downloadPdf.title = "Save a vector PDF at the selected physical size, choosing its name and location";
-    els.downloadDxf.title = "Save DXF geometry for CAD or fabrication, choosing its name and location";
+    els.downloadPdf.title =
+      "Save a vector PDF at the selected physical size, choosing its name and location";
+    els.downloadDxf.title =
+      "Save DXF geometry for CAD or fabrication, choosing its name and location";
   }
   const pdfDxfButtons = /** @type {NodeListOf<HTMLButtonElement>} */ (
     document.querySelectorAll('[data-action="download-pdf"], [data-action="download-dxf"]')
   );
   for (const button of pdfDxfButtons) {
-    button.disabled = !enabled || erased;
+    button.disabled = !enabled || cleaned;
   }
 }
 
@@ -84,7 +90,7 @@ export function refreshExport() {
     document.querySelector('input[name="mode"]:checked')
   );
   const pixelExact = selectedMode?.value === "none";
-  state.svg = applyEraserMask(
+  state.svg = applyCleanupActions(
     applyExportOptions(state.svgRaw, exportOptions()),
     state.eraseStrokes,
     { pixelExact },
@@ -148,10 +154,12 @@ async function chooseSaveFile(extension, mimeType) {
   try {
     return await window.showSaveFilePicker({
       suggestedName: exportFileName(extension),
-      types: [{
-        description: `${extension.toUpperCase()} file`,
-        accept: { [mimeType]: [`.${extension}`] },
-      }],
+      types: [
+        {
+          description: `${extension.toUpperCase()} file`,
+          accept: { [mimeType]: [`.${extension}`] },
+        },
+      ],
     });
   } catch (err) {
     if (err?.name === "AbortError") return undefined;
@@ -251,7 +259,11 @@ els.downloadPdf.addEventListener("click", async () => {
     const pdf = toPdf(parsed, { pageWidth: widthPt, pageHeight: heightPt });
     const result = await saveBlob(new Blob([pdf], { type: "application/pdf" }), "pdf", fileHandle);
     if (!result.cancelled) {
-      els.status.textContent = saveStatus("PDF", result, ` at ${formatDimensionsFromInches(widthPt / 72, heightPt / 72)}`);
+      els.status.textContent = saveStatus(
+        "PDF",
+        result,
+        ` at ${formatDimensionsFromInches(widthPt / 72, heightPt / 72)}`,
+      );
     }
   } catch (err) {
     showError(err.message || "PDF export failed.");
@@ -270,9 +282,10 @@ els.downloadDxf.addEventListener("click", async () => {
     const dxf = toDxf(parsed, { scale: widthUnits / parsed.width });
     const result = await saveBlob(new Blob([dxf], { type: "image/vnd.dxf" }), "dxf", fileHandle);
     if (!result.cancelled) {
-      const detail = els.exportSize.value === "physical"
-        ? ` at ${widthUnits.toFixed(1)} mm wide`
-        : ` at ${widthUnits} units (source pixels)`;
+      const detail =
+        els.exportSize.value === "physical"
+          ? ` at ${widthUnits.toFixed(1)} mm wide`
+          : ` at ${widthUnits} units (source pixels)`;
       els.status.textContent = saveStatus("DXF", result, detail);
     }
   } catch (err) {
