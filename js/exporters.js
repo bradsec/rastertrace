@@ -1,10 +1,10 @@
 // Export pipeline and save handlers: applies export post-processing to
 // the traced SVG, drives the result stats and action buttons, and saves
 // SVG/PNG/PDF/DXF through the File System Access API or a download.
-import { applyCleanupActions } from "./eraser.js?v=8";
-import { applyExportOptions, countPaths, physicalWidthValue } from "./preprocess.js?v=47";
-import { parseSvgPaths, toDxf, toPdf } from "./vectorexport.js?v=40";
-import { els, preferences, showError, state } from "./context.js?v=7";
+import { applyCleanupActions } from "./eraser.js?v=9";
+import { applyExportOptions, countPaths, physicalWidthValue } from "./preprocess.js?v=48";
+import { parseSvgPaths, toDxf, toPdf } from "./vectorexport.js?v=41";
+import { els, preferences, showError, state } from "./context.js?v=8";
 
 const DISPLAY_UNITS_PER_INCH = { px: 96, in: 1, cm: 2.54, mm: 25.4 };
 
@@ -132,8 +132,11 @@ function formatDimensionsFromInches(width, height) {
   return `${displayWidth.toFixed(digits)}×${displayHeight.toFixed(digits)} ${unit}`;
 }
 
+// "_rt" suffix so a PNG export never lands on the source file's own name.
+// The SVG <title> keeps the plain stem: that is the artwork's accessible
+// name, not a file name.
 function exportFileName(extension) {
-  return `${state.fileName.replace(/\.[^.]+$/, "")}.${extension}`;
+  return `${state.fileName.replace(/\.[^.]+$/, "")}_rt.${extension}`;
 }
 
 function downloadBlob(blob, extension) {
@@ -223,7 +226,13 @@ els.downloadPng.addEventListener("click", async () => {
     canvas.width = width;
     canvas.height = height;
     canvas.getContext("2d").drawImage(img, 0, 0, width, height);
-    const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
+    const blob = await new Promise((resolve) => {
+      canvas.toBlob(resolve, "image/png");
+    });
+    // toBlob hands back null when the encode fails (canvas too large for the
+    // device). Without this the null reaches createObjectURL and the user
+    // sees a DOM type error instead of the reason.
+    if (!blob) throw new Error(`PNG encoding failed at ${width}×${height} px. Try a smaller size.`);
     const result = await saveBlob(blob, "png", fileHandle);
     els.status.textContent = saveStatus("PNG", result, ` at ${width}×${height} px`);
   } catch (err) {

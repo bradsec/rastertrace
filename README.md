@@ -31,7 +31,7 @@ Convert raster images to clean, scalable SVG vectors entirely in your browser. [
 - Paste an image from the clipboard (Ctrl/Cmd+V) to load it, alongside drag-and-drop and the file picker
 - Same-fill paths grouped under shared `<g fill>` elements for smaller SVG files
 - Upscale "Auto (fit 2048)" traces small images at the full 2048 px budget for maximum curve quality
-- Live re-trace on setting changes, Save As dialogs for SVG, PNG, PDF, and DXF, clipboard copy, and PNG export at the trace resolution
+- Live re-trace on setting changes, Save As dialogs for SVG, PNG, PDF, and DXF, clipboard copy, and PNG export at the trace resolution. Exports default to `<source>_rt.<ext>` so saving never overwrites the original image
 - Vector PDF export (true curves, physical page size when set) for print shops and design handoff
 - DXF export (R12) for CAD, CNC, and cutters: one closed polyline per shape, one layer per color, mm units when a physical size is set
 - Settings persist across visits and image replacements (flat-image detection still tunes colors per image); one-click Reset settings

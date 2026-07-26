@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { sharedContext } from "./shared-state.mjs";
 
 function element() {
   const listeners = new Map();
@@ -46,10 +47,7 @@ Object.defineProperty(globalThis, "navigator", {
   },
 });
 
-// The query must match the specifier exporters.js uses: Node keys its module
-// cache on the full specifier, so a mismatch hands the test a second, unused
-// copy of the shared state object.
-const { state } = await import("../js/context.js?v=7");
+const { state } = await sharedContext("exporters.js");
 await import("../js/exporters.js?v=test");
 
 test("copy SVG rebuilds cleanup instead of using stale export state", async () => {
@@ -95,4 +93,39 @@ test("SVG export snapshots content before the save picker opens", async () => {
 
   assert.match(written, /id="first"/);
   assert.doesNotMatch(written, /id="second"/);
+});
+
+test("export file names get an _rt suffix so they never overwrite the source", async () => {
+  let suggested;
+  window.showSaveFilePicker = async (options) => {
+    suggested = options.suggestedName;
+    throw Object.assign(new Error("cancelled"), { name: "AbortError" });
+  };
+  state.fileName = "logo.png";
+  state.svgRaw = '<svg viewBox="0 0 10 10"><path d="M0 0"/></svg>';
+  state.svg = state.svgRaw;
+  state.eraseStrokes = [];
+
+  await elements.get("download").listener("click")();
+  assert.equal(suggested, "logo_rt.svg");
+
+  // The accessible <title> keeps the plain stem: it names the artwork, not
+  // the file it is written to.
+  await elements.get("copy-svg").listener("click")();
+  assert.match(copied, /<title>logo<\/title>/);
+});
+
+test("export file names handle a source with no extension", async () => {
+  let suggested;
+  window.showSaveFilePicker = async (options) => {
+    suggested = options.suggestedName;
+    throw Object.assign(new Error("cancelled"), { name: "AbortError" });
+  };
+  state.fileName = "clipboard";
+  state.svgRaw = '<svg viewBox="0 0 10 10"><path d="M0 0"/></svg>';
+  state.svg = state.svgRaw;
+  state.eraseStrokes = [];
+
+  await elements.get("download").listener("click")();
+  assert.equal(suggested, "clipboard_rt.svg");
 });
