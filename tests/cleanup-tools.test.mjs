@@ -171,3 +171,46 @@ test("CT-001: an uninterrupted drag still records every move", () => {
   assert.equal(state.eraseStrokes.length, 1);
   assert.equal(state.eraseStrokes[0].points.length, 4);
 });
+
+// The knockout matches against the worker's preprocessed pixels, so a color
+// picked off the untouched original can be absent from the reduced palette.
+test("BG-001: the eyedropper samples the preprocessed raster, not the original", () => {
+  state.bitmap = { width: 2, height: 2 };
+  // Two flat palette colors: left half red, right half blue.
+  state.processedRaster = {
+    width: 2,
+    height: 2,
+    data: new Uint8ClampedArray([200, 0, 0, 255, 0, 0, 200, 255, 200, 0, 0, 255, 0, 0, 200, 255]),
+  };
+  state.picking = true;
+  state.sourceUrl = null;
+
+  // The stub rect is 200x200, so clientX 150 lands in the right-hand column.
+  elements.get("source-view").dispatch("click", { clientX: 150, clientY: 50 });
+
+  assert.equal(elements.get("knockout-color").value, "#0000c8");
+  assert.equal(state.picking, false, "sampling disarms the eyedropper");
+});
+
+test("BG-001: the eyedropper falls back to the bitmap before the first trace", () => {
+  let drawn = null;
+  globalThis.OffscreenCanvas = class {
+    getContext() {
+      return {
+        drawImage(_bitmap, x, y) {
+          drawn = { x, y };
+        },
+        getImageData: () => ({ data: new Uint8ClampedArray([17, 34, 51, 255]) }),
+      };
+    }
+  };
+  state.bitmap = { width: 4, height: 4 };
+  state.processedRaster = null;
+  state.picking = true;
+  state.sourceUrl = null;
+
+  elements.get("source-view").dispatch("click", { clientX: 150, clientY: 50 });
+
+  assert.deepEqual(drawn, { x: 3, y: 1 }, "click maps to the bitmap pixel");
+  assert.equal(elements.get("knockout-color").value, "#112233");
+});

@@ -4,7 +4,7 @@
 // (which stop propagation while a tool is active), so app.js imports
 // this module last.
 import { els, state } from "./context.js?v=8";
-import { renderSelection } from "./cleanup-tools.js?v=16";
+import { renderSelection } from "./cleanup-tools.js?v=17";
 
 const view = { scale: 1, tx: 0, ty: 0 };
 const ZOOM_MIN = 0.001;

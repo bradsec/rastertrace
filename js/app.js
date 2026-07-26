@@ -29,7 +29,7 @@ import {
   setEraser,
   setSelectionTool,
   setView,
-} from "./cleanup-tools.js?v=16";
+} from "./cleanup-tools.js?v=17";
 import {
   applyExportProfile,
   applyMeasurementUnit,

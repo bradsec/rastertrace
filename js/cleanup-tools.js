@@ -24,14 +24,48 @@ export function setView(view) {
 
 // -- Eyedropper: arm, click the source image to sample, Esc cancels ----
 
+// The knockout runs against the worker's preprocessed pixels (grayscale,
+// denoise, palette reduction), so the eyedropper samples and previews
+// that raster instead of the original bitmap: a color picked off the
+// untouched original may no longer exist once the palette is reduced,
+// leaving the background only partly removed.
+let pickUrl = null;
+let pickToken = 0;
+
+function clearPickPreview() {
+  pickToken++;
+  if (pickUrl) {
+    URL.revokeObjectURL(pickUrl);
+    pickUrl = null;
+  }
+  if (state.sourceUrl) els.sourceView.src = state.sourceUrl;
+}
+
+async function showPickPreview() {
+  const raster = state.processedRaster;
+  if (!raster?.data || !raster.width || !raster.height) return;
+  const token = ++pickToken;
+  const canvas = new OffscreenCanvas(raster.width, raster.height);
+  canvas
+    .getContext("2d")
+    .putImageData(new ImageData(raster.data, raster.width, raster.height), 0, 0);
+  const blob = await canvas.convertToBlob({ type: "image/png" });
+  // A newer arm/disarm may have landed while the blob encoded.
+  if (token !== pickToken || !state.picking) return;
+  pickUrl = URL.createObjectURL(blob);
+  els.sourceView.src = pickUrl;
+}
+
 export function setEyedropper(armed) {
   state.picking = armed;
   els.pickFromImage.setAttribute("aria-pressed", String(armed));
   els.preview.classList.toggle("picking", armed);
   if (armed) {
     setView("source");
+    showPickPreview();
     els.status.textContent = "Click the image to sample the background color. Esc cancels.";
   } else {
+    clearPickPreview();
     els.status.textContent = "";
   }
 }
@@ -176,22 +210,30 @@ document.addEventListener("keydown", (event) => {
   }
 });
 
-els.sourceView.addEventListener("click", (e) => {
-  if (!state.picking || !state.bitmap) return;
-  const rect = els.sourceView.getBoundingClientRect();
-  const x = Math.min(
-    state.bitmap.width - 1,
-    Math.max(0, Math.floor(((e.clientX - rect.left) / rect.width) * state.bitmap.width)),
-  );
-  const y = Math.min(
-    state.bitmap.height - 1,
-    Math.max(0, Math.floor(((e.clientY - rect.top) / rect.height) * state.bitmap.height)),
-  );
+/** Sample the original bitmap, for the window before the first trace. */
+function sampleBitmapColor(normalizedX, normalizedY) {
+  const { width, height } = state.bitmap;
+  const x = Math.min(width - 1, Math.max(0, Math.floor(normalizedX * width)));
+  const y = Math.min(height - 1, Math.max(0, Math.floor(normalizedY * height)));
   const canvas = new OffscreenCanvas(1, 1);
   const ctx = canvas.getContext("2d");
   ctx.drawImage(state.bitmap, x, y, 1, 1, 0, 0, 1, 1);
   const [r, g, b] = ctx.getImageData(0, 0, 1, 1).data;
-  els.knockoutColor.value = toHexColor([r, g, b]).toLowerCase();
+  return [r, g, b];
+}
+
+els.sourceView.addEventListener("click", (e) => {
+  if (!state.picking || !state.bitmap) return;
+  const rect = els.sourceView.getBoundingClientRect();
+  const normalizedX = (e.clientX - rect.left) / rect.width;
+  const normalizedY = (e.clientY - rect.top) / rect.height;
+  const color = /** @type {[number, number, number] | null} */ (
+    state.processedRaster
+      ? sampleRasterColor(state.processedRaster, normalizedX, normalizedY)
+      : sampleBitmapColor(normalizedX, normalizedY)
+  );
+  if (!color) return;
+  els.knockoutColor.value = toHexColor(color).toLowerCase();
   setEyedropper(false);
   setView("result");
   hooks.scheduleRetrace();
