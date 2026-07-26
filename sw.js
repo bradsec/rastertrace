@@ -21,7 +21,7 @@ async function networkFirst(request) {
   const cache = await caches.open(CACHE);
   try {
     const response = await fetch(request);
-    if (response.ok) cache.put(request, response.clone());
+    if (response.ok) await cache.put(request, response.clone());
     return response;
   } catch (err) {
     const hit = await cache.match(request);
@@ -41,16 +41,18 @@ async function cacheFirst(request) {
   // script URL forever and break every later load.
   const isHtmlFallback = (response.headers.get("content-type") || "").includes("text/html");
   if (response.ok && !isHtmlFallback) {
-    cache.put(request, response.clone());
+    await cache.put(request, response.clone());
     // A new ?v= means the old version of the same file is dead weight.
     const url = new URL(request.url);
     if (url.search) {
+      const staleEntries = [];
       for (const cached of await cache.keys()) {
         const cachedUrl = new URL(cached.url);
         if (cachedUrl.pathname === url.pathname && cachedUrl.search !== url.search) {
-          cache.delete(cached);
+          staleEntries.push(cache.delete(cached));
         }
       }
+      await Promise.all(staleEntries);
     }
   }
   return response;
