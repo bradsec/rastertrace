@@ -12,6 +12,7 @@
     "lint": "oxlint js tests scripts --import-plugin --jsdoc-plugin --deny-warnings",
     "format": "oxfmt --write .",
     "format:check": "oxfmt --check .",
+    "check:icons": "node scripts/check-material-icons.mjs",
     "serve": "python3 -m http.server 8137",
     "build:wasm": "cd wasm && wasm-pack build --target web --out-dir ../pkg --release && rm -f ../pkg/.gitignore"
   },
