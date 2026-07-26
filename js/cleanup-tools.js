@@ -502,8 +502,10 @@ els.preview.addEventListener(
       state.selection?.type === "polygon" &&
       !state.selection.finalized
     ) {
+      // Null when the result image has collapsed to zero size; snapping
+      // would dereference it.
       const point = selectionPoint(event, "free");
-      state.selection.hover = constrainedPolygonPoint(point, event.shiftKey);
+      state.selection.hover = point ? constrainedPolygonPoint(point, event.shiftKey) : null;
       renderSelection();
     }
     if (selectionPointer !== event.pointerId || !state.selection) return;

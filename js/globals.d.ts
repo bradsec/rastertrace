@@ -1,4 +1,3 @@
-// Boot guard flag set by app.js and read by the inline script in index.html.
 // File System Access API: not in TS's default DOM lib, feature-detected at
 // call sites via `"showSaveFilePicker" in window`.
 interface FileSystemWritableFileStream {
@@ -14,6 +13,5 @@ interface SaveFilePickerOptions {
   types?: { description?: string; accept: Record<string, string[]> }[];
 }
 interface Window {
-  __rastertraceBooted?: boolean;
   showSaveFilePicker?(options?: SaveFilePickerOptions): Promise<FileSystemFileHandle>;
 }

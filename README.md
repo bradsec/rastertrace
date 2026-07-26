@@ -77,6 +77,7 @@ npm run typecheck        # check JavaScript and DOM types
 npm run lint             # run Oxlint
 npm run format:check     # verify Oxfmt formatting
 npm run format           # apply Oxfmt formatting
+npm run check:icons      # verify bundled Material icons match the pinned package
 npm run serve            # http://localhost:8137
 npm run build:wasm       # rebuild pkg/ (Rust 1.94.0 and wasm-pack 0.15.0)
 ```
