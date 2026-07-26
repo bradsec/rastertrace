@@ -707,13 +707,14 @@ export function knockOutEdges(img, fuzz) {
   const matches = (i) =>
     data[i + 3] >= ALPHA_THRESHOLD && fuzzMatch(data[i], data[i + 1], data[i + 2]);
 
-  const visited = new Uint8Array(width * height);
-  const stack = [];
+  const stack = new Uint32Array(width * height);
+  let stackSize = 0;
   const push = (x, y) => {
     const p = y * width + x;
-    if (!visited[p] && matches(p * 4)) {
-      visited[p] = 1;
-      stack.push(p);
+    const i = p * 4;
+    if (matches(i)) {
+      data[i + 3] = 0;
+      stack[stackSize++] = p;
     }
   };
   for (let x = 0; x < width; x++) {
@@ -724,9 +725,8 @@ export function knockOutEdges(img, fuzz) {
     push(0, y);
     push(width - 1, y);
   }
-  while (stack.length) {
-    const p = stack.pop();
-    data[p * 4 + 3] = 0;
+  while (stackSize) {
+    const p = stack[--stackSize];
     const x = p % width;
     const y = (p / width) | 0;
     if (x > 0) push(x - 1, y);

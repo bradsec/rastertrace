@@ -758,6 +758,21 @@ test("knockOutEdges returns null when corners already transparent", async () => 
   assert.equal(knockOutEdges(img, 16), null);
 });
 
+test("knockOutEdges handles a broad background with bounded storage", async () => {
+  const { knockOutEdges } = await import("../js/preprocess.js");
+  const width = 512;
+  const height = 512;
+  const data = new Uint8ClampedArray(width * height * 4);
+  for (let i = 0; i < data.length; i += 4) {
+    data[i] = 240;
+    data[i + 1] = 240;
+    data[i + 2] = 240;
+    data[i + 3] = 255;
+  }
+  assert.deepEqual(knockOutEdges({ data, width, height }, 0), [240, 240, 240]);
+  for (let i = 3; i < data.length; i += 4) assert.equal(data[i], 0);
+});
+
 test("analyzeFlatness flags flat image with anti-aliased fringe", () => {
   // 100x100: top half red, bottom half blue, plus a fringe row of 100
   // unique blend colors (1% of pixels) like anti-aliased edges produce.
