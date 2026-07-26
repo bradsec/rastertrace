@@ -3,9 +3,19 @@ import assert from "node:assert/strict";
 import {
   applyCleanupActions,
   applyEraserMask,
+  brushSizeForShortcut,
   snapPointToAngle,
   svgViewBox,
 } from "../js/eraser.js";
+
+test("brushSizeForShortcut changes every non-boundary keypress", () => {
+  assert.equal(brushSizeForShortcut(2, true, 2, 240), 3);
+  assert.equal(brushSizeForShortcut(3, false, 2, 240), 2);
+  assert.equal(brushSizeForShortcut(32, true, 2, 240), 38);
+  assert.equal(brushSizeForShortcut(32, false, 2, 240), 27);
+  assert.equal(brushSizeForShortcut(240, true, 2, 240), 240);
+  assert.equal(brushSizeForShortcut(2, false, 2, 240), 2);
+});
 
 test("svgViewBox reads comma and space separated values", () => {
   assert.deepEqual(svgViewBox('<svg viewBox="-2, 3, 100, 50"></svg>'), {
@@ -138,6 +148,28 @@ test("applyCleanupActions preserves cleanup action order", () => {
     result,
     /<g mask="url\(#rastertrace-cleanup-mask-0\)"><path id="art"\/><circle[^>]+fill="#abcdef"\/><\/g><circle[^>]+fill="#fedcba"\/>/,
   );
+});
+
+test("applyCleanupActions fills rectangular, elliptical, and polygon selections", () => {
+  const svg = '<svg viewBox="0 0 100 50"><path d="M0 0"/></svg>';
+  const result = applyCleanupActions(svg, [
+    { mode: "fill", color: "#123456", type: "rect", x: 0.1, y: 0.2, width: 0.3, height: 0.4 },
+    { mode: "fill", color: "#abcdef", type: "ellipse", cx: 0.5, cy: 0.5, rx: 0.1, ry: 0.2 },
+    {
+      mode: "fill",
+      color: "#fedcba",
+      type: "polygon",
+      points: [
+        { x: 0, y: 0 },
+        { x: 1, y: 0 },
+        { x: 0.5, y: 1 },
+      ],
+    },
+  ]);
+
+  assert.match(result, /<rect x="10" y="10" width="30" height="20" fill="#123456"\/>/);
+  assert.match(result, /<ellipse cx="50" cy="25" rx="10" ry="10" fill="#abcdef"\/>/);
+  assert.match(result, /<polygon points="0,0 100,0 50,50" fill="#fedcba"\/>/);
 });
 
 test("snapPointToAngle locks polygon segments in image-space 45 degree increments", () => {

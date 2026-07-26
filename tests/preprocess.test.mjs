@@ -32,6 +32,7 @@ import {
   straightenPaths,
   removeBackground,
   resolveSettings,
+  sampleRasterColor,
   sanitizeSettings,
   snapToImageColor,
   thresholdImage,
@@ -65,6 +66,19 @@ test("parseHexColor accepts #RRGGBB and RRGGBB", () => {
 test("toHexColor round-trips", () => {
   assert.equal(toHexColor([17, 25, 15]), "#11190F");
   assert.deepEqual(parseHexColor(toHexColor([1, 2, 3])), [1, 2, 3]);
+});
+
+test("sampleRasterColor maps preview coordinates to processed pixels", () => {
+  const image = makeImage(2, 2, [0, 0, 0, 255]);
+  setPixel(image, 0, 0, [12, 34, 56, 255]);
+  setPixel(image, 1, 0, [78, 90, 123, 255]);
+  setPixel(image, 0, 1, [145, 167, 189, 255]);
+  setPixel(image, 1, 1, [210, 220, 230, 255]);
+
+  assert.deepEqual(sampleRasterColor(image, 0.1, 0.1), [12, 34, 56]);
+  assert.deepEqual(sampleRasterColor(image, 0.9, 0.1), [78, 90, 123]);
+  assert.deepEqual(sampleRasterColor(image, 0.1, 0.9), [145, 167, 189]);
+  assert.deepEqual(sampleRasterColor(image, 1, 1), [210, 220, 230]);
 });
 
 test("detectBackgroundColor picks most common opaque corner", () => {

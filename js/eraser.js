@@ -1,6 +1,12 @@
 const MASK_ID = "rastertrace-eraser-mask";
 const CLEANUP_MASK_ID = "rastertrace-cleanup-mask";
 
+export function brushSizeForShortcut(value, increase, min, max) {
+  const scaled = Math.round(value * (increase ? 1.2 : 1 / 1.2));
+  const changed = increase ? Math.max(value + 1, scaled) : Math.min(value - 1, scaled);
+  return Math.min(max, Math.max(min, changed));
+}
+
 export function svgViewBox(svg) {
   const match = svg.match(
     /\bviewBox\s*=\s*["']\s*([-+\d.eE]+)[ ,]+([-+\d.eE]+)[ ,]+([-+\d.eE]+)[ ,]+([-+\d.eE]+)\s*["']/i,

@@ -1000,10 +1000,29 @@ details.advanced[open] {
     0 0 0 2px rgb(0 0 0 / 85%);
 }
 .preview.blob-picking .eraser-cursor {
-  width: 18px !important;
-  height: 18px !important;
-  border-radius: 2px;
-  background: transparent;
+  width: 32px !important;
+  height: 32px !important;
+  border: 0;
+  border-radius: 0;
+  background: url("../assets/icons/material/colorize.svg") center / contain no-repeat;
+  box-shadow: none;
+  filter: drop-shadow(0 0 1px #fff) drop-shadow(0 0 1px #fff)
+    drop-shadow(0 1px 1px rgb(0 0 0 / 90%));
+  opacity: 1;
+  transform: translate(-4px, -28px);
+}
+
+.preview.blob-picking .eraser-cursor::after {
+  position: absolute;
+  bottom: 1px;
+  left: 1px;
+  width: 3px;
+  height: 3px;
+  border: 1px solid #fff;
+  border-radius: 50%;
+  background: #000;
+  box-shadow: 0 0 0 1px rgb(0 0 0 / 85%);
+  content: "";
 }
 
 .selection-overlay {

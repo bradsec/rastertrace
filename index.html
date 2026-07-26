@@ -53,7 +53,7 @@
       }
     </script>
 
-    <link rel="stylesheet" href="css/styles.css?v=68" />
+    <link rel="stylesheet" href="css/styles.css?v=69" />
   </head>
   <body>
     <header class="app-header">
@@ -1047,8 +1047,8 @@
               <dt>Blob fill</dt>
               <dd>
                 Press B or select the brush icon, choose or enter a fill color, then paint over the
-                vector result. Use the eyedropper to sample a color from the source image. The
-                eraser and blob brush share the Size control.
+                vector result. Use the eyedropper to sample from the active traced palette after
+                color reduction and preprocessing. The eraser and blob brush share the Size control.
               </dd>
             </div>
             <div>
@@ -1068,10 +1068,11 @@
               </dd>
             </div>
             <div>
-              <dt>Remove a selection</dt>
+              <dt>Erase or fill a selection</dt>
               <dd>
-                Press Delete or Backspace after closing a marquee. Areas outside the image are
-                ignored, so cleanup affects only the vector result.
+                Press Delete or Backspace after closing a marquee to erase it. Press
+                Ctrl/Cmd+Backspace to fill it with the current blob-brush color. Areas outside the
+                image are ignored, so cleanup affects only the vector result.
               </dd>
             </div>
             <div>
@@ -1300,6 +1301,6 @@
         location.reload();
       };
     </script>
-    <script type="module" src="js/app.js?v=81" onerror="window.recoverRasterTraceBoot()"></script>
+    <script type="module" src="js/app.js?v=86" onerror="window.recoverRasterTraceBoot()"></script>
   </body>
 </html>

@@ -1,7 +1,7 @@
 // Shared DOM references and mutable app state, imported by every UI
 // module. Keeps no logic beyond tiny helpers so it can never participate
 // in an import cycle.
-import { MAX_TRACE_SIDE } from "./preprocess.js?v=45";
+import { MAX_TRACE_SIDE } from "./preprocess.js?v=46";
 
 /**
  * @template {Element} [T=HTMLElement]
@@ -130,6 +130,7 @@ export const state = {
   downloadUrl: null,
   debounce: 0,
   raster: null, // { scale, imageData } cache, keyed by current bitmap
+  processedRaster: null, // worker pixels after current trace preprocessing
   picking: false,
   loadToken: 0, // guards against overlapping loads (drop while decoding)
   flatNote: null, // status prefix when load-time detection fired

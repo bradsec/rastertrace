@@ -3,10 +3,10 @@
 // Listener order matters: the selection and eraser pointer handlers must
 // register before the pan handlers in view.js, so app.js imports this
 // module first.
-import { snapPointToAngle, svgViewBox } from "./eraser.js?v=6";
-import { parseHexColor, toHexColor } from "./preprocess.js?v=45";
-import { els, hooks, state } from "./context.js?v=5";
-import { refreshExport } from "./exporters.js?v=9";
+import { brushSizeForShortcut, snapPointToAngle, svgViewBox } from "./eraser.js?v=7";
+import { parseHexColor, sampleRasterColor, toHexColor } from "./preprocess.js?v=46";
+import { els, hooks, state } from "./context.js?v=6";
+import { refreshExport } from "./exporters.js?v=11";
 
 export function setView(view) {
   const showResult = view === "result";
@@ -42,8 +42,60 @@ document.addEventListener("keydown", (e) => {
   if (e.key === "Escape" && state.picking) setEyedropper(false);
 });
 
+export function deactivateCleanupTools() {
+  const active =
+    state.picking ||
+    state.erasing ||
+    state.blobFilling ||
+    state.blobPicking ||
+    state.selection ||
+    state.selectionTool;
+  if (!active) return;
+  if (state.picking) setEyedropper(false);
+  setEraser(false);
+  setBlobFill(false);
+  clearSelection();
+  setSelectionTool(null);
+  els.status.textContent = "";
+}
+
+document.addEventListener(
+  "pointerdown",
+  (event) => {
+    if (!(event.target instanceof Element)) return;
+    if (event.target.closest(".eraser-controls, #preview, #pick-from-image")) return;
+    deactivateCleanupTools();
+  },
+  { capture: true },
+);
+
 document.addEventListener("keydown", (event) => {
   const target = event.target;
+  const bracketDirection =
+    event.key === "]" || event.code === "BracketRight"
+      ? 1
+      : event.key === "[" || event.code === "BracketLeft"
+        ? -1
+        : 0;
+  const rangeFocused = target instanceof HTMLInputElement && target.type === "range";
+  if (
+    bracketDirection &&
+    (state.erasing || state.blobFilling) &&
+    (!(target instanceof HTMLElement) ||
+      rangeFocused ||
+      !(/^(INPUT|SELECT|TEXTAREA)$/.test(target.tagName) || target.isContentEditable))
+  ) {
+    event.preventDefault();
+    setEraserSize(
+      brushSizeForShortcut(
+        Number(els.eraserSize.value),
+        bracketDirection > 0,
+        Number(els.eraserSize.min),
+        Number(els.eraserSize.max),
+      ),
+    );
+    return;
+  }
   const editing =
     target instanceof HTMLElement &&
     (/^(INPUT|SELECT|TEXTAREA)$/.test(target.tagName) || target.isContentEditable);
@@ -92,14 +144,21 @@ document.addEventListener("keydown", (event) => {
   } else if (event.key === "Escape" && (state.selection || state.selectionTool)) {
     clearSelection();
     setSelectionTool(null);
-  } else if ((event.key === "Delete" || event.key === "Backspace") && state.selection?.finalized) {
+  } else if (
+    (event.ctrlKey || event.metaKey) &&
+    event.key === "Backspace" &&
+    state.selection?.finalized
+  ) {
     event.preventDefault();
-    deleteSelection();
-  } else if (event.key === "[" || event.key === "]") {
-    if (!state.erasing && !state.blobFilling) return;
+    commitSelection("fill");
+  } else if (
+    !event.ctrlKey &&
+    !event.metaKey &&
+    (event.key === "Delete" || event.key === "Backspace") &&
+    state.selection?.finalized
+  ) {
     event.preventDefault();
-    const factor = event.key === "]" ? 1.2 : 1 / 1.2;
-    setEraserSize(Number(els.eraserSize.value) * factor);
+    commitSelection("erase");
   } else if (
     (event.ctrlKey || event.metaKey) &&
     (event.key.toLowerCase() === "y" || (event.shiftKey && event.key.toLowerCase() === "z")) &&
@@ -296,15 +355,17 @@ function finishPolygon() {
   state.selection.finalized = true;
   state.selection.hover = null;
   renderSelection();
-  els.status.textContent = "Selection ready. Press Delete or Backspace to remove it.";
+  els.status.textContent =
+    "Selection ready. Delete removes it; Ctrl/Cmd+Backspace fills it with the brush color.";
 }
 
-function deleteSelection() {
+function commitSelection(mode) {
   const selection = state.selection;
   if (!selection?.finalized) return;
   state.eraseRedo = [];
+  const fill = mode === "fill" ? { mode: "fill", color: els.blobFillColor.value } : {};
   if (selection.type === "polygon") {
-    state.eraseStrokes.push({ type: "polygon", points: selection.points });
+    state.eraseStrokes.push({ type: "polygon", points: selection.points, ...fill });
   } else {
     const geometry = marqueeGeometry(selection);
     if (selection.type === "ellipse") {
@@ -314,14 +375,18 @@ function deleteSelection() {
         cy: geometry.y + geometry.height / 2,
         rx: geometry.width / 2,
         ry: geometry.height / 2,
+        ...fill,
       });
     } else {
-      state.eraseStrokes.push({ type: "rect", ...geometry });
+      state.eraseStrokes.push({ type: "rect", ...geometry, ...fill });
     }
   }
   clearSelection();
   refreshExport();
-  els.status.textContent = "Selected area removed. Ctrl/Cmd+Z restores it.";
+  els.status.textContent =
+    mode === "fill"
+      ? `Selected area filled with ${els.blobFillColor.value}. Ctrl/Cmd+Z restores it.`
+      : "Selected area removed. Ctrl/Cmd+Z restores it.";
 }
 
 els.marqueeRect.addEventListener("click", () => {
@@ -470,7 +535,8 @@ for (const type of ["pointerup", "pointercancel"]) {
       }
       state.selection.finalized = true;
       renderSelection();
-      els.status.textContent = "Selection ready. Press Delete or Backspace to remove it.";
+      els.status.textContent =
+        "Selection ready. Delete removes it; Ctrl/Cmd+Backspace fills it with the brush color.";
     },
     true,
   );
@@ -563,7 +629,8 @@ els.blobFillPick.addEventListener("click", () => {
     els.blobFillPick.setAttribute("aria-pressed", "true");
     els.preview.classList.remove("blob-filling");
     els.preview.classList.add("blob-picking");
-    els.status.textContent = "Click the image to sample a fill color. Esc cancels.";
+    els.status.textContent =
+      "Place the eyedropper tip over a pixel and click to sample its fill color. Esc cancels.";
   } else {
     setBlobFill(true);
   }
@@ -667,23 +734,14 @@ els.preview.addEventListener(
 els.preview.addEventListener(
   "pointerdown",
   (event) => {
-    if (!state.blobPicking || event.button !== 0 || !state.bitmap) return;
+    if (!state.blobPicking || event.button !== 0 || !state.processedRaster) return;
     event.preventDefault();
     event.stopImmediatePropagation();
     const point = cleanupPoint(event);
     if (!point || point.x < 0 || point.x > 1 || point.y < 0 || point.y > 1) return;
-    const x = Math.min(
-      state.bitmap.width - 1,
-      Math.max(0, Math.floor(point.x * state.bitmap.width)),
-    );
-    const y = Math.min(
-      state.bitmap.height - 1,
-      Math.max(0, Math.floor(point.y * state.bitmap.height)),
-    );
-    const canvas = new OffscreenCanvas(1, 1);
-    const context = canvas.getContext("2d");
-    context.drawImage(state.bitmap, x, y, 1, 1, 0, 0, 1, 1);
-    const [r, g, b] = context.getImageData(0, 0, 1, 1).data;
+    const color = sampleRasterColor(state.processedRaster, point.x, point.y);
+    if (!color) return;
+    const [r, g, b] = color;
     setBlobColor(toHexColor([r, g, b]).toLowerCase());
     setBlobFill(true);
     els.status.textContent = `Fill color sampled: ${els.blobFillColor.value}.`;

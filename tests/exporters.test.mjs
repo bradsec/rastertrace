@@ -46,7 +46,7 @@ Object.defineProperty(globalThis, "navigator", {
   },
 });
 
-const { state } = await import("../js/context.js?v=5");
+const { state } = await import("../js/context.js?v=6");
 await import("../js/exporters.js?v=test");
 
 test("copy SVG rebuilds cleanup instead of using stale export state", async () => {

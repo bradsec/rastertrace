@@ -14,7 +14,7 @@ import {
   straightenPaths,
   thresholdImage,
   toGrayscale,
-} from "./preprocess.js?v=45";
+} from "./preprocess.js?v=46";
 
 // Explicit versioned URL: the glue's own wasm fetch drops the ?v= query,
 // so a rebuilt binary would otherwise be served from stale browser cache
@@ -118,12 +118,16 @@ self.onmessage = async (event) => {
     const finalSvg = settings.stencil
       ? applyStencilInk(straightened, settings.stencilInk ?? "black")
       : straightened;
-    self.postMessage({
-      id,
-      svg: finalSvg,
-      knockedOut,
-      ms: Math.round(performance.now() - started),
-    });
+    self.postMessage(
+      {
+        id,
+        svg: finalSvg,
+        knockedOut,
+        ms: Math.round(performance.now() - started),
+        processed: img,
+      },
+      { transfer: [img.data.buffer] },
+    );
   } catch (err) {
     self.postMessage({ id, error: err?.message || String(err) });
   }

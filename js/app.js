@@ -10,7 +10,7 @@ import {
   rotateBitmap,
   sniffImageSize,
   Tracer,
-} from "./pipeline.js?v=45";
+} from "./pipeline.js?v=46";
 import {
   analyzeFlatness,
   fitTraceScale,
@@ -20,16 +20,16 @@ import {
   parseHexColor,
   PRESETS,
   toHexColor,
-} from "./preprocess.js?v=45";
-import { $, els, hooks, preferences, showError, state } from "./context.js?v=5";
-import { refreshExport, setResultActions } from "./exporters.js?v=9";
+} from "./preprocess.js?v=46";
+import { $, els, hooks, preferences, showError, state } from "./context.js?v=6";
+import { refreshExport, setResultActions } from "./exporters.js?v=11";
 import {
   clearSelection,
   setBlobFill,
   setEraser,
   setSelectionTool,
   setView,
-} from "./cleanup-tools.js?v=7";
+} from "./cleanup-tools.js?v=12";
 import {
   applyExportProfile,
   applyMeasurementUnit,
@@ -45,12 +45,12 @@ import {
   updateOutputs,
   updateStencilFields,
   updateTransparencyFields,
-} from "./settings.js?v=7";
-import { actualSizeView, resetView } from "./view.js?v=7";
+} from "./settings.js?v=12";
+import { actualSizeView, resetView } from "./view.js?v=12";
 
 const EMPTY_IMAGE_SRC = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==";
 
-const tracer = new Tracer(new URL("./worker.js?v=46", import.meta.url));
+const tracer = new Tracer(new URL("./worker.js?v=47", import.meta.url));
 
 let elapsedTimer = 0;
 
@@ -106,6 +106,7 @@ async function retrace() {
       state.sourceHeight,
     );
     if (!result) return; // superseded by a newer request
+    state.processedRaster = result.processed ?? null;
     state.svgRaw = result.svg;
     const { paths } = refreshExport();
     els.statTime.textContent = `${result.ms.toLocaleString()} ms`;
@@ -220,6 +221,7 @@ async function loadFile(file) {
   state.svgRaw = null;
   state.svg = null;
   state.raster = null;
+  state.processedRaster = null;
   state.eraseStrokes = [];
   state.eraseRedo = [];
   state.flatNote = null;

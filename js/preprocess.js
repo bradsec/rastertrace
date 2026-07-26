@@ -561,6 +561,14 @@ export function toHexColor([r, g, b]) {
   return "#" + [r, g, b].map((c) => c.toString(16).padStart(2, "0").toUpperCase()).join("");
 }
 
+export function sampleRasterColor(imageData, normalizedX, normalizedY) {
+  if (!imageData?.width || !imageData?.height || !imageData.data) return null;
+  const x = Math.min(imageData.width - 1, Math.max(0, Math.floor(normalizedX * imageData.width)));
+  const y = Math.min(imageData.height - 1, Math.max(0, Math.floor(normalizedY * imageData.height)));
+  const offset = (y * imageData.width + x) * 4;
+  return [imageData.data[offset], imageData.data[offset + 1], imageData.data[offset + 2]];
+}
+
 /**
  * sRGB [0-255] channels to Oklab [L, a, b]. Oklab is perceptually
  * uniform: Euclidean distances here track how different two colors look,
