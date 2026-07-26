@@ -479,6 +479,11 @@ export function applyStencilInk(svgText, ink) {
 
 // Validators for persisted settings. localStorage is untrusted input:
 // each entry admits one control's value range and nothing else.
+export function physicalWidthValue(value) {
+  const width = Number(value);
+  return Number.isFinite(width) && width > 0 && width <= 100000 ? width : null;
+}
+
 const SETTING_CHECKS = {
   profile: (v) => v === "" || v in EXPORT_PROFILES,
   preset: (v) => typeof v === "string",
@@ -505,7 +510,7 @@ const SETTING_CHECKS = {
   spliceThreshold: (v) => Number.isFinite(v) && v >= 10 && v <= 90,
   straighten: (v) => Number.isFinite(v) && v >= 0 && v <= 4,
   exportSize: (v) => v === "px" || v === "physical",
-  physicalWidth: (v) => Number.isFinite(v) && v > 0 && v <= 100000,
+  physicalWidth: (v) => typeof v === "number" && physicalWidthValue(v) !== null,
   physicalUnit: (v) => ["px", "mm", "cm", "in"].includes(v),
   minify: (v) => typeof v === "boolean",
 };

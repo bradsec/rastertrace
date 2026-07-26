@@ -26,6 +26,7 @@ import {
   modeFilter,
   oklabToSrgb,
   parseHexColor,
+  physicalWidthValue,
   quantize,
   srgbToOklab,
   straightenPaths,
@@ -493,6 +494,13 @@ test("sanitizeSettings drops out-of-range and wrong-type values", () => {
     transparent: "weird",
   });
   assert.deepEqual(out, {});
+});
+
+test("physicalWidthValue accepts finite bounded widths only", () => {
+  assert.equal(physicalWidthValue("210"), 210);
+  assert.equal(physicalWidthValue("1e309"), null);
+  assert.equal(physicalWidthValue(100001), null);
+  assert.equal(physicalWidthValue(0), null);
 });
 
 test("sanitizeSettings handles junk input", () => {

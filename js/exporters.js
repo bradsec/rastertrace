@@ -2,7 +2,7 @@
 // the traced SVG, drives the result stats and action buttons, and saves
 // SVG/PNG/PDF/DXF through the File System Access API or a download.
 import { applyCleanupActions } from "./eraser.js?v=6";
-import { applyExportOptions, countPaths } from "./preprocess.js?v=44";
+import { applyExportOptions, countPaths, physicalWidthValue } from "./preprocess.js?v=44";
 import { parseSvgPaths, toDxf, toPdf } from "./vectorexport.js?v=39";
 import { els, preferences, showError, state } from "./context.js?v=4";
 
@@ -60,8 +60,8 @@ function exportOptions() {
   if (els.minify.checked) opts.minify = true;
   else opts.title = state.fileName.replace(/\.[^.]+$/, "");
   if (els.exportSize.value === "physical") {
-    const width = Number(els.physicalWidth.value);
-    if (width > 0) {
+    const width = physicalWidthValue(els.physicalWidth.value);
+    if (width !== null) {
       opts.physicalWidth = width;
       opts.physicalUnit = els.physicalUnit.value;
     }
@@ -237,10 +237,10 @@ els.downloadPng.addEventListener("click", async () => {
 /** Physical export width in the given output unit, or null when off. */
 function physicalWidthIn(unitsPerMm, unitsPerInch) {
   if (els.exportSize.value !== "physical") return null;
-  const width = Number(els.physicalWidth.value);
-  if (!(width > 0)) return null;
+  const width = physicalWidthValue(els.physicalWidth.value);
+  if (width === null) return null;
   const unit = els.physicalUnit.value;
-  if (unit === "px") return null;
+  if (!["mm", "cm", "in"].includes(unit)) return null;
   if (unit === "in") return width * unitsPerInch;
   return width * unitsPerMm * (unit === "cm" ? 10 : 1);
 }
