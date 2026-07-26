@@ -21,3 +21,18 @@ jobs:
       - run: npm run lint
       - run: npm run format:check
       - run: npm run check:icons
+
+  wasm:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: 1.94.0
+          targets: wasm32-unknown-unknown
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: wasm
+      - run: cargo install wasm-pack --version 0.15.0 --locked
+      - run: npm run build:wasm
+      - run: git diff --exit-code -- pkg wasm/Cargo.lock

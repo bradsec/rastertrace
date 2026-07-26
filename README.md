@@ -78,7 +78,7 @@ npm run lint             # run Oxlint
 npm run format:check     # verify Oxfmt formatting
 npm run format           # apply Oxfmt formatting
 npm run serve            # http://localhost:8137
-npm run build:wasm       # rebuild pkg/ (needs rustup target wasm32-unknown-unknown + wasm-pack)
+npm run build:wasm       # rebuild pkg/ (Rust 1.94.0 and wasm-pack 0.15.0)
 ```
 
 ## Deploy
