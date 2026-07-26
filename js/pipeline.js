@@ -1,5 +1,5 @@
 // Browser-side pipeline: decode, premultiplied upscale, worker round-trip.
-import { assertRasterBudget, MAX_TRACE_SIDE } from "./preprocess.js?v=47";
+import { assertRasterBudget, MAX_TRACE_SIDE } from "./preprocess.js?v=48";
 
 export const MAX_IMAGE_BYTES = 50 * 1024 * 1024;
 export const MAX_SOURCE_PIXELS = 100_000_000;
@@ -44,14 +44,37 @@ export async function sniffImageSize(file) {
     let rotated = false;
     for (let i = 2; i + 9 < bytes.length;) {
       if (bytes[i] !== 0xff) break;
+      // T.81 B.1.1.2: any marker may be preceded by any number of 0xFF fill
+      // bytes. Skipping them costs one loop; not skipping them reads the
+      // next two bytes as a segment length and abandons a valid JPEG.
       const marker = bytes[i + 1];
+      if (marker === 0xff) {
+        i += 1;
+        continue;
+      }
+      // Standalone markers carry no length field: TEM and the restart
+      // markers. Treating their successor bytes as a length walks the scan
+      // off into the entropy-coded data.
+      if (marker === 0x01 || (marker >= 0xd0 && marker <= 0xd7)) {
+        i += 2;
+        continue;
+      }
+      if (marker === 0xd9 || marker === 0xda) break; // end of image, or start of scan
       const length = view.getUint16(i + 2);
       if (length < 2) break;
       if (marker === 0xe1 && ascii(i + 4, 6) === "Exif\0\0") {
         const orientation = exifOrientation(view, i + 10, i + 2 + length);
         rotated = orientation >= 5 && orientation <= 8;
       }
-      if (marker >= 0xc0 && marker <= 0xcf && ![0xc4, 0xc8, 0xcc].includes(marker)) {
+      // SOF0-SOF15 carry the frame dimensions; DHT, JPG and DAC share the
+      // range but are not frame headers.
+      if (
+        marker >= 0xc0 &&
+        marker <= 0xcf &&
+        marker !== 0xc4 &&
+        marker !== 0xc8 &&
+        marker !== 0xcc
+      ) {
         const width = view.getUint16(i + 7);
         const height = view.getUint16(i + 5);
         return rotated ? { width: height, height: width } : { width, height };

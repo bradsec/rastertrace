@@ -86,6 +86,54 @@ test("sniffImageSize reads JPEG dimensions from SOF marker", async () => {
   assert.deepEqual(await sniffImageSize(blob(bytes, "image/jpeg")), { width: 1280, height: 800 });
 });
 
+// SOF0 for a 640x400 frame, as the marker scan must find it in each case below.
+const SOF0 = [
+  0xff, 0xc0, 0x00, 0x11, 0x08, 0x01, 0x90, 0x02, 0x80, 0x03, 0x01, 0x22, 0x00, 0x02, 0x11, 0x01,
+  0x03, 0x11, 0x01,
+];
+
+test("sniffImageSize skips JPEG fill bytes and standalone markers", async () => {
+  // T.81 B.1.1.2 allows 0xFF fill before any marker, and TEM/RSTn carry no
+  // length field. Reading either as a segment length abandoned a valid file.
+  const variants = {
+    "fill bytes": [0xff, 0xff, 0xff],
+    TEM: [0xff, 0x01],
+    "restart marker": [0xff, 0xd0],
+    "DHT segment": [0xff, 0xc4, 0x00, 0x05, 0x00, 0x00, 0x00],
+  };
+  for (const [name, prefix] of Object.entries(variants)) {
+    const bytes = [0xff, 0xd8, ...prefix, ...SOF0];
+    assert.deepEqual(
+      await sniffImageSize(blob(bytes, "image/jpeg")),
+      { width: 640, height: 400 },
+      name,
+    );
+  }
+});
+
+test("sniffImageSize stops at end-of-image and start-of-scan", async () => {
+  // Anything after EOI or inside entropy-coded data is not a frame header.
+  for (const terminator of [
+    [0xff, 0xd9],
+    [0xff, 0xda, 0x00, 0x03, 0x00],
+  ]) {
+    const bytes = [0xff, 0xd8, ...terminator, ...SOF0];
+    assert.equal(await sniffImageSize(blob(bytes, "image/jpeg")), null);
+  }
+});
+
+test("sniffImageSize gives up on malformed JPEG segments without hanging", async () => {
+  const malformed = {
+    "zero length": [0xff, 0xe0, 0x00, 0x00],
+    "length overruns the buffer": [0xff, 0xe0, 0xff, 0xff],
+    "not a marker": [0x12, 0x34],
+  };
+  for (const [name, prefix] of Object.entries(malformed)) {
+    const bytes = [0xff, 0xd8, ...prefix, ...SOF0];
+    assert.equal(await sniffImageSize(blob(bytes, "image/jpeg")), null, name);
+  }
+});
+
 // APP1 Exif segment with a single IFD0 entry: orientation tag 0x0112.
 // `little` picks the TIFF byte order (II vs MM).
 function exifSegment(orientation, little) {
