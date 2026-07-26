@@ -151,7 +151,7 @@ hooks.scheduleRetrace = scheduleRetrace;
  * A worker that cannot even load its modules means the service worker
  * cached mismatched copies: a deploy caught mid-propagation can pin an
  * old file body under a new ?v= URL, and cache-first then serves it
- * forever. Purge every cache and service worker, then reload once
+ * forever. Purge RasterTrace caches and its service worker, then reload once
  * (sessionStorage guards against a reload loop) to refetch clean files.
  */
 async function recoverFromStaleCache(message) {
@@ -164,9 +164,14 @@ async function recoverFromStaleCache(message) {
     return false; // no sessionStorage: cannot guard the reload loop
   }
   try {
-    for (const key of await caches.keys()) await caches.delete(key);
-    const registrations = (await navigator.serviceWorker?.getRegistrations?.()) ?? [];
-    await Promise.all(registrations.map((registration) => registration.unregister()));
+    for (const key of await caches.keys()) {
+      if (key.startsWith("rastertrace-")) await caches.delete(key);
+    }
+    const registration = await navigator.serviceWorker?.getRegistration?.(
+      new URL("./", document.baseURI),
+    );
+    const expectedScript = new URL("sw.js", document.baseURI).href;
+    if (registration?.active?.scriptURL === expectedScript) await registration.unregister();
   } catch {
     // caches API unavailable: the reload alone may still fetch fresh copies
   }

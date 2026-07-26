@@ -71,3 +71,41 @@ test("service-worker fetch waits for cache persistence", async () => {
     Object.assign(globalThis, original);
   }
 });
+
+test("service-worker activation preserves caches owned by sibling applications", async () => {
+  const original = {
+    caches: globalThis.caches,
+    self: globalThis.self,
+  };
+  const listeners = {};
+  const deleted = [];
+  let activation;
+  globalThis.self = {
+    addEventListener(type, listener) {
+      listeners[type] = listener;
+    },
+    clients: { claim: async () => {} },
+    skipWaiting() {},
+  };
+  globalThis.caches = {
+    async delete(key) {
+      deleted.push(key);
+    },
+    async keys() {
+      return ["rastertrace-v4", "rastertrace-v5", "sibling-app-v1"];
+    },
+  };
+
+  try {
+    await import(`../sw.js?activation-test=${Date.now()}`);
+    listeners.activate({
+      waitUntil(promise) {
+        activation = promise;
+      },
+    });
+    await activation;
+    assert.deepEqual(deleted, ["rastertrace-v4"]);
+  } finally {
+    Object.assign(globalThis, original);
+  }
+});
