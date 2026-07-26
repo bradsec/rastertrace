@@ -7,6 +7,7 @@ import {
   invertBitmap,
   rasterize,
   rotateBitmap,
+  sniffImageSize,
   Tracer,
 } from "./pipeline.js?v=43";
 import {
@@ -227,9 +228,10 @@ async function loadFile(file) {
   els.workspace.hidden = false;
   setBusy(true, "Loading image…");
   try {
-    const decoded = await decodeImage(file);
-    const sourceWidth = decoded.width;
-    const sourceHeight = decoded.height;
+    const sourceSize = await sniffImageSize(file);
+    const decoded = await decodeImage(file, MAX_TRACE_SIDE, sourceSize);
+    const sourceWidth = sourceSize?.width ?? decoded.width;
+    const sourceHeight = sourceSize?.height ?? decoded.height;
     // Shrink oversized bitmaps right away: only the capped copy is
     // retained, so a huge photo does not hold its full decode in memory.
     const bitmap = await capBitmap(decoded);

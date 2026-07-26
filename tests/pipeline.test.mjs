@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { fitDecodeSize, invertRGBA, sniffImageSize, Tracer } from "../js/pipeline.js";
+import { decodeImage, fitDecodeSize, invertRGBA, sniffImageSize, Tracer } from "../js/pipeline.js";
 
 function blob(bytes, type = "image/png") {
   return new Blob([Uint8Array.from(bytes)], { type });
@@ -12,6 +12,26 @@ test("sniffImageSize reads PNG dimensions without decoding pixels", async () => 
     0x10, 0, 0, 0, 0x08, 0,
   ];
   assert.deepEqual(await sniffImageSize(blob(bytes)), { width: 4096, height: 2048 });
+});
+
+test("decodeImage uses known intrinsic dimensions for a bounded decode", async () => {
+  const original = globalThis.createImageBitmap;
+  let receivedOptions;
+  globalThis.createImageBitmap = async (_file, options) => {
+    receivedOptions = options;
+    return { width: options.resizeWidth, height: options.resizeHeight };
+  };
+  try {
+    const result = await decodeImage(blob([]), 2048, { width: 8192, height: 4096 });
+    assert.deepEqual(receivedOptions, {
+      resizeWidth: 2048,
+      resizeHeight: 1024,
+      resizeQuality: "high",
+    });
+    assert.deepEqual(result, { width: 2048, height: 1024 });
+  } finally {
+    globalThis.createImageBitmap = original;
+  }
 });
 
 test("sniffImageSize reads JPEG dimensions from SOF marker", async () => {

@@ -99,9 +99,9 @@ export function fitDecodeSize(width, height, maxSide = MAX_TRACE_SIDE) {
  * Decode a File/Blob into an ImageBitmap. Throws a readable error for
  * unsupported or corrupt files.
  */
-export async function decodeImage(file, maxSide = MAX_TRACE_SIDE) {
+export async function decodeImage(file, maxSide = MAX_TRACE_SIDE, knownSize = null) {
   try {
-    const size = await sniffImageSize(file);
+    const size = knownSize ?? (await sniffImageSize(file));
     if (!size) return await createImageBitmap(file);
     const resized = fitDecodeSize(size.width, size.height, maxSide);
     return await createImageBitmap(file, {
