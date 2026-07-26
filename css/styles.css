@@ -710,8 +710,8 @@ dialog::backdrop { background: rgb(7 9 12 / 72%); }
   .header-action, .primary-action { padding-inline: 6px; font-size: 12px; }
   .topbar-actions > .header-action span { font-size: 0; }
   .topbar-actions > .header-action span::after { content: "Open"; font-size: 12px; }
-  .primary-action span { font-size: 0; }
-  .primary-action span::after { content: "SVG"; font-size: 12px; }
+  .save-action span { font-size: 0; }
+  .save-action span::after { content: "SVG"; font-size: 12px; }
 }
 
 @media (max-width: 820px) {
