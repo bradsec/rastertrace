@@ -7,10 +7,11 @@
   <meta name="color-scheme" content="dark">
   <meta name="theme-color" content="#17191d">
   <link rel="canonical" href="https://rastertrace.com/">
-  <link rel="icon" href="./favicon.ico" sizes="any">
-  <link rel="icon" type="image/png" sizes="32x32" href="./favicon-32x32.png">
-  <link rel="icon" type="image/png" sizes="16x16" href="./favicon-16x16.png">
-  <link rel="apple-touch-icon" href="./apple-touch-icon.png">
+  <link rel="icon" type="image/svg+xml" href="./assets/logo.svg?v=2">
+  <link rel="icon" href="./favicon.ico?v=2" sizes="any">
+  <link rel="icon" type="image/png" sizes="32x32" href="./favicon-32x32.png?v=2">
+  <link rel="icon" type="image/png" sizes="16x16" href="./favicon-16x16.png?v=2">
+  <link rel="apple-touch-icon" href="./apple-touch-icon.png?v=2">
   <link rel="manifest" href="./site.webmanifest">
 
   <meta property="og:type" content="website">
@@ -43,12 +44,12 @@
     }
   </script>
 
-  <link rel="stylesheet" href="css/styles.css?v=64">
+  <link rel="stylesheet" href="css/styles.css?v=66">
 </head>
 <body>
   <header class="app-header">
     <div class="menubar">
-      <h1 class="brand" aria-label="RasterTrace home"><span class="brand-mark">rt</span><span>rastertrace</span></h1>
+      <h1 class="brand" aria-label="RasterTrace home"><img class="brand-mark" src="assets/logo.svg?v=2" alt=""><span>rastertrace</span></h1>
       <details class="app-menu"><summary>File</summary><div class="menu-popover">
         <button type="button" data-action="open-image">Open image<span>Ctrl+O</span></button>
         <hr>
@@ -90,32 +91,32 @@
           <output id="eraser-size-out" for="eraser-size">32 px</output>
         </label>
         <button type="button" id="marquee-rect" class="header-tool cleanup-tool" aria-label="Rectangular marquee" aria-pressed="false" disabled title="Rectangular marquee (M)">
-          <svg class="cleanup-tool-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true" focusable="false"><rect x="3.5" y="5" width="17" height="14" rx="1" stroke-dasharray="3 2.5"/></svg>
+          <img class="material-icon" src="assets/icons/material/crop_square.svg" alt="">
         </button>
         <button type="button" id="marquee-ellipse" class="header-tool cleanup-tool" aria-label="Elliptical marquee" aria-pressed="false" disabled title="Elliptical marquee (Shift+M)">
-          <svg class="cleanup-tool-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true" focusable="false"><ellipse cx="12" cy="12" rx="8.5" ry="7" stroke-dasharray="3 2.5"/></svg>
+          <img class="material-icon" src="assets/icons/material/circle.svg" alt="">
         </button>
         <button type="button" id="polygon-lasso" class="header-tool cleanup-tool" aria-label="Polygonal lasso" aria-pressed="false" disabled title="Polygonal lasso (L)">
-          <svg class="cleanup-tool-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5 6.5 18.5 4 20 15.5 9 20 4 13Z" stroke-dasharray="3 2.5"/><circle cx="5" cy="6.5" r="1.25" fill="currentColor" stroke="none"/><circle cx="18.5" cy="4" r="1.25" fill="currentColor" stroke="none"/><circle cx="20" cy="15.5" r="1.25" fill="currentColor" stroke="none"/></svg>
+          <img class="material-icon" src="assets/icons/material/gesture.svg" alt="">
         </button>
         <button type="button" id="eraser-undo" class="header-tool eraser-action" aria-label="Undo cleanup" disabled title="Undo cleanup (Ctrl/Cmd+Z)">
-          <svg class="cleanup-tool-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M9 7 4 12l5 5"/><path d="M5 12h8.5a6 6 0 0 1 6 6"/></svg>
+          <img class="material-icon" src="assets/icons/material/undo.svg" alt="">
         </button>
         <button type="button" id="eraser-redo" class="header-tool eraser-action" aria-label="Redo cleanup" disabled title="Redo cleanup (Ctrl/Cmd+Shift+Z)">
-          <svg class="cleanup-tool-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m15 7 5 5-5 5"/><path d="M19 12h-8.5a6 6 0 0 0-6 6"/></svg>
+          <img class="material-icon" src="assets/icons/material/redo.svg" alt="">
         </button>
-        <button type="button" id="eraser-clear" class="header-tool eraser-action restore-original" disabled title="Remove all manual cleanup and restore the traced result">Restore Original</button>
+        <button type="button" id="eraser-clear" class="header-tool eraser-action restore-original" disabled title="Remove all manual cleanup and restore the traced result"><img class="material-icon" src="assets/icons/material/restore.svg" alt=""><span>Restore</span></button>
       </div>
     </div>
     <div class="topbar-actions" role="group" aria-label="Quick actions">
-      <button class="header-action" type="button" data-action="open-image"><span>Open image</span></button>
+      <button class="header-action" type="button" data-action="open-image"><img class="material-icon" src="assets/icons/material/folder_open.svg" alt=""><span>Open image</span></button>
       <span class="action-divider" aria-hidden="true"></span>
       <div class="export-actions" role="group" aria-label="Export result">
-        <button type="button" id="copy-svg" class="header-action" disabled title="Copy the SVG markup to the clipboard"><span>Copy SVG</span></button>
-        <button type="button" id="download-png" class="header-action" disabled title="Save a PNG at the trace resolution, choosing its name and location"><span>PNG</span></button>
-        <button type="button" id="download-pdf" class="header-action" disabled title="Save a vector PDF, choosing its name and location"><span>PDF</span></button>
-        <button type="button" id="download-dxf" class="header-action" disabled title="Save DXF geometry, choosing its name and location"><span>DXF</span></button>
-        <button type="button" id="download" class="primary-action" disabled title="Save the SVG, choosing its name and location"><span>Save SVG</span></button>
+        <button type="button" id="copy-svg" class="header-action icon-label-action" disabled title="Copy the SVG markup to the clipboard"><img class="material-icon" src="assets/icons/material/content_copy.svg" alt=""><span>Copy</span></button>
+        <button type="button" id="download-png" class="header-action icon-label-action" disabled title="Save a PNG at the trace resolution, choosing its name and location"><img class="material-icon" src="assets/icons/material/image.svg" alt=""><span>PNG</span></button>
+        <button type="button" id="download-pdf" class="header-action icon-label-action" disabled title="Save a vector PDF, choosing its name and location"><img class="material-icon" src="assets/icons/material/picture_as_pdf.svg" alt=""><span>PDF</span></button>
+        <button type="button" id="download-dxf" class="header-action icon-label-action" disabled title="Save DXF geometry, choosing its name and location"><img class="material-icon" src="assets/icons/material/architecture.svg" alt=""><span>DXF</span></button>
+        <button type="button" id="download" class="primary-action" disabled title="Save the SVG, choosing its name and location"><img class="material-icon material-icon-dark" src="assets/icons/material/save.svg" alt=""><span>Save SVG</span></button>
       </div>
     </div>
   </header>
@@ -126,12 +127,10 @@
     <!-- Empty state: the drop zone is the whole stage -->
     <section id="empty-state" class="stage-empty">
       <div id="dropzone" class="dropzone">
-        <svg class="dropzone-mark" viewBox="0 0 48 48" aria-hidden="true" focusable="false">
-          <path d="M6 38 L18 12 L28 32 L42 8" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
+        <img class="dropzone-mark" src="assets/logo.svg?v=2" alt="">
         <p class="dropzone-title">Drop an image here</p>
         <p class="dropzone-hint">PNG, JPEG, WebP, GIF or BMP. Converted to SVG on your machine; no upload.</p>
-        <button type="button" id="pick-file" class="button button-primary">Choose image</button>
+        <button type="button" id="pick-file" class="button button-primary"><img class="material-icon material-icon-dark" src="assets/icons/material/upload_file.svg" alt="">Choose image</button>
         <input type="file" id="file-input" accept="image/*" class="visually-hidden" aria-label="Choose an image to convert">
       </div>
     </section>
@@ -147,13 +146,13 @@
           <p id="restored-note" class="restored-note" hidden>Using your previous settings. Press <strong>Reset settings</strong> for defaults.</p>
           <div class="button-row" role="group" aria-label="Rotate and invert image">
             <button type="button" id="rotate-left" class="button button-secondary icon-button" title="Rotate 90 degrees counter-clockwise" aria-label="Rotate 90 degrees counter-clockwise">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+              <img class="material-icon" src="assets/icons/material/rotate_left.svg" alt="">
             </button>
             <button type="button" id="rotate-right" class="button button-secondary icon-button" title="Rotate 90 degrees clockwise" aria-label="Rotate 90 degrees clockwise">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+              <img class="material-icon" src="assets/icons/material/rotate_right.svg" alt="">
             </button>
             <button type="button" id="invert-image" class="button button-secondary icon-button" aria-pressed="false" title="Invert colors (negative), useful for stencils" aria-label="Invert image colors">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor" stroke="none"/></svg>
+              <img class="material-icon" src="assets/icons/material/invert_colors.svg" alt="">
             </button>
           </div>
           <div class="view-toggle toolbar-view-toggle" role="group" aria-label="Preview view">

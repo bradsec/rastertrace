@@ -1,27 +1,28 @@
 /* RasterTrace - compact desktop-tool UI shared with the image app family.
    Neutral dark ramp, one Illustrator-orange accent, one radius scale. */
 :root {
-  --bg: #17191d;
-  --surface-1: #1e2125;
-  --surface-2: #22252a;
-  --surface-3: #2a2e34;
-  --border: #3a3f47;
-  --border-strong: #505761;
-  --border-input: #737c87;
-  --text: #f0f2f4;
-  --text-dim: #b5bac2;
-  --text-faint: #9aa1ab;
+  --bg: #14171b;
+  --surface-1: #1b1f24;
+  --surface-2: #22272e;
+  --surface-3: #2a3038;
+  --surface-hover: #333b45;
+  --border: #3c4550;
+  --border-strong: #586574;
+  --border-input: #7b8795;
+  --text: #f3f5f7;
+  --text-dim: #c2c8d0;
+  --text-faint: #9fa8b4;
   --accent: #ff9a00;
   --accent-hover: #ffb13b;
-  --accent-press: #d86f00;
+  --accent-press: #d97706;
   --accent-soft: rgb(255 154 0 / 18%);
-  --accent-ink: #17120a;
-  --error: #e5675b;
-  --success: #57b98a;
+  --accent-ink: #181109;
+  --error: #f0766b;
+  --success: #62c598;
   --r: 4px;
   --r-sm: 4px;
-  --check-a: #36393f;
-  --check-b: #2a2d32;
+  --check-a: #353b43;
+  --check-b: #272c33;
   --ring: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent);
   font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   color-scheme: dark;
@@ -64,7 +65,7 @@ body {
   gap: 12px;
   padding: 0 10px;
   background: var(--surface-1);
-  border-bottom: 1px solid #0f1114;
+  border-bottom: 1px solid #0d1013;
   box-shadow: inset 0 -1px rgb(255 255 255 / 4%);
 }
 
@@ -72,17 +73,16 @@ body {
 .menubar { height: 100%; gap: 2px; }
 .brand { display: inline-flex; align-items: center; gap: 7px; min-width: 0; margin: 0 6px 0 0;
   color: var(--text-dim); font-size: 12px; font-weight: 600; }
-.brand-mark { display: grid; width: 23px; height: 23px; place-items: center; border: 1px solid var(--accent-hover);
-  border-radius: var(--r); color: var(--accent-hover); font-size: 11px; font-weight: 650; letter-spacing: -.04em; }
+.brand-mark { display: block; width: 23px; height: 23px; flex: none; }
 .app-menu { position: relative; height: 100%; }
 .app-menu summary { display: flex; height: 100%; align-items: center; padding: 0 8px; border-radius: var(--r);
   color: var(--text-dim); font: 13px/1.4 ui-sans-serif, system-ui, sans-serif; list-style: none;
   user-select: none; cursor: pointer; }
 .app-menu summary::-webkit-details-marker { display: none; }
-.app-menu summary:hover, .app-menu[open] summary { background: #343941; color: var(--text); }
+.app-menu summary:hover, .app-menu[open] summary { background: var(--surface-hover); color: var(--text); }
 .menu-popover { position: absolute; top: calc(100% - 4px); left: 0; display: grid; width: max-content;
   max-width: calc(100vw - 16px); padding: 5px; border: 1px solid var(--border-strong); border-radius: 6px;
-  background: #282c31; box-shadow: 0 14px 36px rgb(0 0 0 / 45%);
+  background: var(--surface-3); box-shadow: 0 14px 36px rgb(0 0 0 / 45%);
   font: 13px/1.4 ui-sans-serif, system-ui, sans-serif;
   /* Above later header siblings: disabled tools' opacity creates stacking
      contexts that otherwise paint over the popover when the toolbar wraps
@@ -103,7 +103,7 @@ body {
   border: 0; border-right: 1px solid var(--border); background: var(--surface-2); color: var(--text-dim);
   font: 600 13px/1 ui-sans-serif, system-ui, sans-serif; cursor: pointer; }
 .header-tool:last-child { border-right: 0; }
-.header-tool:hover { background: #343941; color: var(--text); }
+.header-tool:hover { background: var(--surface-hover); color: var(--text); }
 .header-tool:active { background: var(--surface-1); }
 .header-tool:disabled { opacity: .42; cursor: default; }
 .header-tool:disabled:hover { background: var(--surface-2); color: var(--text-dim); }
@@ -114,7 +114,7 @@ body {
 .header-action, .primary-action { display: inline-flex; height: 28px; align-items: center; justify-content: center;
   gap: 6px; padding: 0 8px; border: 1px solid var(--border); border-radius: var(--r);
   background: var(--surface-3); color: var(--text-dim); font: inherit; white-space: nowrap; cursor: pointer; }
-.header-action:hover { border-color: var(--border-strong); background: #343941; color: var(--text); }
+.header-action:hover { border-color: var(--border-strong); background: var(--surface-hover); color: var(--text); }
 .header-action:active, .primary-action:active { transform: translateY(1px); }
 .header-action:disabled { opacity: .42; cursor: default; }
 .primary-action { padding-inline: 10px; border-color: var(--accent); background: var(--accent);
@@ -147,7 +147,7 @@ main {
 
 .dropzone.dragover { border-color: var(--accent); background: var(--accent-soft); }
 
-.dropzone-mark { width: 52px; height: 52px; color: var(--accent); }
+.dropzone-mark { display: block; width: 52px; height: 52px; }
 .dropzone-title { margin: 0; font-size: 18px; font-weight: 650; }
 .dropzone-hint { margin: 0; color: var(--text-dim); max-width: 40ch; }
 
@@ -454,6 +454,15 @@ details.advanced[open] { display: grid; gap: 10px; }
 
 .cleanup-tool { min-width: 34px; padding-inline: 7px; }
 .cleanup-tool-icon { display: block; width: 18px; height: 18px; }
+.material-icon {
+  display: block;
+  width: 17px;
+  height: 17px;
+  flex: none;
+  filter: invert(90%) sepia(7%) saturate(223%) hue-rotate(177deg) brightness(91%);
+}
+.material-icon-dark { filter: none; }
+.restore-original { display: inline-flex; gap: 6px; }
 
 .eraser-size {
   display: inline-flex;
