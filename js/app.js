@@ -2,6 +2,7 @@
 // control wiring, and startup. Shared state lives in context.js; tools,
 // settings, export, and zoom/pan live in their own modules.
 import {
+  bitmapOperationIsCurrent,
   capBitmap,
   decodeImage,
   invertBitmap,
@@ -65,6 +66,12 @@ function setBusy(busy, label = "Starting…") {
       els.veilElapsed.textContent = `${Math.round((Date.now() - started) / 1000)}s`;
     }, 1000);
   }
+}
+
+function setBitmapActionsEnabled(enabled) {
+  els.rotateLeft.disabled = !enabled;
+  els.rotateRight.disabled = !enabled;
+  els.invertImage.disabled = !enabled;
 }
 
 tracer.onProgress = (label) => {
@@ -203,6 +210,7 @@ async function loadFile(file) {
   tracer.cancelPending();
   state.bitmap?.close();
   state.bitmap = null;
+  setBitmapActionsEnabled(false);
   state.file = null;
   state.svgRaw = null;
   state.svg = null;
@@ -267,6 +275,7 @@ async function loadFile(file) {
     setView("result");
     if (els.upscale.value === "ultra") await ensureUltraBitmap();
     await retrace();
+    if (token === state.loadToken) setBitmapActionsEnabled(true);
     els.preview.focus({ preventScroll: false });
   } catch (err) {
     if (token === state.loadToken) {
@@ -406,44 +415,54 @@ window.addEventListener("keydown", (event) => {
 
 // Rotation replaces the working bitmap, so the source view is re-rendered
 // from it: eyedropper coordinates and the preview stay consistent.
-async function updateSourceView() {
-  const canvas = new OffscreenCanvas(state.bitmap.width, state.bitmap.height);
-  canvas.getContext("2d").drawImage(state.bitmap, 0, 0);
+async function updateSourceView(bitmap, token) {
+  const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
+  canvas.getContext("2d").drawImage(bitmap, 0, 0);
   const blob = await canvas.convertToBlob({ type: "image/png" });
+  if (!bitmapOperationIsCurrent(state, token, bitmap)) return false;
   if (state.sourceUrl) URL.revokeObjectURL(state.sourceUrl);
   state.sourceUrl = URL.createObjectURL(blob);
   els.sourceView.src = state.sourceUrl;
+  return true;
 }
 
 async function rotate(clockwise) {
   if (!state.bitmap || els.rotateLeft.disabled) return;
-  els.rotateLeft.disabled = true; // rotation closes the bitmap mid-flight
-  els.rotateRight.disabled = true;
-  els.invertImage.disabled = true;
+  const token = state.loadToken;
+  const sourceBitmap = state.bitmap;
+  setBitmapActionsEnabled(false);
   try {
-    state.bitmap = await rotateBitmap(state.bitmap, clockwise);
+    const bitmap = await rotateBitmap(sourceBitmap, clockwise);
+    if (!bitmapOperationIsCurrent(state, token, sourceBitmap)) {
+      bitmap.close();
+      return;
+    }
+    state.bitmap = bitmap;
     state.rotation = (state.rotation + (clockwise ? 1 : 3)) % 4;
     [state.sourceWidth, state.sourceHeight] = [state.sourceHeight, state.sourceWidth];
     state.raster = null;
-    await updateSourceView();
+    if (!(await updateSourceView(bitmap, token))) return;
     resetView();
     retrace();
   } catch (err) {
-    showError(err.message || "Could not rotate the image.");
+    if (token === state.loadToken) showError(err.message || "Could not rotate the image.");
   } finally {
-    els.rotateLeft.disabled = false;
-    els.rotateRight.disabled = false;
-    els.invertImage.disabled = false;
+    if (token === state.loadToken && state.bitmap) setBitmapActionsEnabled(true);
   }
 }
 
 async function invert() {
   if (!state.bitmap || els.invertImage.disabled) return;
-  els.rotateLeft.disabled = true; // inversion closes the bitmap mid-flight
-  els.rotateRight.disabled = true;
-  els.invertImage.disabled = true;
+  const token = state.loadToken;
+  const sourceBitmap = state.bitmap;
+  setBitmapActionsEnabled(false);
   try {
-    state.bitmap = await invertBitmap(state.bitmap);
+    const bitmap = await invertBitmap(sourceBitmap);
+    if (!bitmapOperationIsCurrent(state, token, sourceBitmap)) {
+      bitmap.close();
+      return;
+    }
+    state.bitmap = bitmap;
     state.inverted = !state.inverted;
     els.invertImage.setAttribute("aria-pressed", String(state.inverted));
     const knockout = parseHexColor(els.knockoutColor.value);
@@ -453,14 +472,12 @@ async function invert() {
       );
     }
     state.raster = null;
-    await updateSourceView();
+    if (!(await updateSourceView(bitmap, token))) return;
     retrace();
   } catch (err) {
-    showError(err.message || "Could not invert the image.");
+    if (token === state.loadToken) showError(err.message || "Could not invert the image.");
   } finally {
-    els.rotateLeft.disabled = false;
-    els.rotateRight.disabled = false;
-    els.invertImage.disabled = false;
+    if (token === state.loadToken && state.bitmap) setBitmapActionsEnabled(true);
   }
 }
 
@@ -562,7 +579,7 @@ async function ensureUltraBitmap() {
     state.bitmap = bitmap;
     state.raster = null;
     state.decodedSide = MAX_TRACE_SIDE_ULTRA;
-    if (state.rotation || state.inverted) await updateSourceView();
+    if (state.rotation || state.inverted) await updateSourceView(bitmap, token);
   } catch (err) {
     showError(err.message || "Could not reload the image at 4096 px.");
   }

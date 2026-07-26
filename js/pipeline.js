@@ -181,6 +181,10 @@ export async function invertBitmap(bitmap) {
   return createImageBitmap(canvas);
 }
 
+export function bitmapOperationIsCurrent(state, loadToken, bitmap) {
+  return state.loadToken === loadToken && state.bitmap === bitmap;
+}
+
 /**
  * Draw the bitmap at the given scale factor and return raw RGBA pixels.
  * Canvas interpolates in premultiplied alpha space, which is exactly the

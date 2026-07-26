@@ -1,6 +1,13 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { decodeImage, fitDecodeSize, invertRGBA, sniffImageSize, Tracer } from "../js/pipeline.js";
+import {
+  bitmapOperationIsCurrent,
+  decodeImage,
+  fitDecodeSize,
+  invertRGBA,
+  sniffImageSize,
+  Tracer,
+} from "../js/pipeline.js";
 
 function blob(bytes, type = "image/png") {
   return new Blob([Uint8Array.from(bytes)], { type });
@@ -32,6 +39,14 @@ test("decodeImage uses known intrinsic dimensions for a bounded decode", async (
   } finally {
     globalThis.createImageBitmap = original;
   }
+});
+
+test("bitmapOperationIsCurrent rejects stale loads and replaced bitmaps", () => {
+  const bitmap = {};
+  const state = { loadToken: 3, bitmap };
+  assert.equal(bitmapOperationIsCurrent(state, 3, bitmap), true);
+  assert.equal(bitmapOperationIsCurrent(state, 2, bitmap), false);
+  assert.equal(bitmapOperationIsCurrent({ ...state, bitmap: {} }, 3, bitmap), false);
 });
 
 test("sniffImageSize reads JPEG dimensions from SOF marker", async () => {
