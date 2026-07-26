@@ -10,7 +10,7 @@ import {
   rotateBitmap,
   sniffImageSize,
   Tracer,
-} from "./pipeline.js?v=47";
+} from "./pipeline.js?v=48";
 import {
   analyzeFlatness,
   fitTraceScale,
@@ -20,16 +20,16 @@ import {
   parseHexColor,
   PRESETS,
   toHexColor,
-} from "./preprocess.js?v=47";
-import { $, els, hooks, preferences, showError, state } from "./context.js?v=7";
-import { refreshExport, setResultActions } from "./exporters.js?v=12";
+} from "./preprocess.js?v=48";
+import { $, els, hooks, preferences, showError, state } from "./context.js?v=8";
+import { refreshExport, setResultActions } from "./exporters.js?v=13";
 import {
   clearSelection,
   setBlobFill,
   setEraser,
   setSelectionTool,
   setView,
-} from "./cleanup-tools.js?v=15";
+} from "./cleanup-tools.js?v=16";
 import {
   applyExportProfile,
   applyMeasurementUnit,
@@ -45,12 +45,12 @@ import {
   updateOutputs,
   updateStencilFields,
   updateTransparencyFields,
-} from "./settings.js?v=15";
-import { actualSizeView, resetView } from "./view.js?v=15";
+} from "./settings.js?v=16";
+import { actualSizeView, resetView } from "./view.js?v=16";
 
 const EMPTY_IMAGE_SRC = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==";
 
-const tracer = new Tracer(new URL("./worker.js?v=48", import.meta.url));
+const tracer = new Tracer(new URL("./worker.js?v=49", import.meta.url));
 
 let elapsedTimer = 0;
 
@@ -187,7 +187,12 @@ async function recoverFromStaleCache(message) {
  * user-editable.
  */
 function applyDetectedSettings(bitmap) {
-  const { flat, colorCount } = analyzeFlatness(rasterize(bitmap, 1, false));
+  // Keep the 1x pixels for the trace that follows. Any source at or above
+  // the trace cap scales to exactly 1, so this usually saves a full second
+  // canvas draw and readback per load; retrace re-rasterizes on a miss.
+  const imageData = rasterize(bitmap, 1, false);
+  state.raster = { scale: 1, nearest: false, imageData };
+  const { flat, colorCount } = analyzeFlatness(imageData);
   if (!flat) {
     // Photo-like source: tracing suits flat art. One-time hint, controls
     // untouched (posterized photo traces are a legitimate use).
