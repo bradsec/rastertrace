@@ -227,6 +227,24 @@ export const EXPORT_PROFILES = Object.freeze({
   },
 });
 
+function stripInvalidXmlCharacters(value) {
+  let result = "";
+  for (const character of String(value)) {
+    const codePoint = character.codePointAt(0);
+    if (
+      codePoint === 0x09 ||
+      codePoint === 0x0a ||
+      codePoint === 0x0d ||
+      (codePoint >= 0x20 && codePoint <= 0xd7ff) ||
+      (codePoint >= 0xe000 && codePoint <= 0xfffd) ||
+      (codePoint >= 0x10000 && codePoint <= 0x10ffff)
+    ) {
+      result += character;
+    }
+  }
+  return result;
+}
+
 /**
  * Post-process a finalized SVG for export. Options:
  * - minify: drop the XML declaration and generator comment, and compress
@@ -254,7 +272,7 @@ export function applyExportOptions(svgText, { physicalWidth, physicalUnit, title
     );
   }
   if (title) {
-    const escaped = String(title)
+    const escaped = stripInvalidXmlCharacters(title)
       .replace(/&/g, "&amp;")
       .replace(/</g, "&lt;")
       .replace(/>/g, "&gt;");

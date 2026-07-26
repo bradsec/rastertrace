@@ -397,6 +397,14 @@ test("applyExportOptions adds role and title as first child, escaped", () => {
   assert.match(out, /<svg[^>]* role="img">\n<title>a &lt;b&gt; &amp; c<\/title>\n<path/);
 });
 
+test("applyExportOptions strips XML-forbidden title characters", () => {
+  const svg = '<svg width="10" height="10" viewBox="0 0 10 10"></svg>';
+  const out = applyExportOptions(svg, { title: "scan\u0000\u000B😀" });
+  assert.match(out, /<title>scan😀<\/title>/);
+  assert.equal(out.includes("\u0000"), false);
+  assert.equal(out.includes("\u000B"), false);
+});
+
 test("applyExportOptions minify strips xml declaration and comments", () => {
   const svg =
     '<?xml version="1.0" encoding="UTF-8"?>\n<!-- Generator: visioncortex VTracer 0.6.5 -->\n<svg width="10" height="10" viewBox="0 0 10 10">\n</svg>';
