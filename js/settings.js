@@ -9,7 +9,7 @@ import {
   toGrayscaleColor,
 } from "./preprocess.js?v=44";
 import { els, preferences } from "./context.js?v=3";
-import { refreshExport, updatePhysicalHeightOut } from "./exporters.js?v=5";
+import { refreshExport, updatePhysicalHeightOut } from "./exporters.js?v=6";
 import { setEyedropper } from "./cleanup-tools.js?v=4";
 
 /** @returns {HTMLInputElement} */

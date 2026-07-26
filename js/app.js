@@ -13,7 +13,7 @@ import {
   toHexColor,
 } from "./preprocess.js?v=44";
 import { $, els, hooks, preferences, showError, state } from "./context.js?v=3";
-import { refreshExport, setResultActions } from "./exporters.js?v=5";
+import { refreshExport, setResultActions } from "./exporters.js?v=6";
 import { clearSelection, setEraser, setSelectionTool, setView } from "./cleanup-tools.js?v=4";
 import {
   applyExportProfile,

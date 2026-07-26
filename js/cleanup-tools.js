@@ -6,7 +6,7 @@
 import { snapPointToAngle, svgViewBox } from "./eraser.js?v=5";
 import { toHexColor } from "./preprocess.js?v=44";
 import { els, hooks, state } from "./context.js?v=3";
-import { refreshExport } from "./exporters.js?v=5";
+import { refreshExport } from "./exporters.js?v=6";
 
 export function setView(view) {
   const showResult = view === "result";
