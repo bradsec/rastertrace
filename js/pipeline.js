@@ -226,8 +226,10 @@ export class Tracer {
   }
 
   startWorker() {
-    this.worker = new Worker(this.workerUrl, { type: "module" });
-    this.worker.onmessage = (event) => {
+    const worker = new Worker(this.workerUrl, { type: "module" });
+    this.worker = worker;
+    worker.onmessage = (event) => {
+      if (this.worker !== worker) return;
       const { id, stage } = event.data;
       if (stage !== undefined) {
         if (id === this.nextId - 1) this.onProgress?.(stage);
@@ -240,11 +242,14 @@ export class Tracer {
       if (event.data.error) entry.reject(new Error(event.data.error));
       else entry.resolve(event.data);
     };
-    this.worker.onerror = (event) => {
+    worker.onerror = (event) => {
+      if (this.worker !== worker) return;
       for (const entry of this.pending.values()) {
         entry.reject(new Error(event.message || "Worker failed"));
       }
       this.pending.clear();
+      worker.terminate();
+      this.worker = null;
     };
   }
 
@@ -255,7 +260,7 @@ export class Tracer {
 
   cancelPending() {
     this.dropPending();
-    this.worker.terminate();
+    this.worker?.terminate();
     this.startWorker();
   }
 
@@ -264,6 +269,7 @@ export class Tracer {
    * { svg, ms, knockedOut } or null when superseded by a newer request.
    */
   trace(imageData, settings, sourceWidth, sourceHeight) {
+    if (!this.worker) this.startWorker();
     if (this.pending.size) {
       const oldest = this.pending.values().next().value;
       if (Date.now() - oldest.postedAt > this.terminateAfterMs) this.cancelPending();

@@ -179,6 +179,22 @@ test("Tracer keeps the worker alive when superseding a young request", () =>
     assert.deepEqual(await latest, { id: 1, svg: "<svg></svg>", ms: 1 });
   }));
 
+test("Tracer replaces a worker after an unrecoverable worker error", () =>
+  withFakeWorkers(async (workers) => {
+    const tracer = new Tracer("worker.js");
+    const failed = tracer.trace(IMAGE, {}, 1, 1);
+    workers[0].onerror({ message: "module load failed" });
+    await assert.rejects(failed, /module load failed/);
+    assert.equal(workers[0].terminated, true);
+
+    const recovered = tracer.trace(IMAGE, {}, 1, 1);
+    assert.equal(workers.length, 2);
+    workers[1].onmessage({
+      data: { id: workers[1].messages[0].id, svg: "<svg></svg>", ms: 1 },
+    });
+    assert.deepEqual(await recovered, { id: 1, svg: "<svg></svg>", ms: 1 });
+  }));
+
 test("Tracer terminates a long-running trace before posting the next one", () =>
   withFakeWorkers(async (workers) => {
     const tracer = new Tracer("worker.js", { terminateAfterMs: 0 });
