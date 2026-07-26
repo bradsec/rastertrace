@@ -431,8 +431,11 @@ async function updateSourceView(bitmap, token) {
   return true;
 }
 
+let bitmapRevision = 0;
+
 async function rotate(clockwise) {
   if (!state.bitmap || els.rotateLeft.disabled) return;
+  bitmapRevision++;
   const token = state.loadToken;
   const sourceBitmap = state.bitmap;
   setBitmapActionsEnabled(false);
@@ -458,6 +461,7 @@ async function rotate(clockwise) {
 
 async function invert() {
   if (!state.bitmap || els.invertImage.disabled) return;
+  bitmapRevision++;
   const token = state.loadToken;
   const sourceBitmap = state.bitmap;
   setBitmapActionsEnabled(false);
@@ -560,7 +564,10 @@ els.knockoutColor.addEventListener("input", scheduleRetrace);
  * at 4096 so capped sources regain real detail, replaying any rotation.
  * Uncapped sources (small logos) skip this: upscaling covers them.
  */
-async function ensureUltraBitmap() {
+let ultraBitmapPromise = null;
+let ultraBitmapToken = -1;
+
+async function loadUltraBitmap() {
   if (!state.file || !state.bitmap || state.decodedSide >= MAX_TRACE_SIDE_ULTRA) return;
   if (
     Math.max(state.sourceWidth, state.sourceHeight) <=
@@ -570,17 +577,21 @@ async function ensureUltraBitmap() {
     return;
   }
   const token = state.loadToken;
+  const revision = bitmapRevision;
+  const sourceBitmap = state.bitmap;
+  const rotation = state.rotation;
+  const inverted = state.inverted;
   els.status.textContent = "Reloading image at 4096 px…";
   try {
     const decoded = await decodeImage(state.file, MAX_TRACE_SIDE_ULTRA);
     let bitmap = await capBitmap(decoded, MAX_TRACE_SIDE_ULTRA);
-    for (let i = 0; i < state.rotation; i++) bitmap = await rotateBitmap(bitmap, true);
-    if (state.inverted) bitmap = await invertBitmap(bitmap);
-    if (token !== state.loadToken) {
-      bitmap.close(); // a new image loaded while re-decoding
+    for (let i = 0; i < rotation; i++) bitmap = await rotateBitmap(bitmap, true);
+    if (inverted) bitmap = await invertBitmap(bitmap);
+    if (token !== state.loadToken || revision !== bitmapRevision || state.bitmap !== sourceBitmap) {
+      bitmap.close();
       return;
     }
-    state.bitmap?.close();
+    sourceBitmap.close();
     state.bitmap = bitmap;
     state.raster = null;
     state.decodedSide = MAX_TRACE_SIDE_ULTRA;
@@ -588,6 +599,20 @@ async function ensureUltraBitmap() {
   } catch (err) {
     showError(err.message || "Could not reload the image at 4096 px.");
   }
+}
+
+async function ensureUltraBitmap() {
+  const token = state.loadToken;
+  if (ultraBitmapPromise && ultraBitmapToken !== token) {
+    await ultraBitmapPromise;
+  }
+  if (!ultraBitmapPromise) {
+    ultraBitmapToken = token;
+    ultraBitmapPromise = loadUltraBitmap().finally(() => {
+      ultraBitmapPromise = null;
+    });
+  }
+  return ultraBitmapPromise;
 }
 
 els.upscale.addEventListener("change", async () => {
