@@ -61,7 +61,7 @@ js/app.js           app core: trace loop, image loading, menus, startup
 js/context.js       shared DOM references and mutable state
 js/settings.js      preferences, profiles, presets, persistence
 js/exporters.js     export post-processing and SVG/PNG/PDF/DXF save
-js/cleanup-tools.js eyedropper, marquee/lasso selections, vector eraser
+js/cleanup-tools.js eyedropper, selections, vector eraser and blob fill
 js/view.js          zoom and pan
 pkg/                wasm-pack output (committed so Pages serves it as-is)
 wasm/               Rust wrapper crate around vtracer
