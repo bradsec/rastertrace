@@ -3,11 +3,20 @@ wasm/target/
 
 # Node
 node_modules/
+coverage/
+dist/
+.cache/
+*.log
+.env
+.env.*
+!.env.example
 
 # OS / IDE
 .DS_Store
 .idea/
 .vscode/
+*.swp
+*.swo
 
 # Local scratch / tooling artifacts
 _diag.png
@@ -15,3 +24,4 @@ _diag.png
 .playwright-mcp/
 .claude/
 docs/superpowers/
+.codex/

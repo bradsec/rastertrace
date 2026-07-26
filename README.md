@@ -71,14 +71,19 @@ tests/              node --test unit tests
 ## Develop
 
 ```bash
+npm ci                   # install the locked development dependencies
 npm test                 # unit tests (node --test)
+npm run typecheck        # check JavaScript and DOM types
+npm run lint             # run Oxlint
+npm run format:check     # verify Oxfmt formatting
+npm run format           # apply Oxfmt formatting
 npm run serve            # http://localhost:8137
 npm run build:wasm       # rebuild pkg/ (needs rustup target wasm32-unknown-unknown + wasm-pack)
 ```
 
 ## Deploy
 
-Static files only. The GitHub Actions workflow runs the tests and publishes the repository to GitHub Pages on every push to main.
+Static files only. The GitHub Actions workflow validates pushes to `main` and pull requests. Production hosting for [rastertrace.com](https://rastertrace.com/) is managed separately from this repository.
 
 ## Browser support
 
