@@ -682,6 +682,7 @@ function moveCleanupCursor(event) {
 }
 
 let erasePointer = null;
+let eraseStroke = null;
 let eraseFrame = 0;
 
 function redrawErasure() {
@@ -698,12 +699,19 @@ els.preview.addEventListener("pointerleave", () => {
 els.preview.addEventListener("pointermove", (event) => {
   moveCleanupCursor(event);
   if (erasePointer !== event.pointerId) return;
+  // Undo/redo shortcuts stay live during a drag, so the stroke this pointer
+  // started can be popped off the stack mid-gesture. Drop the gesture then
+  // instead of appending points to whatever action ended up last.
+  if (state.eraseStrokes.at(-1) !== eraseStroke) {
+    erasePointer = null;
+    eraseStroke = null;
+    return;
+  }
   const point = cleanupPoint(event);
   if (!point) return;
-  const stroke = state.eraseStrokes.at(-1);
-  const previous = stroke.points.at(-1);
+  const previous = eraseStroke.points.at(-1);
   if (Math.hypot(point.x - previous.x, point.y - previous.y) < 0.001) return;
-  stroke.points.push({ x: point.x, y: point.y });
+  eraseStroke.points.push({ x: point.x, y: point.y });
   redrawErasure();
 });
 
@@ -718,12 +726,13 @@ els.preview.addEventListener(
     const box = svgViewBox(state.svgRaw || "");
     if (!box) return;
     state.eraseRedo = [];
-    state.eraseStrokes.push({
+    eraseStroke = {
       mode: state.blobFilling ? "fill" : "erase",
       ...(state.blobFilling ? { color: els.blobFillColor.value } : {}),
       diameter: Number(els.eraserSize.value) / Math.min(box.width, box.height),
       points: [{ x: point.x, y: point.y }],
-    });
+    };
+    state.eraseStrokes.push(eraseStroke);
     erasePointer = event.pointerId;
     els.preview.setPointerCapture(event.pointerId);
     redrawErasure();
@@ -755,6 +764,7 @@ for (const type of ["pointerup", "pointercancel"]) {
     (event) => {
       if (erasePointer !== /** @type {PointerEvent} */ (event).pointerId) return;
       erasePointer = null;
+      eraseStroke = null;
       refreshExport();
     },
     true,

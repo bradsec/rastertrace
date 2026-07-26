@@ -29,7 +29,7 @@ import {
   setEraser,
   setSelectionTool,
   setView,
-} from "./cleanup-tools.js?v=12";
+} from "./cleanup-tools.js?v=13";
 import {
   applyExportProfile,
   applyMeasurementUnit,
@@ -45,8 +45,8 @@ import {
   updateOutputs,
   updateStencilFields,
   updateTransparencyFields,
-} from "./settings.js?v=12";
-import { actualSizeView, resetView } from "./view.js?v=12";
+} from "./settings.js?v=13";
+import { actualSizeView, resetView } from "./view.js?v=13";
 
 const EMPTY_IMAGE_SRC = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==";
 
