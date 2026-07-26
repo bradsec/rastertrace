@@ -1,5 +1,5 @@
 // Web Worker: runs preprocessing + wasm tracing off the main thread.
-import init, { trace } from "../pkg/rastertrace_wasm.js?v=40";
+import init, { trace } from "../pkg/rastertrace_wasm.js?v=41";
 import {
   applyStencilInk,
   binarizeAlpha,
@@ -20,7 +20,7 @@ import {
 // so a rebuilt binary would otherwise be served from stale browser cache
 // against new glue (positional args shift into garbage).
 const ready = init({
-  module_or_path: new URL("../pkg/rastertrace_wasm_bg.wasm?v=40", import.meta.url),
+  module_or_path: new URL("../pkg/rastertrace_wasm_bg.wasm?v=41", import.meta.url),
 });
 
 self.onmessage = async (event) => {

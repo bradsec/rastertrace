@@ -84,6 +84,8 @@ npm run build:wasm       # rebuild pkg/ (Rust 1.94.0 and wasm-pack 0.15.0)
 
 ## Deploy
 
+`pkg/` is committed, and CI rebuilds it to confirm the checked-in binary matches the source. The build script sets `--remap-path-prefix` so dependency panic locations do not embed `$CARGO_HOME`, which otherwise made the output differ between machines. Rebuilding `pkg/` means bumping the `?v=` on both wasm URLs in `js/worker.js`.
+
 Static files only. The GitHub Actions workflow validates pushes to `main` and pull requests. Production hosting for [rastertrace.com](https://rastertrace.com/) is managed separately from this repository.
 
 ## Browser support

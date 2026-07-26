@@ -14,7 +14,7 @@
     "format:check": "oxfmt --check .",
     "check:icons": "node scripts/check-material-icons.mjs",
     "serve": "python3 -m http.server 8137",
-    "build:wasm": "cd wasm && wasm-pack build --target web --out-dir ../pkg --release && rm -f ../pkg/.gitignore"
+    "build:wasm": "cd wasm && RUSTFLAGS=\"--remap-path-prefix=${CARGO_HOME:-$HOME/.cargo}/registry=/registry\" wasm-pack build --target web --out-dir ../pkg --release && rm -f ../pkg/.gitignore"
   },
   "devDependencies": {
     "@material-design-icons/svg": "^0.14.15",
