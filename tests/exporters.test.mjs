@@ -20,6 +20,7 @@ function element() {
 }
 
 const elements = new Map();
+globalThis.window = {};
 globalThis.document = {
   getElementById(id) {
     if (!elements.has(id)) elements.set(id, element());
@@ -58,4 +59,37 @@ test("copy SVG rebuilds cleanup instead of using stale export state", async () =
 
   assert.match(copied, /mask-type="luminance"/);
   assert.match(copied, /<circle cx="50" cy="50" r="10"/);
+});
+
+test("SVG export snapshots content before the save picker opens", async () => {
+  let resolvePicker;
+  let written;
+  window.showSaveFilePicker = () =>
+    new Promise((resolve) => {
+      resolvePicker = resolve;
+    });
+  state.fileName = "first.png";
+  state.svgRaw = '<svg viewBox="0 0 10 10"><path id="first" d="M0 0"/></svg>';
+  state.svg = state.svgRaw;
+  state.eraseStrokes = [];
+
+  const exporting = elements.get("download").listener("click")();
+  await Promise.resolve();
+  state.fileName = "second.png";
+  state.svgRaw = '<svg viewBox="0 0 20 20"><path id="second" d="M0 0"/></svg>';
+  resolvePicker({
+    name: "first.svg",
+    async createWritable() {
+      return {
+        async close() {},
+        async write(blob) {
+          written = await blob.text();
+        },
+      };
+    },
+  });
+  await exporting;
+
+  assert.match(written, /id="first"/);
+  assert.doesNotMatch(written, /id="second"/);
 });

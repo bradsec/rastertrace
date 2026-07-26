@@ -22,14 +22,14 @@ import {
   toHexColor,
 } from "./preprocess.js?v=45";
 import { $, els, hooks, preferences, showError, state } from "./context.js?v=5";
-import { refreshExport, setResultActions } from "./exporters.js?v=8";
+import { refreshExport, setResultActions } from "./exporters.js?v=9";
 import {
   clearSelection,
   setBlobFill,
   setEraser,
   setSelectionTool,
   setView,
-} from "./cleanup-tools.js?v=6";
+} from "./cleanup-tools.js?v=7";
 import {
   applyExportProfile,
   applyMeasurementUnit,
@@ -45,8 +45,8 @@ import {
   updateOutputs,
   updateStencilFields,
   updateTransparencyFields,
-} from "./settings.js?v=6";
-import { actualSizeView, resetView } from "./view.js?v=6";
+} from "./settings.js?v=7";
+import { actualSizeView, resetView } from "./view.js?v=7";
 
 const EMPTY_IMAGE_SRC = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==";
 
