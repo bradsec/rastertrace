@@ -1097,8 +1097,11 @@ export function quantize(img, colors) {
     for (let i = 0; i < boxes.length; i++) {
       if (boxes[i].length < 2) continue;
       for (const ch of ["L", "A", "B"]) {
-        let min = 255;
-        let max = 0;
+        // Oklab, not RGB: a and b are signed and routinely negative, so RGB
+        // sentinels leave max pinned at 0 and report an all-negative axis as
+        // |min|, which wins splits it should lose.
+        let min = Infinity;
+        let max = -Infinity;
         for (const e of boxes[i]) {
           if (e[ch] < min) min = e[ch];
           if (e[ch] > max) max = e[ch];

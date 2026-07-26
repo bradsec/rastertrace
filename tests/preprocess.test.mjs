@@ -239,6 +239,32 @@ test("quantize backfills transparent pixels so they do not skew the palette", ()
   assert.deepEqual([r, g, b], [255, 0, 0]);
 });
 
+test("quantize merges the closest pair when the palette is one slot short", () => {
+  // PP-001: dark greens and dark blues sit on negative Oklab a/b axes. The
+  // old RGB sentinels (min=255, max=0) reported such an axis as |min|, so
+  // median cut split the wrong box: the two greens 8 apart got merged while
+  // the two blues 1 apart were kept, the opposite of the intended choice.
+  // Repeats are deliberate: median cut splits at the pixel-weighted median,
+  // so the counts are part of the case, not padding.
+  const source = [
+    [0, 0, 0],
+    [0, 64, 0],
+    [0, 56, 0],
+    [0, 0, 0],
+    [0, 0, 57],
+    [0, 64, 0],
+    [0, 0, 0],
+    [0, 0, 56],
+  ];
+  const img = makeImage(source.length, 1);
+  source.forEach((rgb, x) => setPixel(img, x, 0, [...rgb, 255]));
+  quantize(img, 4);
+  const at = (x) => getPixel(img, x, 0).slice(0, 3);
+  assert.deepEqual(at(1), [0, 64, 0], "the brighter green survives untouched");
+  assert.deepEqual(at(2), [0, 56, 0], "the darker green stays distinct from it");
+  assert.deepEqual(at(4), at(7), "the two near-identical blues collapse together");
+});
+
 test("quantize is a no-op when colors already fit", () => {
   const img = makeImage(2, 1, [10, 20, 30, 255]);
   const before = [...img.data];
