@@ -308,7 +308,7 @@
           <label for="hierarchical" title="Stacked: shapes layer on top of each other (smallest files). Cutout: non-overlapping shapes that tile edge to edge; best for laser cutting, vinyl, and CNC">Layering</label>
           <select id="hierarchical">
             <option value="stacked">Stacked (default)</option>
-            <option value="cutout">Cutout (for cutting machines)</option>
+            <option value="cutout">Mosaic (seam-free cutout)</option>
           </select>
         </div>
 
@@ -494,7 +494,7 @@
       <div class="dialog-heading"><h2 id="about-title">About rastertrace</h2><p>Version <span id="about-version"></span></p></div>
       <p>Convert raster images to clean SVG vectors locally in your browser. Images remain on your device.</p>
       <p>Created by Mark Bradley (<a href="https://github.com/bradsec" target="_blank" rel="noopener noreferrer">BRADSEC</a>).</p>
-      <p>Vector tracing is powered by the open-source <a href="https://github.com/visioncortex/vtracer" target="_blank" rel="noopener noreferrer">vtracer</a> and <a href="https://github.com/visioncortex/visioncortex" target="_blank" rel="noopener noreferrer">visioncortex</a> libraries. <a href="THIRD-PARTY-LICENSES.txt" target="_blank" rel="noopener noreferrer">View third-party licenses</a>.</p>
+      <p>Vector tracing is powered by the open-source <a href="https://github.com/visioncortex/vtracer" target="_blank" rel="noopener noreferrer">vtracer 1.0 alpha</a> and <a href="https://github.com/visioncortex/visioncortex" target="_blank" rel="noopener noreferrer">visioncortex</a> libraries. <a href="THIRD-PARTY-LICENSES.txt" target="_blank" rel="noopener noreferrer">View third-party licenses</a>.</p>
       <a class="about-repo-link" href="https://github.com/bradsec/rastertrace" target="_blank" rel="noopener noreferrer">View rastertrace on GitHub</a>
       <p class="about-support-copy">If you find this useful, please consider starring the repository. It helps others discover the project.</p>
       <div class="dialog-actions"><button value="close">Close</button></div>
@@ -527,6 +527,6 @@
       }, 3000);
     });
   </script>
-  <script type="module" src="js/app.js?v=70"></script>
+  <script type="module" src="js/app.js?v=71"></script>
 </body>
 </html>

@@ -25,7 +25,7 @@ Convert raster images to clean, scalable SVG vectors entirely in your browser. [
 - Crisp edges toggle: sharper corner tracing for hard-edged sources, available manually for any image.
 - Path modes: smooth splines, straight polygons, or pixel-exact outlines with nearest-neighbor upscaling for pixel art
 - Corner rounding slider: fine control over how sharply angles trace, from hard corners to flowing curves
-- Layering modes: stacked shapes (smallest files) or non-overlapping cutout shapes for laser cutting, vinyl, and CNC
+- Layering modes: stacked shapes (smallest files) or vtracer 1.0's true seam-free mosaic with shared boundaries for laser cutting, vinyl, and CNC
 - EXIF orientation respected: rotated phone photos load upright without distortion
 - Invert (negative) toggle: trace the opposite regions, useful for stencils; composes with rotation and applies to the whole pipeline
 - Paste an image from the clipboard (Ctrl/Cmd+V) to load it, alongside drag-and-drop and the file picker

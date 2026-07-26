@@ -3,8 +3,7 @@
 //! Mirrors the vtracer invocation used by RasterTrace:
 //! color mode, stacked hierarchy, and the same tunable parameters.
 
-use visioncortex::{ColorImage, PathSimplifyMode};
-use vtracer::{ColorMode, Config, Hierarchical};
+use vtracer::{ColorImage, ColorMode, Config, FitMode, Hierarchical};
 use wasm_bindgen::prelude::*;
 
 /// Trace an RGBA pixel buffer into an SVG document string.
@@ -51,9 +50,9 @@ pub fn trace(
     }
 
     let mode = match mode {
-        "spline" => PathSimplifyMode::Spline,
-        "polygon" => PathSimplifyMode::Polygon,
-        "none" => PathSimplifyMode::None,
+        "spline" => FitMode::Spline,
+        "polygon" => FitMode::Polygon,
+        "none" => FitMode::Pixel,
         other => return Err(JsError::new(&format!("unknown mode: {other}"))),
     };
 
@@ -86,8 +85,16 @@ pub fn trace(
         max_iterations,
         splice_threshold,
         path_precision: Some(path_precision),
+        // RasterTrace groups fills and optionally minifies after line
+        // straightening. Keep absolute M/L/C commands at this boundary so
+        // those tools, the eraser, and the PDF/DXF exporters share one shape.
+        optimize: 0,
+        ..Config::default()
     };
 
-    let svg = vtracer::convert(img, config).map_err(|e| JsError::new(&e))?;
-    Ok(svg.to_string())
+    config
+        .build()
+        .map_err(|e| JsError::new(&e.to_string()))?
+        .to_svg(&img)
+        .map_err(|e| JsError::new(&e.to_string()))
 }
