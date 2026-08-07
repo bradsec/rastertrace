@@ -3,7 +3,7 @@
 //! Mirrors the vtracer invocation used by RasterTrace:
 //! color mode, stacked hierarchy, and the same tunable parameters.
 
-use vtracer::{ColorImage, ColorMode, Config, FitMode, Hierarchical};
+use vtracer::{Clustering, ColorImage, Config, FitMode, Hierarchical};
 use wasm_bindgen::prelude::*;
 
 /// Trace an RGBA pixel buffer into an SVG document string.
@@ -62,9 +62,9 @@ pub fn trace(
         other => return Err(JsError::new(&format!("unknown hierarchical: {other}"))),
     };
 
-    let color_mode = match color_mode {
-        "color" => ColorMode::Color,
-        "binary" => ColorMode::Binary,
+    let clustering = match color_mode {
+        "color" => Clustering::ColorCluster,
+        "binary" => Clustering::Binary,
         other => return Err(JsError::new(&format!("unknown color_mode: {other}"))),
     };
 
@@ -74,7 +74,7 @@ pub fn trace(
         height,
     };
     let config = Config {
-        color_mode,
+        clustering,
         hierarchical,
         mode,
         filter_speckle,
