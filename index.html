@@ -53,7 +53,7 @@
       }
     </script>
 
-    <link rel="stylesheet" href="css/styles.css?v=70" />
+    <link rel="stylesheet" href="css/styles.css?v=71" />
   </head>
   <body>
     <header class="app-header">
@@ -577,6 +577,89 @@
                 </div>
                 <input type="range" id="layer-diff" min="0" max="128" step="1" value="16" />
               </div>
+            </div>
+          </details>
+
+          <details class="panel" data-panel-key="palette">
+            <summary title="Change any traced color to a HEX or RGB value. Shapes stay the same">
+              <span class="panel-heading"
+                ><span>Palette</span
+                ><span id="palette-summary" class="panel-summary">No trace</span></span
+              >
+            </summary>
+            <div class="panel-body">
+              <div class="color-row">
+                <button
+                  type="button"
+                  id="palette-pick"
+                  class="button button-secondary"
+                  aria-pressed="false"
+                  title="Click the result to choose a traced color to edit (Esc cancels)"
+                  disabled
+                >
+                  Pick from result
+                </button>
+              </div>
+              <div id="palette-grid" class="palette-grid" role="list" hidden></div>
+              <p id="palette-hint" class="palette-hint">
+                Pick a color from the result to edit it. The full palette shows at 16 colors or
+                fewer.
+              </p>
+              <div
+                id="palette-editor"
+                class="palette-editor"
+                role="group"
+                aria-label="Edit color"
+                hidden
+              >
+                <div class="palette-editor-head">
+                  <span id="palette-original-swatch" class="palette-chip" aria-hidden="true"></span>
+                  <span
+                    >Original
+                    <code id="palette-original-hex" title="Traced color">#000000</code></span
+                  >
+                  <button
+                    type="button"
+                    id="palette-close"
+                    class="button button-secondary palette-close"
+                    aria-label="Close color editor"
+                  >
+                    Close
+                  </button>
+                </div>
+                <div class="palette-editor-fields">
+                  <input type="color" id="palette-color" value="#000000" aria-label="New color" />
+                  <label class="palette-field"
+                    ><span>HEX</span
+                    ><input
+                      type="text"
+                      id="palette-hex"
+                      value="#000000"
+                      maxlength="7"
+                      spellcheck="false"
+                      autocomplete="off"
+                  /></label>
+                  <label class="palette-field"
+                    ><span>R</span
+                    ><input type="number" id="palette-r" min="0" max="255" step="1" value="0"
+                  /></label>
+                  <label class="palette-field"
+                    ><span>G</span
+                    ><input type="number" id="palette-g" min="0" max="255" step="1" value="0"
+                  /></label>
+                  <label class="palette-field"
+                    ><span>B</span
+                    ><input type="number" id="palette-b" min="0" max="255" step="1" value="0"
+                  /></label>
+                </div>
+                <button type="button" id="palette-reset" class="button button-secondary">
+                  Reset color
+                </button>
+              </div>
+              <ul id="palette-edits" class="palette-edits" aria-label="Edited colors"></ul>
+              <button type="button" id="palette-reset-all" class="button button-secondary" disabled>
+                Reset all colors
+              </button>
             </div>
           </details>
 
@@ -1377,6 +1460,6 @@
         location.reload();
       };
     </script>
-    <script type="module" src="js/app.js?v=95" onerror="window.recoverRasterTraceBoot()"></script>
+    <script type="module" src="js/app.js?v=96" onerror="window.recoverRasterTraceBoot()"></script>
   </body>
 </html>

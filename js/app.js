@@ -29,7 +29,8 @@ import {
   setEraser,
   setSelectionTool,
   setView,
-} from "./cleanup-tools.js?v=21";
+} from "./cleanup-tools.js?v=22";
+import { afterTrace, resetPalette } from "./palette-ui.js?v=1";
 import {
   applyExportProfile,
   applyMeasurementUnit,
@@ -46,7 +47,7 @@ import {
   updateStencilFields,
   updateTransparencyFields,
 } from "./settings.js?v=20";
-import { actualSizeView, resetView } from "./view.js?v=20";
+import { actualSizeView, resetView } from "./view.js?v=21";
 
 const EMPTY_IMAGE_SRC = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==";
 
@@ -108,6 +109,7 @@ async function retrace() {
     if (!result) return; // superseded by a newer request
     state.processedRaster = result.processed ?? null;
     state.svgRaw = result.svg;
+    const paletteNote = afterTrace();
     const { paths } = refreshExport();
     els.statTime.textContent = `${result.ms.toLocaleString()} ms`;
 
@@ -120,6 +122,7 @@ async function retrace() {
       statusText = `${state.flatNote} ${statusText}`;
       state.flatNote = null;
     }
+    if (paletteNote) statusText = `${statusText} ${paletteNote}`;
     // Report whenever the trace ran below the requested size, whether the
     // bitmap was capped at load or the upscale was clamped.
     const { width, height } = state.raster.imageData;
@@ -229,6 +232,7 @@ async function loadFile(file) {
   state.eraseStrokes = [];
   state.eraseRedo = [];
   state.flatNote = null;
+  resetPalette();
   clearSelection();
   setSelectionTool(null);
   setEraser(false);

@@ -1,0 +1,170 @@
+import { expect, test } from "@playwright/test";
+
+const CREAM = "#f3ead8";
+
+/** Draw [fillStyle, x, y, w, h] rectangles over `bg` ("noise" for random pixels). */
+async function makePng(page, name, width, height, bg, shapes = []) {
+  const base64 = await page.evaluate(
+    async (spec) => {
+      const canvas = new OffscreenCanvas(spec.width, spec.height);
+      const ctx = canvas.getContext("2d");
+      if (spec.bg === "noise") {
+        const img = ctx.createImageData(spec.width, spec.height);
+        for (let i = 0; i < img.data.length; i += 4) {
+          img.data[i] = Math.random() * 256;
+          img.data[i + 1] = Math.random() * 256;
+          img.data[i + 2] = Math.random() * 256;
+          img.data[i + 3] = 255;
+        }
+        ctx.putImageData(img, 0, 0);
+      } else {
+        ctx.fillStyle = spec.bg;
+        ctx.fillRect(0, 0, spec.width, spec.height);
+      }
+      for (const [fill, x, y, w, h] of spec.shapes) {
+        ctx.fillStyle = fill;
+        ctx.fillRect(x, y, w, h);
+      }
+      const bytes = new Uint8Array(await (await canvas.convertToBlob()).arrayBuffer());
+      let binary = "";
+      for (const byte of bytes) binary += String.fromCharCode(byte);
+      return btoa(binary);
+    },
+    { width, height, bg, shapes },
+  );
+  return { name, mimeType: "image/png", buffer: Buffer.from(base64, "base64") };
+}
+
+async function traced(page, action) {
+  await page.evaluate(() => (document.getElementById("status").textContent = ""));
+  await action();
+  await expect(page.locator("#status")).toContainText(/Traced \d/, { timeout: 60_000 });
+}
+
+/** The SVG markup the result preview currently shows. */
+async function resultSvg(page) {
+  return page.evaluate(async () => {
+    const view = /** @type {HTMLImageElement} */ (document.getElementById("result-view"));
+    return (await fetch(view.src)).text();
+  });
+}
+
+/** Click the result image at source-pixel coordinates of a `width` x `height` image. */
+async function clickResult(page, [x, y], [width, height]) {
+  const box = await page.locator("#result-view").boundingBox();
+  await page.mouse.click(
+    box.x + (box.width * (x + 0.5)) / width,
+    box.y + (box.height * (y + 0.5)) / height,
+  );
+}
+
+const SIZE = [120, 90];
+const SHAPES = [
+  ["#d02020", 10, 10, 40, 40],
+  ["#2040c0", 70, 40, 40, 40],
+];
+
+async function loadShapes(page) {
+  const file = await makePng(page, "shapes.png", ...SIZE, CREAM, SHAPES);
+  await traced(page, () => page.locator("#file-input").setInputFiles(file));
+  await page.evaluate(() => {
+    for (const details of document.querySelectorAll("details")) details.open = true;
+  });
+}
+
+/** Open the editor on the first swatch and return its original fill. */
+async function editFirstSwatch(page, hex) {
+  const swatch = page.locator("#palette-grid .swatch").first();
+  const original = await swatch.getAttribute("data-fill");
+  await swatch.click();
+  await page.locator("#palette-hex").fill(hex);
+  return original;
+}
+
+test.beforeEach(async ({ page }) => {
+  await page.setViewportSize({ width: 1600, height: 1000 });
+  await page.goto("/");
+  await page.evaluate(() => localStorage.clear());
+  await page.reload();
+});
+
+test("grid lists traced colors", async ({ page }) => {
+  await loadShapes(page);
+  await expect(page.locator("#palette-grid .swatch")).toHaveCount(3);
+  await expect(page.locator("#palette-hint")).toBeHidden();
+});
+
+test("hex edit recolors export and syncs RGB", async ({ page }) => {
+  await loadShapes(page);
+  const original = await editFirstSwatch(page, "#00FF00");
+  await expect.poll(() => resultSvg(page)).toContain('fill="#00FF00"');
+  expect((await resultSvg(page)).toUpperCase()).not.toContain(`"${original}"`);
+  await expect(page.locator("#palette-r")).toHaveValue("0");
+  await expect(page.locator("#palette-g")).toHaveValue("255");
+  await expect(page.locator("#palette-edits li")).toHaveCount(1);
+});
+
+test("partial hex is ignored", async ({ page }) => {
+  await loadShapes(page);
+  await editFirstSwatch(page, "#00FF00");
+  await expect.poll(() => resultSvg(page)).toContain('fill="#00FF00"');
+  await page.locator("#palette-hex").fill("#12");
+  await expect(page.locator("#palette-hex")).toHaveAttribute("aria-invalid", "true");
+  expect(await resultSvg(page)).toContain('fill="#00FF00"');
+});
+
+test("reset color restores the original fill", async ({ page }) => {
+  await loadShapes(page);
+  const original = await editFirstSwatch(page, "#00FF00");
+  await expect.poll(() => resultSvg(page)).toContain('fill="#00FF00"');
+  await page.locator("#palette-reset").click();
+  await expect.poll(async () => (await resultSvg(page)).toUpperCase()).toContain(`"${original}"`);
+  await expect(page.locator("#palette-edits li")).toHaveCount(0);
+});
+
+test("pick opens editor for clicked color", async ({ page }) => {
+  await loadShapes(page);
+  await page.locator("#palette-pick").click();
+  await clickResult(page, [90, 60], SIZE);
+  await expect(page.locator("#palette-editor")).toBeVisible();
+  const hex = (await page.locator("#palette-original-hex").textContent()).trim();
+  const [r, , b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
+  expect(b).toBeGreaterThan(r);
+  await expect(page.locator("#palette-pick")).toHaveAttribute("aria-pressed", "false");
+});
+
+test("pick on transparent area keeps pick mode", async ({ page }) => {
+  await loadShapes(page);
+  await traced(page, () => page.locator("#transparent").selectOption("edges"));
+  await page.locator("#palette-pick").click();
+  await clickResult(page, [3, 3], SIZE);
+  await expect(page.locator("#palette-editor")).toBeHidden();
+  await expect(page.locator("#palette-pick")).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator("#status")).toContainText("transparent");
+});
+
+test("edits survive a palette-stable retrace and clear on new file", async ({ page }) => {
+  await loadShapes(page);
+  await editFirstSwatch(page, "#00FF00");
+  await expect(page.locator("#palette-edits li")).toHaveCount(1);
+  await traced(page, async () => {
+    await page.locator("#speckle").fill("4");
+    await page.locator("#speckle").dispatchEvent("input");
+  });
+  await expect(page.locator("#palette-edits li")).toHaveCount(1);
+  expect(await resultSvg(page)).toContain('fill="#00FF00"');
+
+  const other = await makePng(page, "other.png", ...SIZE, CREAM, SHAPES);
+  await traced(page, () => page.locator("#file-input").setInputFiles(other));
+  await expect(page.locator("#palette-edits li")).toHaveCount(0);
+});
+
+test("grid hidden above 16 colors", async ({ page }) => {
+  const photo = await makePng(page, "photo.png", 120, 120, "noise");
+  await traced(page, () => page.locator("#file-input").setInputFiles(photo));
+  await page.evaluate(() => {
+    for (const details of document.querySelectorAll("details")) details.open = true;
+  });
+  await expect(page.locator("#palette-grid")).toBeHidden();
+  await expect(page.locator("#palette-hint")).toBeVisible();
+});

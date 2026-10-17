@@ -38,6 +38,7 @@ Convert raster images to clean, scalable SVG vectors entirely in your browser. [
 - Works offline after the first visit (service worker, everything stays local)
 - Zoomable preview: pinch, scroll wheel, buttons, Fit, or Actual size (1:1); drag to pan
 - Vector eraser that works across the full preview, including strokes started outside an image edge, with a zoom-aware circular cursor, adjustable diameter, `[` and `]` size shortcuts, undo/redo, and Restore Original. Cleanup masks are included in SVG and PNG exports.
+- Palette editing: change any traced color by HEX or RGB without retracing. Pick a color from the result at any palette size, or choose from the swatch grid when the trace has 16 colors or fewer. Edits apply to the preview and to SVG, PNG, PDF and DXF exports, survive retraces that keep the color, and reset when a new image loads
 - Vector blob-fill brush with adjustable diameter, color picker, editable hex color, active traced-palette eyedropper, and shared cleanup undo/redo. Fill strokes are included in SVG and PNG exports.
 - Photoshop-style rectangular and elliptical marquees plus a point-to-point polygonal lasso. Use `M`, `Shift+M`, or `L`, hold Shift to constrain proportions, hold Alt/Option to draw from center, then press Delete/Backspace to remove the selected area or Ctrl/Cmd+Backspace to fill it with the blob-brush color.
 - Rotate the loaded image in 90 degree steps
@@ -62,11 +63,13 @@ js/context.js       shared DOM references and mutable state
 js/settings.js      preferences, profiles, presets, persistence
 js/exporters.js     export post-processing and SVG/PNG/PDF/DXF save
 js/cleanup-tools.js eyedropper, selections, vector eraser and blob fill
+js/palette.js       palette extraction and fill recoloring
+js/palette-ui.js    palette panel, color editor and result eyedropper
 js/view.js          zoom and pan
 pkg/                wasm-pack output (committed so Pages serves it as-is)
 wasm/               Rust wrapper crate around vtracer
 tests/              node --test unit tests
-e2e/                Playwright responsive-layout tests
+e2e/                Playwright layout and workflow tests
 ```
 
 ## Develop

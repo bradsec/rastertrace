@@ -53,6 +53,22 @@ export const els = {
   knockoutColorField: $("knockout-color-field"),
   knockoutColor: /** @type {HTMLInputElement} */ ($("knockout-color")),
   pickFromImage: /** @type {HTMLButtonElement} */ ($("pick-from-image")),
+  paletteSummary: $("palette-summary"),
+  palettePick: /** @type {HTMLButtonElement} */ ($("palette-pick")),
+  paletteGrid: $("palette-grid"),
+  paletteHint: $("palette-hint"),
+  paletteEditor: $("palette-editor"),
+  paletteOriginalSwatch: $("palette-original-swatch"),
+  paletteOriginalHex: $("palette-original-hex"),
+  paletteClose: /** @type {HTMLButtonElement} */ ($("palette-close")),
+  paletteColor: /** @type {HTMLInputElement} */ ($("palette-color")),
+  paletteHex: /** @type {HTMLInputElement} */ ($("palette-hex")),
+  paletteR: /** @type {HTMLInputElement} */ ($("palette-r")),
+  paletteG: /** @type {HTMLInputElement} */ ($("palette-g")),
+  paletteB: /** @type {HTMLInputElement} */ ($("palette-b")),
+  paletteReset: /** @type {HTMLButtonElement} */ ($("palette-reset")),
+  paletteEdits: $("palette-edits"),
+  paletteResetAll: /** @type {HTMLButtonElement} */ ($("palette-reset-all")),
   denoise: /** @type {HTMLInputElement} */ ($("denoise")),
   autoDetect: /** @type {HTMLInputElement} */ ($("auto-detect")),
   contiguousField: $("contiguous-field"),
@@ -148,6 +164,7 @@ export const state = {
   raster: null, // { scale, imageData } cache, keyed by current bitmap
   processedRaster: null, // worker pixels after current trace preprocessing
   picking: false,
+  palettePicking: false,
   colorEdits: /** @type {Map<string, string>} */ (new Map()), // original "#RRGGBB" to edited fill
   loadToken: 0, // guards against overlapping loads (drop while decoding)
   flatNote: null, // status prefix when load-time detection fired
@@ -168,6 +185,7 @@ export const preferences = { measurementUnit: "mm" };
 // entry module's ?v= string in two places.
 export const hooks = {
   scheduleRetrace: () => {},
+  cancelPalettePick: () => {},
 };
 
 export function showError(message) {

@@ -61,6 +61,7 @@ export function setEyedropper(armed) {
   els.pickFromImage.setAttribute("aria-pressed", String(armed));
   els.preview.classList.toggle("picking", armed);
   if (armed) {
+    hooks.cancelPalettePick();
     setView("source");
     showPickPreview();
     els.status.textContent = "Click the image to sample the background color. Esc cancels.";
@@ -79,6 +80,7 @@ document.addEventListener("keydown", (e) => {
 export function deactivateCleanupTools() {
   const active =
     state.picking ||
+    state.palettePicking ||
     state.erasing ||
     state.blobFilling ||
     state.blobPicking ||
@@ -86,6 +88,7 @@ export function deactivateCleanupTools() {
     state.selectionTool;
   if (!active) return;
   if (state.picking) setEyedropper(false);
+  hooks.cancelPalettePick();
   setEraser(false);
   setBlobFill(false);
   clearSelection();
@@ -249,6 +252,7 @@ export function clearSelection() {
 export function setSelectionTool(tool) {
   state.selectionTool = tool;
   if (tool) {
+    hooks.cancelPalettePick();
     state.erasing = false;
     state.blobFilling = false;
     state.blobPicking = false;
@@ -591,6 +595,7 @@ for (const type of ["pointerup", "pointercancel"]) {
 export function setEraser(active) {
   state.erasing = active && Boolean(state.svg);
   if (state.erasing) {
+    hooks.cancelPalettePick();
     state.blobFilling = false;
     state.blobPicking = false;
     els.blobFillTool.setAttribute("aria-pressed", "false");
@@ -613,6 +618,7 @@ export function setBlobFill(active) {
   state.blobFilling = active && Boolean(state.svg);
   state.blobPicking = false;
   if (state.blobFilling) {
+    hooks.cancelPalettePick();
     state.erasing = false;
     els.eraserTool.setAttribute("aria-pressed", "false");
     els.preview.classList.remove("erasing");

@@ -587,6 +587,146 @@ main {
 .preview.picking img {
   cursor: crosshair;
 }
+.palette-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(28px, 1fr));
+  gap: 6px;
+  margin-top: 8px;
+}
+.palette-grid .swatch,
+.palette-chip {
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-sm);
+}
+.palette-grid .swatch {
+  position: relative;
+  aspect-ratio: 1;
+  min-height: 28px;
+  padding: 0;
+  cursor: pointer;
+}
+.palette-grid .swatch:focus-visible,
+.palette-edit-row:focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
+}
+.palette-grid .swatch[aria-pressed="true"] {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+.palette-grid .swatch.edited::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 7px;
+  height: 7px;
+  border: 1px solid var(--bg);
+  border-radius: 50%;
+  background: var(--accent);
+}
+.palette-hint {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+.palette-editor {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  background: var(--surface-1);
+}
+.palette-editor[hidden] {
+  display: none;
+}
+.palette-editor-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+.palette-close {
+  margin-left: auto;
+  min-height: 28px;
+  padding: 0 8px;
+  font-size: 12px;
+}
+.palette-chip {
+  display: inline-block;
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+}
+.palette-editor-fields {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 2fr) repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  align-items: end;
+}
+.palette-editor-fields input[type="color"] {
+  padding: 2px;
+}
+.palette-field {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  font-size: 11px;
+  color: var(--text-dim);
+}
+.palette-field input {
+  width: 100%;
+  min-width: 0;
+  min-height: 34px;
+  padding: 4px 6px;
+  border: 1px solid var(--border-input);
+  border-radius: var(--r-sm);
+  background: var(--surface-2);
+  color: var(--text);
+  font:
+    12px ui-monospace,
+    SFMono-Regular,
+    Consolas,
+    monospace;
+}
+.palette-field input:focus {
+  border-color: var(--accent);
+  outline: none;
+}
+.palette-field input[aria-invalid="true"] {
+  border-color: var(--error);
+}
+.palette-edits {
+  display: grid;
+  gap: 4px;
+  margin: 8px 0;
+  padding: 0;
+  list-style: none;
+}
+.palette-edits:empty {
+  display: none;
+}
+.palette-edit-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 4px 6px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  background: var(--surface-2);
+  color: var(--text);
+  cursor: pointer;
+}
+.palette-edit-row code {
+  overflow: hidden;
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .subfield label {
   font-weight: 500;
   font-size: 12px;

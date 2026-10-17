@@ -4,7 +4,7 @@
 // (which stop propagation while a tool is active), so app.js imports
 // this module last.
 import { els, state } from "./context.js?v=13";
-import { renderSelection } from "./cleanup-tools.js?v=21";
+import { renderSelection } from "./cleanup-tools.js?v=22";
 
 const view = { scale: 1, tx: 0, ty: 0 };
 const ZOOM_MIN = 0.001;
@@ -108,7 +108,14 @@ function pinchState() {
 }
 
 els.preview.addEventListener("pointerdown", (e) => {
-  if (state.picking || state.erasing || state.blobFilling || state.blobPicking || e.button !== 0)
+  if (
+    state.picking ||
+    state.palettePicking ||
+    state.erasing ||
+    state.blobFilling ||
+    state.blobPicking ||
+    e.button !== 0
+  )
     return;
   pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
   if (pointers.size === 1) {
