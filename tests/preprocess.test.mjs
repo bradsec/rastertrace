@@ -14,6 +14,7 @@ import {
   countPaths,
   defringeAlpha,
   detectBackgroundColor,
+  detectedColorSettings,
   dominantOpaqueColor,
   erodeAlpha,
   finalizeSvg,
@@ -27,7 +28,10 @@ import {
   oklabToSrgb,
   parseHexColor,
   physicalWidthValue,
+  PRESETS,
   quantize,
+  reclaimFringe,
+  reduceAndRemoveBackground,
   srgbToOklab,
   straightenPaths,
   removeBackground,
@@ -238,6 +242,32 @@ test("quantize backfills transparent pixels so they do not skew the palette", ()
   quantize(img, 2);
   const [r, g, b] = getPixel(img, 4, 4);
   assert.deepEqual([r, g, b], [255, 0, 0]);
+});
+
+test("quantize gives transparent pixels no palette weight", () => {
+  // Proportions from a knocked-out flat image: a large transparent area,
+  // a dark frame with dark ringing and blend shades, and a small cream
+  // detail. Counting the transparent area as the dominant dark color
+  // spent both slots on dark shades and painted the cream dark.
+  const runs = [
+    [[243, 234, 216, 0], 2186],
+    [[60, 40, 30, 255], 130],
+    [[56, 35, 26, 255], 19],
+    [[47, 26, 17, 255], 19],
+    [[206, 195, 178, 255], 19],
+    [[97, 79, 68, 255], 19],
+    [[243, 234, 216, 255], 5],
+  ];
+  const img = makeImage(
+    runs.reduce((n, [, count]) => n + count, 0),
+    1,
+  );
+  let x = 0;
+  for (const [rgba, count] of runs) for (let k = 0; k < count; k++) setPixel(img, x++, 0, rgba);
+  quantize(img, 2);
+  const [r, g, b] = getPixel(img, x - 1, 0);
+  assert.ok(r > 200 && g > 190 && b > 170, `cream detail kept, got ${[r, g, b]}`);
+  assert.equal(getPixel(img, 0, 0)[3], 0); // alpha untouched
 });
 
 test("quantize merges the closest pair when the palette is one slot short", () => {
@@ -994,12 +1024,128 @@ test("knockOutEdges keeps enclosed background below the minimum area", async () 
 
 test("removeBackground enclosed option removes holes in edges and contiguous modes", () => {
   const edges = ringImage();
-  removeBackground(edges, "edges", 16, false, { enclosed: true });
+  removeBackground(edges, "edges", 16, false, { enclosedMinArea: 1 });
   assert.equal(getPixel(edges, 10, 10)[3], 0);
   assert.equal(getPixel(edges, 3, 3)[3], 255);
   const picked = ringImage();
-  removeBackground(picked, [255, 255, 255], 16, false, { contiguous: true, enclosed: true });
+  removeBackground(picked, [255, 255, 255], 16, false, { contiguous: true, enclosedMinArea: 1 });
   assert.equal(getPixel(picked, 10, 10)[3], 0);
+});
+
+test("reduceAndRemoveBackground sizes enclosed areas in source pixels", () => {
+  // Hole is 12x12 = 144 trace px. At trace scale 2, 6 source px across
+  // is 12 trace px (144 px): removed. 7 across is 196 px: kept.
+  const bg = { transparent: "edges", fuzz: 16, enclosed: true, scale: 2 };
+  const removed = ringImage();
+  reduceAndRemoveBackground(removed, 256, { ...bg, enclosedSize: 6 });
+  assert.equal(getPixel(removed, 10, 10)[3], 0);
+  const kept = ringImage();
+  reduceAndRemoveBackground(kept, 256, { ...bg, enclosedSize: 7 });
+  assert.equal(getPixel(kept, 10, 10)[3], 255);
+  const off = ringImage();
+  reduceAndRemoveBackground(off, 256, { ...bg, enclosed: false, enclosedSize: 1 });
+  assert.equal(getPixel(off, 10, 10)[3], 255);
+});
+
+/** Horizontal gray ramp from `from` to `to` (inclusive), opaque. */
+function rampImage(width, height, from, to) {
+  const img = makeImage(width, height, [0, 0, 0, 255]);
+  for (let x = 0; x < width; x++) {
+    const v = Math.round(from + ((to - from) * x) / (width - 1));
+    for (let y = 0; y < height; y++) setPixel(img, x, y, [v, v, v, 255]);
+  }
+  return img;
+}
+
+test("knockOutConnected follows a gradient background when asked", async () => {
+  const { knockOutConnected } = await import("../js/preprocess.js");
+  const flat = rampImage(40, 10, 255, 185);
+  knockOutConnected(flat, [255, 255, 255], 16);
+  assert.equal(getPixel(flat, 0, 5)[3], 0);
+  assert.equal(getPixel(flat, 39, 5)[3], 255); // beyond fuzz of the seed: kept
+
+  const img = rampImage(40, 10, 255, 185);
+  for (let y = 3; y < 7; y++) for (let x = 18; x < 22; x++) setPixel(img, x, y, [0, 0, 0, 255]);
+  knockOutConnected(img, [255, 255, 255], 16, 0, { gradient: true });
+  assert.equal(getPixel(img, 0, 5)[3], 0);
+  assert.equal(getPixel(img, 39, 5)[3], 0); // whole ramp removed
+  assert.equal(getPixel(img, 20, 5)[3], 255); // subject kept
+});
+
+test("knockOutConnected gradient flood stops at the drift cap", async () => {
+  const { knockOutConnected } = await import("../js/preprocess.js");
+  const img = rampImage(100, 4, 255, 60);
+  knockOutConnected(img, [255, 255, 255], 16, 0, { gradient: true });
+  assert.equal(getPixel(img, 0, 1)[3], 0);
+  assert.equal(getPixel(img, 99, 1)[3], 255); // far from the seed: kept
+});
+
+test("removeBackground passes the gradient option to edges mode", () => {
+  const img = rampImage(40, 10, 255, 185);
+  removeBackground(img, "edges", 16, false, { gradient: true });
+  assert.equal(getPixel(img, 39, 5)[3], 0);
+});
+
+test("reduceAndRemoveBackground masks edges before quantizing (no leak)", () => {
+  // White bg, light gray subject touching it, dark subject. At 2 colors
+  // the light gray would share the white palette slot and the edge flood
+  // would run straight through it.
+  const img = makeImage(30, 10, [255, 255, 255, 255]);
+  for (let y = 2; y < 8; y++) {
+    for (let x = 5; x < 15; x++) setPixel(img, x, y, [225, 225, 225, 255]);
+    for (let x = 15; x < 25; x++) setPixel(img, x, y, [20, 20, 20, 255]);
+  }
+  const seed = reduceAndRemoveBackground(img, 2, { transparent: "edges", fuzz: 16 });
+  assert.deepEqual(seed, [255, 255, 255]);
+  assert.equal(getPixel(img, 0, 0)[3], 0); // background removed
+  assert.equal(getPixel(img, 8, 5)[3], 255); // light subject kept
+  assert.equal(getPixel(img, 20, 5)[3], 255); // dark subject kept
+});
+
+test("reduceAndRemoveBackground keeps global modes quantize-first", () => {
+  // Off-white highlight collapses into the white palette slot and goes
+  // with it: global removal semantics are unchanged.
+  const img = makeImage(10, 10, [255, 255, 255, 255]);
+  for (let y = 2; y < 8; y++) for (let x = 2; x < 8; x++) setPixel(img, x, y, [20, 20, 20, 255]);
+  for (let y = 3; y < 6; y++) for (let x = 3; x < 6; x++) setPixel(img, x, y, [235, 235, 235, 255]);
+  const removed = reduceAndRemoveBackground(img, 2, { transparent: "auto", fuzz: 0 });
+  assert.ok(removed);
+  assert.equal(getPixel(img, 0, 0)[3], 0);
+  assert.equal(getPixel(img, 4, 4)[3], 0); // highlight went with the background slot
+  assert.equal(getPixel(img, 6, 6)[3], 255); // dark subject kept
+});
+
+test("reduceAndRemoveBackground without background only quantizes", () => {
+  const img = makeImage(4, 1, [255, 255, 255, 255]);
+  setPixel(img, 1, 0, [250, 250, 250, 255]);
+  setPixel(img, 2, 0, [0, 0, 0, 255]);
+  assert.equal(reduceAndRemoveBackground(img, 2, { transparent: "", fuzz: 16 }), null);
+  for (let x = 0; x < 4; x++) assert.equal(getPixel(img, x, 0)[3], 255);
+  assert.ok(new Set([0, 1, 2, 3].map((x) => getPixel(img, x, 0).join())).size <= 2);
+});
+
+test("reclaimFringe clears edge pixels closer to the background than their palette color", () => {
+  // Row: transparent bg | fringe | subject. Fringe was near-white before
+  // quantizing and got snapped to the subject's palette color.
+  const img = makeImage(6, 1, [40, 40, 40, 255]);
+  setPixel(img, 0, 0, [255, 255, 255, 0]);
+  const original = new Uint8ClampedArray(img.data);
+  original.set([230, 230, 230, 255], 4); // x=1 fringe: near background
+  original.set([60, 60, 60, 255], 8); // x=2: near its palette color
+  reclaimFringe(img, original, [255, 255, 255], 2);
+  assert.equal(getPixel(img, 1, 0)[3], 0); // fringe reclaimed
+  assert.equal(getPixel(img, 2, 0)[3], 255); // subject kept
+  assert.equal(getPixel(img, 4, 0)[3], 255);
+});
+
+test("reclaimFringe grows at most `rings` pixels", () => {
+  const img = makeImage(6, 1, [40, 40, 40, 255]);
+  setPixel(img, 0, 0, [255, 255, 255, 0]);
+  const original = new Uint8ClampedArray(img.data);
+  for (let x = 1; x < 6; x++) original.set([240, 240, 240, 255], x * 4);
+  reclaimFringe(img, original, [255, 255, 255], 2);
+  assert.equal(getPixel(img, 2, 0)[3], 0);
+  assert.equal(getPixel(img, 3, 0)[3], 255);
 });
 
 test("removeSpecks drops small opaque islands and fills small enclosed pinholes", () => {
@@ -1032,6 +1178,33 @@ test("removeSpecks with size 0 is a no-op", () => {
   const before = [...img.data];
   removeSpecks(img, 0);
   assert.deepEqual([...img.data], before);
+});
+
+test("detectedColorSettings snaps flat images to the nearest preset at or above the count", () => {
+  assert.deepEqual(detectedColorSettings({ flat: true, colorCount: 5 }), {
+    colors: 5,
+    speckle: PRESETS[6].speckle,
+    layerDiff: PRESETS[6].layerDiff,
+  });
+  assert.deepEqual(detectedColorSettings({ flat: true, colorCount: 2 }), {
+    colors: 2,
+    speckle: PRESETS[2].speckle,
+    layerDiff: PRESETS[2].layerDiff,
+  });
+});
+
+test("detectedColorSettings returns defaults for photographic images", () => {
+  // A photo after a flat image must not inherit the flat image's colors.
+  assert.deepEqual(detectedColorSettings({ flat: false, colorCount: 4000 }), {
+    colors: DEFAULTS.colors,
+    speckle: DEFAULTS.speckle,
+    layerDiff: DEFAULTS.layerDiff,
+  });
+});
+
+test("sanitizeSettings keeps autoDetect booleans only", () => {
+  assert.deepEqual(sanitizeSettings({ autoDetect: false }), { autoDetect: false });
+  assert.deepEqual(sanitizeSettings({ autoDetect: "yes" }), {});
 });
 
 test("analyzeFlatness flags flat image with anti-aliased fringe", () => {

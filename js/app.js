@@ -10,26 +10,26 @@ import {
   rotateBitmap,
   sniffImageSize,
   Tracer,
-} from "./pipeline.js?v=49";
+} from "./pipeline.js?v=50";
 import {
   analyzeFlatness,
+  detectedColorSettings,
   fitTraceScale,
   isStaleModuleError,
   MAX_TRACE_SIDE,
   MAX_TRACE_SIDE_ULTRA,
   parseHexColor,
-  PRESETS,
   toHexColor,
-} from "./preprocess.js?v=49";
-import { $, els, hooks, preferences, showError, state } from "./context.js?v=9";
-import { refreshExport, setResultActions } from "./exporters.js?v=14";
+} from "./preprocess.js?v=50";
+import { $, els, hooks, preferences, showError, state } from "./context.js?v=10";
+import { refreshExport, setResultActions } from "./exporters.js?v=15";
 import {
   clearSelection,
   setBlobFill,
   setEraser,
   setSelectionTool,
   setView,
-} from "./cleanup-tools.js?v=18";
+} from "./cleanup-tools.js?v=19";
 import {
   applyExportProfile,
   applyMeasurementUnit,
@@ -45,12 +45,12 @@ import {
   updateOutputs,
   updateStencilFields,
   updateTransparencyFields,
-} from "./settings.js?v=17";
-import { actualSizeView, resetView } from "./view.js?v=17";
+} from "./settings.js?v=18";
+import { actualSizeView, resetView } from "./view.js?v=18";
 
 const EMPTY_IMAGE_SRC = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==";
 
-const tracer = new Tracer(new URL("./worker.js?v=52", import.meta.url));
+const tracer = new Tracer(new URL("./worker.js?v=53", import.meta.url));
 
 let elapsedTimer = 0;
 
@@ -181,10 +181,10 @@ async function recoverFromStaleCache(message) {
 }
 
 /**
- * Load-time content detection. Flat-color sources get visible smart
- * defaults: colors snapped to the detected count, cleanup levels from the
- * nearest preset at or above it. Controls move in the open and stay fully
- * user-editable.
+ * Load-time content detection. With "Auto-detect colors" on, colors,
+ * speckle and layer difference come from this image (detectedColorSettings);
+ * with it off, every setting carries over from the previous image
+ * unchanged. Manual color, preset or profile changes turn it off.
  */
 function applyDetectedSettings(bitmap) {
   // Keep the 1x pixels for the trace that follows. Any source at or above
@@ -192,25 +192,24 @@ function applyDetectedSettings(bitmap) {
   // canvas draw and readback per load; retrace re-rasterizes on a miss.
   const imageData = rasterize(bitmap, 1, false);
   state.raster = { scale: 1, nearest: false, imageData };
-  const { flat, colorCount } = analyzeFlatness(imageData);
-  if (!flat) {
-    // Photo-like source: tracing suits flat art. One-time hint, controls
-    // untouched (posterized photo traces are a legitimate use).
+  const analysis = analyzeFlatness(imageData);
+  if (!analysis.flat) {
+    // Tracing suits flat art. One-time hint.
     state.flatNote =
       "Photographic image: tracing works best on flat art. Try the Print profile or fewer colors; for engraving photos, a raster PNG usually works better.";
-    return;
   }
-  const presetKey = Object.keys(PRESETS)
-    .map(Number)
-    .sort((a, b) => a - b)
-    .find((k) => k >= colorCount);
-  const preset = PRESETS[presetKey];
-  els.colors.value = String(colorCount);
-  els.speckle.value = String(preset.speckle);
-  els.layerDiff.value = String(preset.layerDiff);
+  if (!els.autoDetect.checked) return;
+  const detected = detectedColorSettings(analysis);
+  els.colors.value = String(detected.colors);
+  els.speckle.value = String(detected.speckle);
+  els.layerDiff.value = String(detected.layerDiff);
   els.preset.value = "";
+  clearProfile();
   updateOutputs();
-  state.flatNote = `Detected flat image (~${colorCount} colors), color settings applied.`;
+  saveSettings();
+  if (analysis.flat) {
+    state.flatNote = `Detected flat image (~${analysis.colorCount} colors), color settings applied.`;
+  }
 }
 
 async function loadFile(file) {
@@ -264,6 +263,16 @@ async function loadFile(file) {
     state.bitmap = bitmap;
     state.file = file;
     state.rotation = 0;
+    // invert() flipped the knockout color to follow the inverted pixels;
+    // the new image is not inverted, so flip it back.
+    if (state.inverted) {
+      const knockout = parseHexColor(els.knockoutColor.value);
+      if (knockout) {
+        els.knockoutColor.value = toHexColor(
+          /** @type {[number, number, number]} */ (knockout.map((channel) => 255 - channel)),
+        );
+      }
+    }
     state.inverted = false;
     els.invertImage.setAttribute("aria-pressed", "false");
     state.decodedSide = MAX_TRACE_SIDE;
@@ -539,6 +548,7 @@ document.addEventListener("paste", (e) => {
 
 els.preset.addEventListener("change", () => {
   clearProfile();
+  els.autoDetect.checked = false;
   applyPreset(els.preset.value);
   scheduleRetrace();
 });
@@ -546,13 +556,14 @@ els.preset.addEventListener("change", () => {
 for (const input of [els.colors, els.speckle, els.layerDiff]) {
   input.addEventListener("input", () => {
     els.preset.value = ""; // manual change leaves the preset
+    els.autoDetect.checked = false; // and keeps the value for later images
     clearProfile();
     updateOutputs();
     scheduleRetrace();
   });
 }
 
-for (const input of [els.fuzz, els.specks, els.edgeTrim, els.defringe]) {
+for (const input of [els.fuzz, els.specks, els.enclosedSize, els.edgeTrim, els.defringe]) {
   input.addEventListener("input", () => {
     updateOutputs();
     scheduleRetrace();
@@ -571,7 +582,11 @@ els.contiguous.addEventListener("change", () => {
   scheduleRetrace();
 });
 
-els.enclosed.addEventListener("change", scheduleRetrace);
+els.enclosed.addEventListener("change", () => {
+  updateTransparencyFields();
+  scheduleRetrace();
+});
+els.gradient.addEventListener("change", scheduleRetrace);
 
 /**
  * The bitmap is decoded at the 2048 cap. Ultra re-decodes the kept file
@@ -717,6 +732,13 @@ els.greenScreen.addEventListener("click", () => {
   els.greenScreen.setAttribute("aria-pressed", String(enabled));
   els.preview.classList.toggle("checkerboard", !enabled);
   els.preview.classList.toggle("green-screen", enabled);
+});
+
+// Turning auto-detect back on applies it to the current image right away.
+els.autoDetect.addEventListener("change", () => {
+  if (!els.autoDetect.checked || !state.bitmap) return;
+  applyDetectedSettings(state.bitmap);
+  scheduleRetrace();
 });
 
 els.resetSettingsBtn.addEventListener("click", () => {

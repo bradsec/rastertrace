@@ -7,10 +7,10 @@ import {
   PRESETS,
   sanitizeSettings,
   toGrayscaleColor,
-} from "./preprocess.js?v=49";
-import { els, preferences } from "./context.js?v=9";
-import { refreshExport, updatePhysicalHeightOut } from "./exporters.js?v=14";
-import { setEyedropper } from "./cleanup-tools.js?v=18";
+} from "./preprocess.js?v=50";
+import { els, preferences } from "./context.js?v=10";
+import { refreshExport, updatePhysicalHeightOut } from "./exporters.js?v=15";
+import { setEyedropper } from "./cleanup-tools.js?v=19";
 
 /** @returns {HTMLInputElement} */
 const radioEl = (selector) => /** @type {HTMLInputElement} */ (document.querySelector(selector));
@@ -97,6 +97,8 @@ export function currentSettings() {
     transparent,
     contiguous: els.contiguous.checked,
     enclosed: els.enclosed.checked,
+    enclosedSize: Number(els.enclosedSize.value),
+    gradient: els.gradient.checked,
     specks: Number(els.specks.value),
     fuzz: Number(els.fuzz.value),
     edgeTrim: Number(els.edgeTrim.value),
@@ -113,6 +115,7 @@ export function updateOutputs() {
   els.straightenOut.textContent = Number(els.straighten.value) === 0 ? "Off" : els.straighten.value;
   els.fuzzOut.textContent = els.fuzz.value;
   els.specksOut.textContent = els.specks.value;
+  els.enclosedSizeOut.textContent = `${els.enclosedSize.value} px`;
   els.edgeTrimOut.textContent = els.edgeTrim.value;
   els.defringeOut.textContent = els.defringe.value;
   els.pathPrecisionOut.textContent = els.pathPrecision.value;
@@ -163,6 +166,8 @@ export function applyExportProfile(name) {
   if (profile.spliceThreshold) els.spliceThreshold.value = String(profile.spliceThreshold);
   els.minify.checked = profile.minify;
   els.preset.value = "";
+  // The profile chose the color settings; detection must not replace them.
+  els.autoDetect.checked = false;
   els.exportProfile.value = name; // resetSettings cleared the select
   updateStencilFields(); // after the select: Laser moves the threshold up top
   updateOutputs();
@@ -180,6 +185,7 @@ const SETTINGS_KEY = "rastertrace-settings";
 function snapshotSettings() {
   return {
     profile: els.exportProfile.value,
+    autoDetect: els.autoDetect.checked,
     preset: els.preset.value,
     colors: Number(els.colors.value),
     speckle: Number(els.speckle.value),
@@ -202,6 +208,8 @@ function snapshotSettings() {
     knockoutColor: els.knockoutColor.value,
     contiguous: els.contiguous.checked,
     enclosed: els.enclosed.checked,
+    enclosedSize: Number(els.enclosedSize.value),
+    gradient: els.gradient.checked,
     specks: Number(els.specks.value),
     fuzz: Number(els.fuzz.value),
     edgeTrim: Number(els.edgeTrim.value),
@@ -244,6 +252,10 @@ export function restoreSettings() {
     if (saved[key] !== undefined) el.checked = saved[key];
   };
   set(els.exportProfile, "profile");
+  // Saves from before the checkbox existed: a chosen profile or preset
+  // means the user picked color settings, so keep them across images.
+  if (saved.autoDetect === undefined && (saved.profile || saved.preset)) saved.autoDetect = false;
+  check(els.autoDetect, "autoDetect");
   set(els.preset, "preset");
   set(els.colors, "colors");
   set(els.speckle, "speckle");
@@ -267,6 +279,8 @@ export function restoreSettings() {
   set(els.knockoutColor, "knockoutColor");
   check(els.contiguous, "contiguous");
   check(els.enclosed, "enclosed");
+  set(els.enclosedSize, "enclosedSize");
+  check(els.gradient, "gradient");
   set(els.specks, "specks");
   set(els.fuzz, "fuzz");
   set(els.edgeTrim, "edgeTrim");
@@ -300,8 +314,12 @@ export function updateTransparencyFields() {
   const mode = els.transparent.value;
   els.knockoutColorField.hidden = mode !== "custom";
   els.contiguousField.hidden = mode !== "custom";
-  // Enclosed holes only exist for border-connected removal.
-  els.enclosedField.hidden = !(mode === "edges" || (mode === "custom" && els.contiguous.checked));
+  // Enclosed holes and gradient following only apply to border-connected
+  // removal.
+  const connected = mode === "edges" || (mode === "custom" && els.contiguous.checked);
+  els.enclosedField.hidden = !connected;
+  els.enclosedSizeField.hidden = !connected || !els.enclosed.checked;
+  els.gradientField.hidden = !connected;
   els.fuzzField.hidden = mode === "";
   els.specksField.hidden = mode === "";
   els.edgeTrimField.hidden = mode === "";
@@ -317,6 +335,7 @@ export function updateExportFields() {
 export function resetSettings() {
   els.exportProfile.value = "";
   els.preset.value = "";
+  els.autoDetect.checked = DEFAULTS.autoDetect;
   els.colors.value = String(DEFAULTS.colors);
   els.speckle.value = String(DEFAULTS.speckle);
   els.layerDiff.value = String(DEFAULTS.layerDiff);
@@ -332,6 +351,8 @@ export function resetSettings() {
   els.knockoutColor.value = "#ffffff";
   els.contiguous.checked = DEFAULTS.contiguous;
   els.enclosed.checked = DEFAULTS.enclosed;
+  els.enclosedSize.value = String(DEFAULTS.enclosedSize);
+  els.gradient.checked = DEFAULTS.gradient;
   els.specks.value = String(DEFAULTS.specks);
   els.fuzz.value = String(DEFAULTS.fuzz);
   els.edgeTrim.value = String(DEFAULTS.edgeTrim);

@@ -8,14 +8,12 @@ import {
   fillTransparent,
   finalizeSvg,
   medianFilter,
-  modeFilter,
-  quantize,
-  removeBackground,
+  reduceAndRemoveBackground,
   removeSpecks,
   straightenPaths,
   thresholdImage,
   toGrayscale,
-} from "./preprocess.js?v=49";
+} from "./preprocess.js?v=50";
 
 // Explicit versioned URL: the glue's own wasm fetch drops the ?v= query,
 // so a rebuilt binary would otherwise be served from stale browser cache
@@ -53,24 +51,15 @@ self.onmessage = async (event) => {
       medianFilter(img, 2);
     }
     // Binary mode ignores the palette entirely; skip the quantize cost.
-    const quantized = settings.colors < 256 && !settings.stencil;
-    if (quantized) {
-      stage(`Reducing to ${settings.colors} colors…`);
-      quantize(img, settings.colors);
-      modeFilter(img);
-    }
-
-    // Background knockout runs AFTER quantization so the removed color is
-    // one of the final palette colors: off-white highlights that collapse
-    // into the background's palette slot get removed with it, matching
-    // "N colors where one is transparent".
-    let knockedOut = null;
+    // The helper orders quantize and knockout per background mode.
+    const knockedOut = reduceAndRemoveBackground(
+      img,
+      settings.stencil ? 256 : settings.colors,
+      // Trace pixels per source pixel: enclosed sizes are set in source px.
+      { ...settings, scale: img.width / sourceWidth },
+      stage,
+    );
     if (settings.transparent) {
-      stage("Removing background…");
-      knockedOut = removeBackground(img, settings.transparent, settings.fuzz, quantized, {
-        contiguous: settings.contiguous,
-        enclosed: settings.enclosed,
-      });
       // Before the trim: trimming would widen pinholes past the size limit.
       if (knockedOut && settings.specks > 0) {
         stage("Cleaning specks…");

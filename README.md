@@ -13,7 +13,7 @@ Convert raster images to clean, scalable SVG vectors entirely in your browser. [
 - Median-cut + k-means color quantization in perceptual Oklab space with transparent-area backfill
 - 3x3 majority filter to clean quantization dither
 - Optional edge-preserving median denoise for photographic sources
-- Background removal: auto-detect from border sampling, hex color, or eyedropper pick from the image (sampled from the current preprocessed state, so the picked color matches the reduced palette); picked colors can be limited to areas connected to the edges, and edge removal can also clear enclosed background (letter counters, gaps between shapes); perceptual match tolerance; clean specks drops stray dots and fills pinholes; edge trim chokes the cutout and defringe repaints leftover fringe without shrinking thin details
+- Background removal: auto-detect from border sampling, hex color, or eyedropper pick from the image (sampled from the current preprocessed state, so the picked color matches the reduced palette); picked colors can be limited to areas connected to the edges, and edge removal can also clear enclosed background (letter counters, gaps between shapes) above an adjustable minimum size and follow gradient backgrounds; with color reduction, edge-connected masks are built before quantizing so light subject edges do not leak; perceptual match tolerance; clean specks drops stray dots and fills pinholes; edge trim chokes the cutout and defringe repaints leftover fringe without shrinking thin details
 - Purpose-based export profiles: Web optimized, Balanced, High detail, Max detail, Pixel exact, Print & cutting, Mono stencil (black/white), and Laser stencil set colors, cleanup, path detail, and output options together (all controls stay editable)
 - Stencil mode: true black/white binary tracing for laser cutting, stamps, and silhouettes, with an adjustable brightness threshold and a choice of black-on-transparent or white-on-black ink
 - SVG size export: preserve source pixels or write a custom width/height in px, mm, cm, or in, with the viewBox preserved
@@ -21,7 +21,7 @@ Convert raster images to clean, scalable SVG vectors entirely in your browser. [
 - Straighten lines slider: snaps slightly wobbly or bumpy traced edges to true straight lines while keeping corners and real curves
 - Advanced tracing controls: path coordinate precision, curve segment length, spline splitting
 - Color-count presets from 2 to 256 with matched cleanup levels: fewer colors get more aggressive speckle and layer cleanup for flat print-style output
-- Flat-image detection: logos, text, and pixel art are detected at load; the color count snaps to the image, with every control still editable.
+- Color auto-detection (on by default): each opened image sets colors, speckle filter, and layer difference; flat art snaps to its color count and photos get the defaults. Changing those controls, a preset, or a profile turns it off.
 - Crisp edges toggle: sharper corner tracing for hard-edged sources, available manually for any image.
 - Path modes: smooth splines, straight polygons, or pixel-exact outlines with nearest-neighbor upscaling for pixel art
 - Corner rounding slider: fine control over how sharply angles trace, from hard corners to flowing curves
@@ -34,7 +34,7 @@ Convert raster images to clean, scalable SVG vectors entirely in your browser. [
 - Live re-trace on setting changes, Save As dialogs for SVG, PNG, PDF, and DXF, clipboard copy, and PNG export at the trace resolution. Exports default to `<source>_rt.<ext>` so saving never overwrites the original image
 - Vector PDF export (true curves, physical page size when set) for print shops and design handoff
 - DXF export (R12) for CAD, CNC, and cutters: one closed polyline per shape, one layer per color, mm units when a physical size is set
-- Settings persist across visits and image replacements (flat-image detection still tunes colors per image); one-click Reset settings
+- Settings persist across visits and image replacements: with color auto-detection off, every setting carries over unchanged; one-click Reset settings
 - Works offline after the first visit (service worker, everything stays local)
 - Zoomable preview: pinch, scroll wheel, buttons, Fit, or Actual size (1:1); drag to pan
 - Vector eraser that works across the full preview, including strokes started outside an image edge, with a zoom-aware circular cursor, adjustable diameter, `[` and `]` size shortcuts, undo/redo, and Restore Original. Cleanup masks are included in SVG and PNG exports.

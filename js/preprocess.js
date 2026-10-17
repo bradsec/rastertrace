@@ -46,6 +46,7 @@ export function assertRasterBudget(width, height, upscale) {
 }
 
 export const DEFAULTS = Object.freeze({
+  autoDetect: true,
   colors: 256,
   speckle: 8,
   layerDiff: 16,
@@ -60,6 +61,8 @@ export const DEFAULTS = Object.freeze({
   fuzz: 16,
   contiguous: false,
   enclosed: false,
+  enclosedSize: 16,
+  gradient: false,
   specks: 0,
   edgeTrim: 0,
   defringe: 0,
@@ -91,6 +94,25 @@ export const PRESETS = Object.freeze({
   // instead of continuing to taper off.
   256: { colors: 256, speckle: 3, layerDiff: 10 },
 });
+
+/**
+ * Color settings auto-detection derives from one image's analyzeFlatness
+ * result. Flat art snaps colors to the detected count and takes cleanup
+ * from the nearest preset at or above it; photographic sources get the
+ * defaults, so a photo loaded after flat art does not inherit its
+ * reduced palette.
+ */
+export function detectedColorSettings({ flat, colorCount }) {
+  if (!flat) {
+    return { colors: DEFAULTS.colors, speckle: DEFAULTS.speckle, layerDiff: DEFAULTS.layerDiff };
+  }
+  const key = Object.keys(PRESETS)
+    .map(Number)
+    .sort((a, b) => a - b)
+    .find((k) => k >= colorCount);
+  const preset = PRESETS[key ?? 256];
+  return { colors: colorCount, speckle: preset.speckle, layerDiff: preset.layerDiff };
+}
 
 // Purpose-based export profiles (SVG_EXPORT_RESEARCH.md). Values are
 // applied to the visible controls like PRESETS: users can edit them
@@ -508,6 +530,7 @@ export function physicalWidthValue(value) {
 const SETTING_CHECKS = {
   profile: (v) => v === "" || v in EXPORT_PROFILES,
   preset: (v) => typeof v === "string",
+  autoDetect: (v) => typeof v === "boolean",
   colors: (v) => Number.isFinite(v) && v >= 2 && v <= 256,
   speckle: (v) => Number.isFinite(v) && v >= 0 && v <= 32,
   layerDiff: (v) => Number.isFinite(v) && v >= 0 && v <= 128,
@@ -526,6 +549,8 @@ const SETTING_CHECKS = {
   fuzz: (v) => Number.isFinite(v) && v >= 0 && v <= 255,
   contiguous: (v) => typeof v === "boolean",
   enclosed: (v) => typeof v === "boolean",
+  enclosedSize: (v) => Number.isFinite(v) && v >= 1 && v <= 64,
+  gradient: (v) => typeof v === "boolean",
   specks: (v) => Number.isFinite(v) && v >= 0 && v <= 16,
   edgeTrim: (v) => Number.isFinite(v) && v >= 0 && v <= 16,
   defringe: (v) => Number.isFinite(v) && v >= 0 && v <= 8,
@@ -691,6 +716,30 @@ export function detectBackgroundColor(img) {
 }
 
 /**
+ * Write the Oklab coordinates of an sRGB color into `out` (length 3).
+ * Allocation-free for per-pixel use; same math as srgbToOklab.
+ */
+function oklabInto(lut, r, g, b, out) {
+  const lr = lut[r];
+  const lg = lut[g];
+  const lb = lut[b];
+  const l = Math.cbrt(0.4122214708 * lr + 0.5363325363 * lg + 0.0514459929 * lb);
+  const m = Math.cbrt(0.2119034982 * lr + 0.6806995451 * lg + 0.1073969566 * lb);
+  const s = Math.cbrt(0.0883024619 * lr + 0.2817188376 * lg + 0.6299787005 * lb);
+  out[0] = 0.2104542553 * l + 0.793617785 * m - 0.0040720468 * s;
+  out[1] = 1.9779984951 * l - 2.428592205 * m + 0.4505937099 * s;
+  out[2] = 0.0259040371 * l + 0.7827717662 * m - 0.808675766 * s;
+}
+
+/** Fuzz-scale distance between two Oklab colors (see makeFuzzMatch). */
+function fuzzDistance(a, b) {
+  const dL = a[0] - b[0];
+  const dA = (a[1] - b[1]) * 2;
+  const dB = (a[2] - b[2]) * 2;
+  return Math.sqrt(dL * dL + dA * dA + dB * dB) * 255;
+}
+
+/**
  * Perceptual fuzz matcher: chroma-weighted Oklab distance to `target`,
  * scaled so 0-255 fuzz values stay comparable to the old per-channel
  * scale. Doubling the a/b (chroma) axes keeps hue shifts (subject edges)
@@ -728,12 +777,24 @@ export function knockOutColor(img, color, fuzz) {
 }
 
 /**
- * Smallest enclosed background region the "enclosed" option removes, as
- * a fraction of the image area. Keeps small same-color details inside the
- * subject (eye highlights, specular glints) while letter counters and
- * gaps between shapes go.
+ * Smallest enclosed region the "enclosed" option removes, in trace pixels:
+ * `size` source pixels across, squared at the trace `scale`. The size is
+ * user-set because no fixed limit separates letter counters (small) from
+ * same-color subject areas such as a blank screen (large).
  */
-export const ENCLOSED_MIN_FRACTION = 0.0005;
+export function enclosedAreaLimit(size, scale) {
+  return Math.max(1, Math.round((size * scale) ** 2));
+}
+
+/**
+ * Gradient flood limits, as multiples of fuzz. A real backdrop gradient
+ * changes by a fraction of a unit per pixel; what the step limit must
+ * reject is the jump across a subject edge. The drift cap bounds how far
+ * a chain of small steps can wander from the seed, so a soft,
+ * low-contrast edge cannot carry the fill through the whole subject.
+ */
+const GRADIENT_STEP_SCALE = 0.5;
+const GRADIENT_DRIFT_SCALE = 4;
 
 /**
  * Flood-fill knockout: zero the alpha of every pixel CONNECTED to the
@@ -741,41 +802,78 @@ export const ENCLOSED_MIN_FRACTION = 0.0005;
  * distance). Pixels of the same color inside the subject stay opaque
  * because they are not connected to the edge, unless `enclosedMinArea` is
  * positive: then enclosed matching regions of at least that many pixels
- * (letter counters, gaps between shapes) are removed too. Mutates img in
- * place.
+ * (letter counters, gaps between shapes) are removed too. With
+ * `gradient`, the fill spreads by small steps between neighbors instead
+ * of matching the seed directly, so vignettes and lit backdrops go too
+ * (see GRADIENT_STEP_SCALE); enclosed regions still match the seed.
+ * Mutates img in place.
  */
-export function knockOutConnected(img, color, fuzz, enclosedMinArea = 0) {
+export function knockOutConnected(
+  img,
+  color,
+  fuzz,
+  enclosedMinArea = 0,
+  { gradient = false } = {},
+) {
   const { data, width, height } = img;
   const fuzzMatch = makeFuzzMatch(color, fuzz);
   const matches = (i) =>
     data[i + 3] >= ALPHA_THRESHOLD && fuzzMatch(data[i], data[i + 1], data[i + 2]);
 
+  // Gradient mode: a neighbor joins when it is within the step limit of
+  // the pixel it was reached from and within the drift cap of the seed.
+  const lut = linearLut();
+  const seedLab = srgbToOklab(color);
+  const fromLab = new Float64Array(3);
+  const toLab = new Float64Array(3);
+  const stepLimit = fuzz * GRADIENT_STEP_SCALE;
+  const driftLimit = fuzz * GRADIENT_DRIFT_SCALE;
+  const steps = (from, i) => {
+    if (data[i + 3] < ALPHA_THRESHOLD) return false;
+    oklabInto(lut, data[i], data[i + 1], data[i + 2], toLab);
+    return fuzzDistance(fromLab, toLab) <= stepLimit && fuzzDistance(seedLab, toLab) <= driftLimit;
+  };
+
   const stack = new Uint32Array(width * height);
   let stackSize = 0;
-  const push = (x, y) => {
+  const take = (p) => {
+    data[p * 4 + 3] = 0;
+    stack[stackSize++] = p;
+  };
+  const seedPush = (x, y) => {
     const p = y * width + x;
-    const i = p * 4;
-    if (matches(i)) {
-      data[i + 3] = 0;
-      stack[stackSize++] = p;
-    }
+    if (matches(p * 4)) take(p);
   };
   for (let x = 0; x < width; x++) {
-    push(x, 0);
-    push(x, height - 1);
+    seedPush(x, 0);
+    seedPush(x, height - 1);
   }
   for (let y = 0; y < height; y++) {
-    push(0, y);
-    push(width - 1, y);
+    seedPush(0, y);
+    seedPush(width - 1, y);
   }
   while (stackSize) {
     const p = stack[--stackSize];
     const x = p % width;
     const y = (p / width) | 0;
-    if (x > 0) push(x - 1, y);
-    if (x < width - 1) push(x + 1, y);
-    if (y > 0) push(x, y - 1);
-    if (y < height - 1) push(x, y + 1);
+    if (gradient) {
+      // Alpha is already 0 on taken pixels; their color is intact.
+      const i = p * 4;
+      oklabInto(lut, data[i], data[i + 1], data[i + 2], fromLab);
+      for (const q of [
+        x > 0 ? p - 1 : -1,
+        x < width - 1 ? p + 1 : -1,
+        y > 0 ? p - width : -1,
+        y < height - 1 ? p + width : -1,
+      ]) {
+        if (q >= 0 && steps(fromLab, q * 4)) take(q);
+      }
+    } else {
+      if (x > 0) seedPush(x - 1, y);
+      if (x < width - 1) seedPush(x + 1, y);
+      if (y > 0) seedPush(x, y - 1);
+      if (y < height - 1) seedPush(x, y + 1);
+    }
   }
   if (enclosedMinArea <= 0) return img;
 
@@ -816,10 +914,10 @@ export function knockOutConnected(img, color, fuzz, enclosedMinArea = 0) {
  * detectBackgroundColor and knockOutConnected). Returns the seed color,
  * or null when the border is already transparent. Mutates img in place.
  */
-export function knockOutEdges(img, fuzz, enclosedMinArea = 0) {
+export function knockOutEdges(img, fuzz, enclosedMinArea = 0, { gradient = false } = {}) {
   const seed = detectBackgroundColor(img);
   if (!seed) return null;
-  knockOutConnected(img, seed, fuzz, enclosedMinArea);
+  knockOutConnected(img, seed, fuzz, enclosedMinArea, { gradient });
   return seed;
 }
 
@@ -856,21 +954,21 @@ export function snapToImageColor(img, [r, g, b], maxDistance) {
  * anti-aliased boundary quantizes into several near-background shades
  * that would otherwise survive as a halo outline around the subject.
  * `contiguous` limits a picked color to regions connected to the border,
- * like edges mode; `enclosed` then also removes enclosed regions of at
- * least ENCLOSED_MIN_FRACTION of the image (edges and contiguous only).
- * Returns the removed color, or null when nothing was removed.
+ * like edges mode; a positive `enclosedMinArea` then also removes
+ * enclosed regions of at least that many pixels (edges and contiguous
+ * only),
+ * and `gradient` lets those modes follow a gradient backdrop (see
+ * knockOutConnected). Returns the removed color, or null when nothing
+ * was removed.
  */
 export function removeBackground(
   img,
   transparent,
   fuzz,
   quantized,
-  { contiguous = false, enclosed = false } = {},
+  { contiguous = false, enclosedMinArea = 0, gradient = false } = {},
 ) {
-  const enclosedMinArea = enclosed
-    ? Math.max(1, Math.round(img.width * img.height * ENCLOSED_MIN_FRACTION))
-    : 0;
-  if (transparent === "edges") return knockOutEdges(img, fuzz, enclosedMinArea);
+  if (transparent === "edges") return knockOutEdges(img, fuzz, enclosedMinArea, { gradient });
   let target = null;
   if (transparent === "auto") target = detectBackgroundColor(img);
   else if (Array.isArray(transparent)) target = transparent;
@@ -881,11 +979,109 @@ export function removeBackground(
     if (snapped) color = snapped;
   }
   if (contiguous && Array.isArray(transparent)) {
-    knockOutConnected(img, color, fuzz, enclosedMinArea);
+    knockOutConnected(img, color, fuzz, enclosedMinArea, { gradient });
   } else {
     knockOutColor(img, color, fuzz);
   }
   return color;
+}
+
+/**
+ * After a knockout made before quantizing: clear opaque pixels along the
+ * cutout that looked more like the background than like the palette
+ * color they were quantized to. Those are anti-aliased blends that the
+ * knockout's fuzz missed; without a background palette slot to absorb
+ * them they would trace as an outline. `original` holds the colors from
+ * before quantizing. Grows at most `rings` pixels in from the cutout, and
+ * only through reclaimed pixels, so the subject cannot be eaten.
+ * Mutates img in place.
+ */
+export function reclaimFringe(img, original, seed, rings) {
+  const { data, width, height } = img;
+  const lut = linearLut();
+  const seedLab = srgbToOklab(seed);
+  const was = new Float64Array(3);
+  const now = new Float64Array(3);
+  for (let ring = 0; ring < rings; ring++) {
+    const clear = [];
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        const p = y * width + x;
+        const i = p * 4;
+        if (data[i + 3] < ALPHA_THRESHOLD) continue;
+        if (
+          !(
+            (x > 0 && data[i - 4 + 3] < ALPHA_THRESHOLD) ||
+            (x < width - 1 && data[i + 4 + 3] < ALPHA_THRESHOLD) ||
+            (y > 0 && data[i - width * 4 + 3] < ALPHA_THRESHOLD) ||
+            (y < height - 1 && data[i + width * 4 + 3] < ALPHA_THRESHOLD)
+          )
+        ) {
+          continue;
+        }
+        oklabInto(lut, original[i], original[i + 1], original[i + 2], was);
+        oklabInto(lut, data[i], data[i + 1], data[i + 2], now);
+        if (fuzzDistance(was, seedLab) < fuzzDistance(was, now)) clear.push(i);
+      }
+    }
+    if (clear.length === 0) break;
+    for (const i of clear) data[i + 3] = 0;
+  }
+  return img;
+}
+
+/** How far reclaimFringe may reach into the subject, in pixels. */
+export const FRINGE_RINGS = 2;
+
+/**
+ * Color reduction (when `colors` < 256) plus background removal, in the
+ * order each mode needs. Border-connected modes (edges, contiguous pick)
+ * build the mask BEFORE quantizing: a light subject edge that shares the
+ * background's palette slot would otherwise let the flood leak into the
+ * subject; reclaimFringe then clears the blend fringe the earlier mask
+ * leaves. Global color modes quantize first so off-white highlights that
+ * collapse into the background's palette slot go with it ("N colors
+ * where one is transparent"). `background` holds transparent, fuzz,
+ * contiguous and gradient as removeBackground takes them, plus enclosed,
+ * enclosedSize (source pixels across) and scale (trace pixels per source
+ * pixel) for the enclosed-area limit.
+ * Returns the removed color, or null. Mutates img in place.
+ * @param {(label: string) => void} [stage] progress reporter
+ */
+export function reduceAndRemoveBackground(img, colors, background, stage = () => {}) {
+  const {
+    transparent,
+    fuzz,
+    contiguous = false,
+    enclosed = false,
+    enclosedSize = DEFAULTS.enclosedSize,
+    gradient = false,
+    scale = 1,
+  } = background;
+  const options = {
+    contiguous,
+    enclosedMinArea: enclosed ? enclosedAreaLimit(enclosedSize, scale) : 0,
+    gradient,
+  };
+  const quantized = colors < 256;
+  const reduce = () => {
+    stage(`Reducing to ${colors} colors…`);
+    quantize(img, colors);
+    modeFilter(img);
+  };
+  const connected = transparent === "edges" || (Array.isArray(transparent) && contiguous);
+  if (quantized && connected) {
+    stage("Removing background…");
+    const seed = removeBackground(img, transparent, fuzz, false, options);
+    const original = seed ? new Uint8ClampedArray(img.data) : null;
+    reduce();
+    if (seed && original) reclaimFringe(img, original, seed, FRINGE_RINGS);
+    return seed;
+  }
+  if (quantized) reduce();
+  if (!transparent) return null;
+  stage("Removing background…");
+  return removeBackground(img, transparent, fuzz, quantized, options);
 }
 
 /**
@@ -1205,22 +1401,21 @@ export function analyzeFlatness(img) {
 }
 
 /**
- * Median-cut color quantization to at most `colors` colors. Transparent
- * areas are backfilled with the dominant opaque color before the palette
- * is computed so hidden pixels do not pollute it; alpha is untouched.
+ * Median-cut color quantization to at most `colors` colors. The palette
+ * comes from opaque pixels only: hidden pixels carry garbage colors, and
+ * counting a large knocked-out area as any one color would crowd small
+ * visible details out of the palette. Transparent pixels are then painted
+ * with the dominant opaque color's palette entry; alpha is untouched.
  * Mutates img in place.
  */
 export function quantize(img, colors) {
   const { data } = img;
   const backfill = dominantOpaqueColor(img);
 
-  // Histogram of unique colors (transparent pixels count as backfill).
   const hist = new Map();
   for (let i = 0; i < data.length; i += 4) {
-    const key =
-      data[i + 3] < ALPHA_THRESHOLD
-        ? (backfill[0] << 16) | (backfill[1] << 8) | backfill[2]
-        : (data[i] << 16) | (data[i + 1] << 8) | data[i + 2];
+    if (data[i + 3] < ALPHA_THRESHOLD) continue;
+    const key = (data[i] << 16) | (data[i + 1] << 8) | data[i + 2];
     hist.set(key, (hist.get(key) || 0) + 1);
   }
   if (hist.size <= colors) return img;

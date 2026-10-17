@@ -533,6 +533,13 @@
                   <option value="128">128 colors</option>
                   <option value="256">256 colors (all)</option>
                 </select>
+                <label class="choice"
+                  ><input type="checkbox" id="auto-detect" checked />
+                  <span
+                    title="On: colors, speckle filter and layer difference are set from each image you open. Changing them yourself, or picking a preset or profile, turns this off so your values carry over to the next image"
+                    >Auto-detect colors for each image</span
+                  ></label
+                >
               </div>
 
               <div class="field">
@@ -625,8 +632,28 @@
                   <label class="choice"
                     ><input type="checkbox" id="enclosed" />
                     <span
-                      title="Also removes enclosed background, such as the inside of an O or gaps between shapes. Tiny enclosed areas stay"
+                      title="Also removes enclosed background, such as the inside of an O or gaps between shapes. Can also remove subject areas that share the background color"
                       >Also remove enclosed background</span
+                    ></label
+                  >
+                </div>
+                <div class="subfield" id="enclosed-size-field" hidden>
+                  <div class="label-row">
+                    <label
+                      for="enclosed-size"
+                      title="Enclosed areas smaller than this many source pixels across stay. Lower it to reach small letter counters; raise it to protect same-color details in the subject"
+                      >Smallest enclosed area</label
+                    >
+                    <output id="enclosed-size-out" for="enclosed-size">16 px</output>
+                  </div>
+                  <input type="range" id="enclosed-size" min="1" max="64" step="1" value="16" />
+                </div>
+                <div class="subfield" id="gradient-field" hidden>
+                  <label class="choice"
+                    ><input type="checkbox" id="gradient" />
+                    <span
+                      title="Lets the removal follow a background that fades or changes shade, such as a vignette or lit backdrop. Can creep into low-contrast edges; lower the tolerance if it does"
+                      >Follow gradient background</span
                     ></label
                   >
                 </div>
@@ -1049,9 +1076,9 @@
               <dd>
                 Makes the background transparent: connected-from-edges, auto-detected color, or a
                 picked color. A picked color can be limited to areas connected to the edges, and
-                edge removal can also clear enclosed background. Tolerance widens the match; clean
-                specks removes stray dots and pinholes; edge trim and defringe clean the cutout
-                boundary.
+                edge removal can also clear enclosed background or follow a gradient background.
+                Tolerance widens the match; clean specks removes stray dots and pinholes; edge trim
+                and defringe clean the cutout boundary.
               </dd>
             </div>
           </dl>
@@ -1332,6 +1359,6 @@
         location.reload();
       };
     </script>
-    <script type="module" src="js/app.js?v=92" onerror="window.recoverRasterTraceBoot()"></script>
+    <script type="module" src="js/app.js?v=93" onerror="window.recoverRasterTraceBoot()"></script>
   </body>
 </html>
