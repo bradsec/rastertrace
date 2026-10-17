@@ -71,7 +71,23 @@ function pixelExactStrokeMarkup(erasure, box) {
   return `<path d="${d}" fill="none" stroke="#000" stroke-width="${diameter}" stroke-linecap="square" stroke-linejoin="miter" shape-rendering="crispEdges"/>`;
 }
 
+/**
+ * Marks for a combined selection, in order: added parts in `addFill`,
+ * subtracted parts in `subtractFill`, so later parts override earlier ones.
+ */
+function compositeMarkup(parts, box, addFill, subtractFill) {
+  return parts
+    .map((part) =>
+      erasureMarkup(part.shape, box, false).replace(
+        /fill="#000"/g,
+        `fill="${part.op === "subtract" ? subtractFill : addFill}"`,
+      ),
+    )
+    .join("");
+}
+
 function erasureMarkup(erasure, box, pixelExact) {
+  if (erasure.type === "composite") return compositeMarkup(erasure.parts, box, "#000", "#fff");
   if (erasure.type === "rect") {
     return `<rect x="${n(box.x + erasure.x * box.width)}" y="${n(box.y + erasure.y * box.height)}" width="${n(erasure.width * box.width)}" height="${n(erasure.height * box.height)}" fill="#000"/>`;
   }
@@ -157,6 +173,15 @@ export function applyCleanupActions(svg, actions, { pixelExact = false } = {}) {
   let defs = "";
   let maskIndex = 0;
   for (const action of actions) {
+    if (action.mode === "fill" && action.type === "composite") {
+      // Subtracted parts must stay unpainted, so the color is masked
+      // rather than drawn as recolored shapes.
+      const id = `${CLEANUP_MASK_ID}-${maskIndex++}`;
+      const area = `x="${n(box.x)}" y="${n(box.y)}" width="${n(box.width)}" height="${n(box.height)}"`;
+      defs += `<mask id="${id}" maskUnits="userSpaceOnUse" ${area} mask-type="luminance" style="mask-type:luminance" color-interpolation="sRGB"><rect ${area} fill="#000"/>${compositeMarkup(action.parts, box, "#fff", "#000")}</mask>`;
+      content += `<g mask="url(#${id})"><rect ${area} fill="${action.color}"/></g>`;
+      continue;
+    }
     if (action.mode === "fill") {
       content += fillMarkup(action, box, pixelExact);
       continue;

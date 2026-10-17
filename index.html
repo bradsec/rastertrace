@@ -53,7 +53,7 @@
       }
     </script>
 
-    <link rel="stylesheet" href="css/styles.css?v=90" />
+    <link rel="stylesheet" href="css/styles.css?v=93" />
   </head>
   <body>
     <header class="app-header">
@@ -271,6 +271,76 @@
           >
             <span class="material-icon icon-auto_fix_high" aria-hidden="true"></span>
           </button>
+          <div class="selection-mode" role="group" aria-label="Selection mode">
+            <button
+              type="button"
+              id="sel-mode-new"
+              class="header-tool cleanup-tool"
+              aria-label="New selection"
+              aria-pressed="true"
+              title="New selection"
+            >
+              <svg
+                class="cleanup-tool-icon"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+                focusable="false"
+              >
+                <rect x="5" y="5" width="14" height="14" rx="1" stroke-dasharray="3 2.5" />
+              </svg>
+            </button>
+            <button
+              type="button"
+              id="sel-mode-add"
+              class="header-tool cleanup-tool"
+              aria-label="Add to selection"
+              aria-pressed="false"
+              title="Add to selection (hold Shift)"
+            >
+              <svg
+                class="cleanup-tool-icon"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+                focusable="false"
+              >
+                <rect x="3" y="3" width="12" height="12" rx="1" stroke-dasharray="3 2.5" />
+                <path d="M18 13v8M14 17h8" />
+              </svg>
+            </button>
+            <button
+              type="button"
+              id="sel-mode-subtract"
+              class="header-tool cleanup-tool"
+              aria-label="Subtract from selection"
+              aria-pressed="false"
+              title="Subtract from selection (hold Alt/Option)"
+            >
+              <svg
+                class="cleanup-tool-icon"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+                focusable="false"
+              >
+                <rect x="3" y="3" width="12" height="12" rx="1" stroke-dasharray="3 2.5" />
+                <path d="M14 17h8" />
+              </svg>
+            </button>
+          </div>
           <label
             class="wand-option"
             for="wand-tolerance"
@@ -1322,8 +1392,17 @@
               <dt>Box &amp; circle marquee</dt>
               <dd>
                 Press M for a rectangular selection or Shift+M for an elliptical selection. Drag
-                anywhere in the preview, including outside the image. Hold Shift for a square or
-                circle, or Alt/Option to draw from the center.
+                anywhere in the preview, including outside the image. Press Shift during the drag
+                for a square or circle, or Alt/Option to draw from the center.
+              </dd>
+            </div>
+            <div>
+              <dt>Add to or subtract from a selection</dt>
+              <dd>
+                Hold Shift when you start a marquee, lasso or wand click to add it to the current
+                selection, or Alt/Option to subtract it; the cursor shows a + or −. On touch
+                screens, use the New, Add and Subtract buttons next to the tools. Switching
+                selection tools keeps the selection, so a wand area can be combined with a marquee.
               </dd>
             </div>
             <div>
@@ -1579,6 +1658,6 @@
         location.reload();
       };
     </script>
-    <script type="module" src="js/app.js?v=113" onerror="window.recoverRasterTraceBoot()"></script>
+    <script type="module" src="js/app.js?v=114" onerror="window.recoverRasterTraceBoot()"></script>
   </body>
 </html>

@@ -181,3 +181,35 @@ test("snapPointToAngle locks polygon segments in image-space 45 degree increment
   const horizontal = snapPointToAngle(anchor, { x: 0.5, y: 0.4 }, 200, 100);
   assert.ok(Math.abs(horizontal.y - anchor.y) < 1e-10);
 });
+
+test("composite erase paints added parts black and subtracted parts white in order", () => {
+  const svg = '<svg viewBox="0 0 100 100"><path d="M0 0H100V100H0Z" fill="#000"/></svg>';
+  const parts = [
+    { op: "add", shape: { type: "rect", x: 0, y: 0, width: 0.5, height: 0.5 } },
+    { op: "subtract", shape: { type: "rect", x: 0.1, y: 0.1, width: 0.2, height: 0.2 } },
+  ];
+  const out = applyCleanupActions(svg, [{ type: "composite", parts }]);
+  const add = out.indexOf('<rect x="0" y="0" width="50" height="50" fill="#000"/>');
+  const sub = out.indexOf('<rect x="10" y="10" width="20" height="20" fill="#fff"/>');
+  assert.ok(add > 0 && sub > add, out);
+});
+
+test("composite fill paints the color through a mask of the parts", () => {
+  const svg = '<svg viewBox="0 0 100 100"><path d="M0 0H100V100H0Z" fill="#000"/></svg>';
+  const parts = [
+    { op: "add", shape: { type: "rect", x: 0, y: 0, width: 0.5, height: 0.5 } },
+    { op: "subtract", shape: { type: "ellipse", cx: 0.2, cy: 0.2, rx: 0.1, ry: 0.1 } },
+  ];
+  const out = applyCleanupActions(svg, [{ type: "composite", parts, mode: "fill", color: "#0f0" }]);
+  assert.match(
+    out,
+    /<mask id="([^"]+)"[^>]*><rect[^>]*fill="#000"\/><rect x="0" y="0" width="50" height="50" fill="#fff"\/><ellipse cx="20" cy="20" rx="10" ry="10" fill="#000"\/><\/mask>/,
+  );
+  const id = out.match(/<mask id="([^"]+)"[^>]*><rect[^>]*fill="#000"\/>/)[1];
+  assert.match(
+    out,
+    new RegExp(
+      `<g mask="url\\(#${id}\\)"><rect x="0" y="0" width="100" height="100" fill="#0f0"/></g>`,
+    ),
+  );
+});

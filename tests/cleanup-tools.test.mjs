@@ -54,7 +54,7 @@ function element(id) {
 
 const elements = new Map();
 const documentListeners = new Map();
-globalThis.window = {};
+globalThis.window = { addEventListener() {} };
 // The module guards keyboard shortcuts with `instanceof` checks, so the
 // constructors have to exist. `tagName` is what those guards actually read.
 globalThis.Element = class Element {

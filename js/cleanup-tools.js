@@ -3,11 +3,11 @@
 // Listener order matters: the selection and eraser pointer handlers must
 // register before the pan handlers in view.js, so app.js imports this
 // module first.
-import { brushSizeForShortcut, snapPointToAngle, svgViewBox } from "./eraser.js?v=10";
+import { brushSizeForShortcut, snapPointToAngle, svgViewBox } from "./eraser.js?v=11";
 import { parseHexColor, sampleRasterColor, toHexColor } from "./preprocess.js?v=54";
-import { els, hooks, state } from "./context.js?v=21";
+import { els, hooks, state } from "./context.js?v=22";
 import { floodRegion, growMask, maskLoops, unionMasks } from "./magicwand.js?v=5";
-import { refreshExport } from "./exporters.js?v=28";
+import { refreshExport } from "./exporters.js?v=29";
 
 export function setView(view) {
   const showResult = view === "result";
@@ -158,15 +158,15 @@ document.addEventListener("keydown", (event) => {
           ? "rect"
           : "ellipse"
       : "rect";
-    clearSelection();
+    keepFinishedSelection();
     setSelectionTool(tool);
   } else if (!event.ctrlKey && !event.metaKey && !event.altKey && key === "l" && state.svg) {
     event.preventDefault();
-    clearSelection();
+    keepFinishedSelection();
     setSelectionTool("polygon");
   } else if (!event.ctrlKey && !event.metaKey && !event.altKey && key === "w" && state.svg) {
     event.preventDefault();
-    clearSelection();
+    keepFinishedSelection();
     setSelectionTool("wand");
   } else if (event.key === "Enter" && state.selection?.type === "polygon") {
     event.preventDefault();
@@ -182,7 +182,7 @@ document.addEventListener("keydown", (event) => {
     event.preventDefault();
     state.selection.points.pop();
     state.selection.hover = null;
-    if (!state.selection.points.length) clearSelection();
+    if (!state.selection.points.length) abandonShape(state.selection.base);
     else renderSelection();
     els.status.textContent = state.selection
       ? "Last polygon point removed. Click to continue drawing."
@@ -294,15 +294,16 @@ export function setSelectionTool(tool) {
   els.polygonLasso.setAttribute("aria-pressed", String(tool === "polygon"));
   els.magicWand.setAttribute("aria-pressed", String(tool === "wand"));
   els.preview.classList.toggle("selecting", Boolean(tool));
+  updateSelectCursor();
   if (tool === "wand") {
     els.status.textContent =
-      "Click a color to select that connected area. Shift+click adds another area.";
+      "Click a color to select that connected area. Shift+click adds, Alt/Option+click subtracts.";
   } else if (tool === "polygon") {
     els.status.textContent =
-      "Click around an area. Hold Shift for 45° segments; double-click or press Enter to close.";
+      "Click around an area; double-click or press Enter to close. Shift or Alt/Option at the first click adds or subtracts.";
   } else if (tool) {
     els.status.textContent =
-      "Drag anywhere in the preview. Hold Shift for a square or circle; Alt/Option draws from the center.";
+      "Drag to select. Shift or Alt/Option at the press adds or subtracts; pressed during the drag they make a square or circle, or draw from the center.";
   }
 }
 
@@ -333,6 +334,62 @@ function marqueeGeometry(selection) {
   };
 }
 
+const SVG_NS = "http://www.w3.org/2000/svg";
+
+/** Overlay element for one finished shape, in overlay pixels. */
+function shapeNode(shape, size) {
+  if (shape.type === "rect") {
+    const node = document.createElementNS(SVG_NS, "rect");
+    node.setAttribute("x", String(shape.x * size.width));
+    node.setAttribute("y", String(shape.y * size.height));
+    node.setAttribute("width", String(shape.width * size.width));
+    node.setAttribute("height", String(shape.height * size.height));
+    return node;
+  }
+  if (shape.type === "ellipse") {
+    const node = document.createElementNS(SVG_NS, "ellipse");
+    node.setAttribute("cx", String(shape.cx * size.width));
+    node.setAttribute("cy", String(shape.cy * size.height));
+    node.setAttribute("rx", String(shape.rx * size.width));
+    node.setAttribute("ry", String(shape.ry * size.height));
+    return node;
+  }
+  return loopsNode(shape.type === "region" ? shape.loops : [shape.points], size);
+}
+
+function loopsNode(loops, size) {
+  const node = document.createElementNS(SVG_NS, "path");
+  node.setAttribute(
+    "d",
+    loops
+      .map(
+        (loop) =>
+          loop.map((p, i) => `${i ? "L" : "M"}${p.x * size.width} ${p.y * size.height}`).join("") +
+          "Z",
+      )
+      .join(""),
+  );
+  node.setAttribute("fill-rule", "evenodd");
+  node.setAttribute("clip-rule", "evenodd");
+  return node;
+}
+
+/** One shape draws as itself; several draw as their merged outline. */
+function partsNode(parts, outline, size) {
+  return parts.length === 1 && parts[0].op === "add"
+    ? shapeNode(parts[0].shape, size)
+    : loopsNode(outline ?? [], size);
+}
+
+function antsPair(node) {
+  const dark = /** @type {Element} */ (node.cloneNode());
+  dark.setAttribute("class", "selection-ants-dark");
+  dark.setAttribute("vector-effect", "non-scaling-stroke");
+  node.setAttribute("class", "selection-ants-light");
+  node.setAttribute("vector-effect", "non-scaling-stroke");
+  return [dark, node];
+}
+
 export function renderSelection() {
   const selection = state.selection;
   updateSelectionActions();
@@ -348,80 +405,39 @@ export function renderSelection() {
   els.selectionOverlay.style.height = `${imageRect.height}px`;
   els.selectionOverlay.style.overflow = selection.finalized ? "hidden" : "visible";
   els.selectionOverlay.setAttribute("viewBox", `0 0 ${imageRect.width} ${imageRect.height}`);
-  const px = (point) => ({ x: point.x * imageRect.width, y: point.y * imageRect.height });
+  const size = { width: imageRect.width, height: imageRect.height };
   let shape;
-  if (selection.type === "region") {
-    shape = document.createElementNS("http://www.w3.org/2000/svg", "path");
-    shape.setAttribute(
-      "d",
-      selection.loops
-        .map(
-          (loop) =>
-            loop
-              .map((point, index) => {
-                const p = px(point);
-                return `${index ? "L" : "M"}${p.x} ${p.y}`;
-              })
-              .join("") + "Z",
-        )
-        .join(""),
-    );
-    shape.setAttribute("fill-rule", "evenodd");
-    shape.setAttribute("clip-rule", "evenodd");
+  if (selection.type === "composite") {
+    shape = partsNode(selection.parts, selection.outline, size);
   } else if (selection.type === "polygon") {
-    shape = document.createElementNS(
-      "http://www.w3.org/2000/svg",
-      selection.finalized ? "polygon" : "polyline",
-    );
-    const points =
-      selection.hover && !selection.finalized
-        ? [...selection.points, selection.hover]
-        : selection.points;
+    shape = document.createElementNS(SVG_NS, "polyline");
+    const points = selection.hover ? [...selection.points, selection.hover] : selection.points;
     shape.setAttribute(
       "points",
-      points
-        .map((point) => {
-          const screenPoint = px(point);
-          return `${screenPoint.x},${screenPoint.y}`;
-        })
-        .join(" "),
+      points.map((point) => `${point.x * size.width},${point.y * size.height}`).join(" "),
     );
   } else {
-    const geometry = marqueeGeometry(selection);
-    if (selection.type === "ellipse") {
-      shape = document.createElementNS("http://www.w3.org/2000/svg", "ellipse");
-      shape.setAttribute("cx", String((geometry.x + geometry.width / 2) * imageRect.width));
-      shape.setAttribute("cy", String((geometry.y + geometry.height / 2) * imageRect.height));
-      shape.setAttribute("rx", String((geometry.width * imageRect.width) / 2));
-      shape.setAttribute("ry", String((geometry.height * imageRect.height) / 2));
-    } else {
-      shape = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-      shape.setAttribute("x", String(geometry.x * imageRect.width));
-      shape.setAttribute("y", String(geometry.y * imageRect.height));
-      shape.setAttribute("width", String(geometry.width * imageRect.width));
-      shape.setAttribute("height", String(geometry.height * imageRect.height));
-    }
+    shape = shapeNode(toShape(selection), size);
   }
-  const darkAnts = shape.cloneNode();
-  darkAnts.setAttribute("class", "selection-ants-dark");
-  darkAnts.setAttribute("vector-effect", "non-scaling-stroke");
-  shape.setAttribute("class", "selection-ants-light");
-  shape.setAttribute("vector-effect", "non-scaling-stroke");
-  const selectionNodes = [darkAnts, shape];
+  const selectionNodes = antsPair(shape);
+  // While a shape is drawn, keep showing the parts it will join.
+  if (selection.type !== "composite" && selection.base?.length) {
+    if (selection.base.length > 1) selection.baseOutline ??= compositeOutline(selection.base);
+    selectionNodes.unshift(...antsPair(partsNode(selection.base, selection.baseOutline, size)));
+  }
   if (selection.finalized) {
-    const ns = "http://www.w3.org/2000/svg";
-    const defs = document.createElementNS(ns, "defs");
-    const clipPath = document.createElementNS(ns, "clipPath");
+    const defs = document.createElementNS(SVG_NS, "defs");
+    const clipPath = document.createElementNS(SVG_NS, "clipPath");
     clipPath.id = "selection-image-edge-clip";
     clipPath.setAttribute("clipPathUnits", "userSpaceOnUse");
-    const clipShape = shape.cloneNode();
+    const clipShape = /** @type {Element} */ (shape.cloneNode());
     clipShape.removeAttribute("class");
     clipShape.setAttribute("fill", "#fff");
     clipShape.setAttribute("stroke", "none");
     clipPath.appendChild(clipShape);
     defs.appendChild(clipPath);
 
-    const edge = document.createElementNS(ns, "rect");
+    const edge = document.createElementNS(SVG_NS, "rect");
     edge.setAttribute("x", "0.75");
     edge.setAttribute("y", "0.75");
     edge.setAttribute("width", String(Math.max(0, imageRect.width - 1.5)));
@@ -439,44 +455,166 @@ export function renderSelection() {
   els.selectionOverlay.removeAttribute("hidden");
 }
 
-function finishPolygon() {
-  if (state.selection?.type !== "polygon" || state.selection.points.length < 3) return;
-  if (!selectionIntersectsImage(state.selection)) {
+// -- Combining selections: Shift adds, Alt/Option subtracts -------------
+
+/** Toolbar selection mode: "new", "add" or "subtract" (touch has no keys). */
+let selectionMode = "new";
+
+/** The operation a press starts: modifier keys win over the toolbar mode. */
+function pressOp(event) {
+  if (event.shiftKey) return "add";
+  if (event.altKey) return "subtract";
+  return selectionMode;
+}
+
+/** Finished parts the next shape combines with; "new" starts over. */
+function baseParts(op) {
+  return op !== "new" && state.selection?.type === "composite" ? state.selection.parts : [];
+}
+
+/** A finished marquee or lasso in the cleanup action format. */
+function toShape(selection) {
+  if (selection.type === "polygon") return { type: "polygon", points: selection.points };
+  const g = marqueeGeometry(selection);
+  if (selection.type === "ellipse") {
+    return {
+      type: "ellipse",
+      cx: g.x + g.width / 2,
+      cy: g.y + g.height / 2,
+      rx: g.width / 2,
+      ry: g.height / 2,
+    };
+  }
+  return { type: "rect", ...g };
+}
+
+/** Add or subtract a finished shape and show the combined selection. */
+function finishShape(op, base, shape) {
+  if (op === "subtract" && !base.length) {
     clearSelection();
+    els.status.textContent = "Nothing selected to subtract from.";
+    return;
+  }
+  setComposite([...base, { op: op === "subtract" ? "subtract" : "add", shape }]);
+}
+
+/**
+ * Switching selection tools keeps a finished selection, so a wand area can
+ * be combined with a marquee; only a half-drawn shape is dropped.
+ */
+function keepFinishedSelection() {
+  const selection = state.selection;
+  if (selection && selection.type !== "composite") abandonShape(selection.base);
+}
+
+/** Drop a shape that went nowhere, keeping the parts drawn before it. */
+function abandonShape(base) {
+  if (base?.length) setComposite(base);
+  else clearSelection();
+}
+
+function setComposite(parts) {
+  const outline = parts.length > 1 ? compositeOutline(parts) : null;
+  if (outline && !outline.length) {
+    clearSelection();
+    els.status.textContent = "Nothing is left selected after subtracting.";
+    return;
+  }
+  state.selection = { type: "composite", parts, outline, finalized: true };
+  renderSelection();
+  els.status.textContent =
+    "Selection ready. Erase or fill it; Shift adds to it, Alt/Option subtracts.";
+}
+
+/**
+ * Merged outline of several parts for the marching ants, traced from a
+ * raster of them: SVG cannot union shapes. Display only; commits stay
+ * vector masks.
+ */
+function compositeOutline(parts) {
+  const width = state.processedRaster?.width || 1024;
+  const height = state.processedRaster?.height || 1024;
+  const canvas = new OffscreenCanvas(width, height);
+  const ctx = /** @type {OffscreenCanvasRenderingContext2D} */ (canvas.getContext("2d"));
+  ctx.scale(width, height);
+  for (const { op, shape } of parts) {
+    ctx.globalCompositeOperation = op === "subtract" ? "destination-out" : "source-over";
+    ctx.beginPath();
+    if (shape.type === "rect") {
+      ctx.rect(shape.x, shape.y, shape.width, shape.height);
+    } else if (shape.type === "ellipse") {
+      ctx.ellipse(shape.cx, shape.cy, Math.abs(shape.rx), Math.abs(shape.ry), 0, 0, Math.PI * 2);
+    } else {
+      for (const loop of shape.type === "region" ? shape.loops : [shape.points]) {
+        loop.forEach((p, i) => (i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y)));
+        ctx.closePath();
+      }
+    }
+    ctx.fill("evenodd");
+  }
+  const { data } = ctx.getImageData(0, 0, width, height);
+  const mask = new Uint8Array(width * height);
+  for (let i = 0; i < mask.length; i++) mask[i] = data[i * 4 + 3] >= 128 ? 1 : 0;
+  return maskLoops(mask, width, height, 1);
+}
+
+const modeButtons = {
+  new: els.selModeNew,
+  add: els.selModeAdd,
+  subtract: els.selModeSubtract,
+};
+
+function setSelectionMode(mode) {
+  selectionMode = mode;
+  for (const [name, button] of Object.entries(modeButtons)) {
+    button.setAttribute("aria-pressed", String(name === mode));
+  }
+  updateSelectCursor();
+}
+
+for (const [name, button] of Object.entries(modeButtons)) {
+  button.addEventListener("click", () => setSelectionMode(name));
+}
+
+/** Show + or - beside the crosshair for the operation a press would start. */
+function updateSelectCursor(event = null) {
+  const op = event ? pressOp(event) : selectionMode;
+  const armed = Boolean(state.selectionTool);
+  els.preview.classList.toggle("sel-add", armed && op === "add");
+  els.preview.classList.toggle("sel-subtract", armed && op === "subtract");
+}
+
+/** @param {KeyboardEvent} event */
+function onModifierKey(event) {
+  if (event.key === "Shift" || event.key === "Alt") updateSelectCursor(event);
+}
+document.addEventListener("keydown", onModifierKey);
+document.addEventListener("keyup", onModifierKey);
+window.addEventListener("blur", () => updateSelectCursor());
+els.preview.addEventListener("pointermove", (event) => {
+  if (state.selectionTool) updateSelectCursor(event);
+});
+
+function finishPolygon() {
+  const selection = state.selection;
+  if (selection?.type !== "polygon" || selection.points.length < 3) return;
+  if (!selectionIntersectsImage(selection)) {
+    abandonShape(selection.base);
     els.status.textContent = "Selection did not overlap the image.";
     return;
   }
-  state.selection.finalized = true;
-  state.selection.hover = null;
-  renderSelection();
-  els.status.textContent =
-    "Selection ready. Erase or fill it, or press Delete or Ctrl/Cmd+Backspace.";
+  finishShape(selection.op, selection.base, toShape(selection));
 }
 
 function commitSelection(mode) {
   const selection = state.selection;
-  if (!selection?.finalized) return;
+  if (selection?.type !== "composite") return;
   state.eraseRedo = [];
   const fill = mode === "fill" ? { mode: "fill", color: els.blobFillColor.value } : {};
-  if (selection.type === "region") {
-    state.eraseStrokes.push({ type: "region", loops: selection.loops, ...fill });
-  } else if (selection.type === "polygon") {
-    state.eraseStrokes.push({ type: "polygon", points: selection.points, ...fill });
-  } else {
-    const geometry = marqueeGeometry(selection);
-    if (selection.type === "ellipse") {
-      state.eraseStrokes.push({
-        type: "ellipse",
-        cx: geometry.x + geometry.width / 2,
-        cy: geometry.y + geometry.height / 2,
-        rx: geometry.width / 2,
-        ry: geometry.height / 2,
-        ...fill,
-      });
-    } else {
-      state.eraseStrokes.push({ type: "rect", ...geometry, ...fill });
-    }
-  }
+  const { parts } = selection;
+  const action =
+    parts.length === 1 && parts[0].op === "add" ? parts[0].shape : { type: "composite", parts };
+  state.eraseStrokes.push({ ...action, ...fill });
   clearSelection();
   refreshExport();
   els.status.textContent =
@@ -486,19 +624,19 @@ function commitSelection(mode) {
 }
 
 els.marqueeRect.addEventListener("click", () => {
-  clearSelection();
+  keepFinishedSelection();
   setSelectionTool("rect");
 });
 els.marqueeEllipse.addEventListener("click", () => {
-  clearSelection();
+  keepFinishedSelection();
   setSelectionTool("ellipse");
 });
 els.magicWand.addEventListener("click", () => {
-  clearSelection();
+  keepFinishedSelection();
   setSelectionTool("wand");
 });
 els.polygonLasso.addEventListener("click", () => {
-  clearSelection();
+  keepFinishedSelection();
   setSelectionTool("polygon");
 });
 els.selectionClose.addEventListener("click", finishPolygon);
@@ -588,31 +726,25 @@ function selectionIntersectsImage(selection) {
   );
 }
 
-/**
- * Select the connected region of the clicked color in the reduced raster,
- * or add it to the current wand selection with Shift.
- */
-function wandSelect(point, add) {
-  if (!floodRegion(state.processedRaster, point.x, point.y)) {
+/** Select the connected region of the clicked color and combine it. */
+function wandSelect(point, op) {
+  const shape = regionShape([point]);
+  if (!shape) {
     els.status.textContent =
       "No color here to select: that area is transparent or outside the image.";
     return;
   }
-  const previous = add && state.selection?.type === "region" ? state.selection.seeds : [];
-  state.selection = wandSelection([...previous, point]);
-  renderSelection();
-  els.status.textContent =
-    "Area selected. Erase or fill it, Shift+click to add more, or press Delete or Ctrl/Cmd+Backspace.";
+  finishShape(op, baseParts(op), shape);
 }
 
 /** Tolerance slider (0 to 50) as an Oklab distance (0 to 0.2). */
 const wandTolerance = () => Number(els.wandTolerance.value) / 250;
 
 /**
- * Rebuild the wand selection from its clicked points, so changing
- * Tolerance, Expand or Smooth updates the current selection in place.
+ * A wand region from its clicked points. Kept with the points, so changing
+ * Tolerance, Expand or Smooth rebuilds the current selection in place.
  */
-function wandSelection(seeds) {
+function regionShape(seeds) {
   let mask = null;
   let width = 0;
   let height = 0;
@@ -625,7 +757,7 @@ function wandSelection(seeds) {
   if (!mask) return null;
   const grown = growMask(mask, width, height, Number(els.wandExpand.value));
   const loops = maskLoops(grown, width, height, Number(els.wandSmooth.value));
-  return { type: "region", seeds, loops, finalized: true };
+  return { type: "region", seeds, loops };
 }
 
 for (const input of [els.wandTolerance, els.wandExpand, els.wandSmooth]) {
@@ -633,9 +765,14 @@ for (const input of [els.wandTolerance, els.wandExpand, els.wandSmooth]) {
     els.wandToleranceOut.textContent = els.wandTolerance.value;
     els.wandExpandOut.textContent = `${els.wandExpand.value} px`;
     els.wandSmoothOut.textContent = els.wandSmooth.value;
-    if (state.selection?.type !== "region") return;
-    state.selection = wandSelection(state.selection.seeds);
-    renderSelection();
+    if (state.selection?.type !== "composite") return;
+    setComposite(
+      state.selection.parts.map((part) =>
+        part.shape.type === "region"
+          ? { ...part, shape: regionShape(part.shape.seeds) ?? part.shape }
+          : part,
+      ),
+    );
   });
 }
 
@@ -657,8 +794,9 @@ els.preview.addEventListener(
     // An active selection tool owns the whole preview, including the empty
     // canvas around the image, so selection gestures never pan the artwork.
     if (!point) return;
+    const op = pressOp(event);
     if (state.selectionTool === "wand") {
-      wandSelect(point, event.shiftKey);
+      wandSelect(point, op);
       return;
     }
     if (state.selectionTool === "polygon") {
@@ -666,8 +804,9 @@ els.preview.addEventListener(
         finishPolygon();
         return;
       }
-      if (!state.selection || state.selection.finalized) {
-        state.selection = { type: "polygon", points: [], hover: null, finalized: false };
+      if (state.selection?.type !== "polygon") {
+        const base = baseParts(op);
+        state.selection = { type: "polygon", points: [], hover: null, finalized: false, op, base };
       }
       state.selection.points.push(
         constrainedPolygonPoint({ x: point.x, y: point.y }, event.shiftKey),
@@ -677,24 +816,31 @@ els.preview.addEventListener(
         if (selection?.type !== "polygon" || selection.finalized) return;
         selection.points.pop();
         if (selection.points.length) renderSelection();
-        else clearSelection();
+        else abandonShape(selection.base);
       });
       renderSelection();
       return;
     }
+    const base = baseParts(op);
     state.selection = {
       type: state.selectionTool,
       start: { x: point.x, y: point.y },
       current: { x: point.x, y: point.y },
-      constrain: event.shiftKey,
-      fromCenter: event.altKey,
+      constrain: false,
+      fromCenter: false,
+      // A key held at the press picks add or subtract; it constrains or
+      // centers only once released and pressed again (Photoshop behavior).
+      holdShift: event.shiftKey,
+      holdAlt: event.altKey,
       finalized: false,
+      op,
+      base,
     };
     selectionPointer = event.pointerId;
     els.preview.setPointerCapture(event.pointerId);
     claimTouch(event, () => {
       selectionPointer = null;
-      clearSelection();
+      abandonShape(base);
     });
     renderSelection();
   },
@@ -729,9 +875,12 @@ els.preview.addEventListener(
     if (selectionPointer !== event.pointerId || !state.selection) return;
     const point = selectionPoint(event, "free");
     if (!point) return;
-    state.selection.current = { x: point.x, y: point.y };
-    state.selection.constrain = event.shiftKey;
-    state.selection.fromCenter = event.altKey;
+    const selection = state.selection;
+    selection.current = { x: point.x, y: point.y };
+    if (!event.shiftKey) selection.holdShift = false;
+    if (!event.altKey) selection.holdAlt = false;
+    selection.constrain = event.shiftKey && !selection.holdShift;
+    selection.fromCenter = event.altKey && !selection.holdAlt;
     renderSelection();
   },
   true,
@@ -743,20 +892,18 @@ for (const type of ["pointerup", "pointercancel"]) {
     (event) => {
       if (selectionPointer !== /** @type {PointerEvent} */ (event).pointerId) return;
       selectionPointer = null;
-      if (!state.selection) return;
-      const geometry = marqueeGeometry(state.selection);
+      const selection = state.selection;
+      if (!selection || selection.type === "composite") return;
+      const geometry = marqueeGeometry(selection);
       if (
         geometry.width < 0.001 ||
         geometry.height < 0.001 ||
-        !selectionIntersectsImage(state.selection)
+        !selectionIntersectsImage(selection)
       ) {
-        clearSelection();
+        abandonShape(selection.base);
         return;
       }
-      state.selection.finalized = true;
-      renderSelection();
-      els.status.textContent =
-        "Selection ready. Erase or fill it, or press Delete or Ctrl/Cmd+Backspace.";
+      finishShape(selection.op, selection.base, toShape(selection));
     },
     true,
   );

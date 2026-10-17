@@ -21,16 +21,16 @@ import {
   parseHexColor,
   toHexColor,
 } from "./preprocess.js?v=54";
-import { $, els, hooks, preferences, showError, state } from "./context.js?v=21";
-import { refreshExport, setResultActions } from "./exporters.js?v=28";
+import { $, els, hooks, preferences, showError, state } from "./context.js?v=22";
+import { refreshExport, setResultActions } from "./exporters.js?v=29";
 import {
   clearSelection,
   setBlobFill,
   setEraser,
   setSelectionTool,
   setView,
-} from "./cleanup-tools.js?v=34";
-import { afterTrace, resetPalette } from "./palette-ui.js?v=18";
+} from "./cleanup-tools.js?v=35";
+import { afterTrace, resetPalette } from "./palette-ui.js?v=19";
 import {
   applyExportProfile,
   applyMeasurementUnit,
@@ -46,8 +46,8 @@ import {
   updateOutputs,
   updateStencilFields,
   updateTransparencyFields,
-} from "./settings.js?v=32";
-import { actualSizeView, resetView } from "./view.js?v=33";
+} from "./settings.js?v=33";
+import { actualSizeView, resetView } from "./view.js?v=34";
 
 const EMPTY_IMAGE_SRC = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==";
 

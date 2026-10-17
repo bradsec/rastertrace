@@ -1316,6 +1316,19 @@ details.advanced[open] {
 .preview.selecting {
   cursor: crosshair;
 }
+/* Boxed + or - beside the crosshair: Shift adds, Alt/Option subtracts. */
+.preview.selecting.sel-add {
+  cursor:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='26' height='26'%3E%3Cpath d='M8 1v14M1 8h14' stroke='%23000' stroke-width='3'/%3E%3Cpath d='M8 1v14M1 8h14' stroke='%23fff' stroke-width='1'/%3E%3Crect x='14.5' y='14.5' width='10' height='10' fill='%23fff' stroke='%23000'/%3E%3Cpath d='M19.5 16.5v6M16.5 19.5h6' stroke='%23000' stroke-width='1.5'/%3E%3C/svg%3E")
+      8 8,
+    crosshair;
+}
+.preview.selecting.sel-subtract {
+  cursor:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='26' height='26'%3E%3Cpath d='M8 1v14M1 8h14' stroke='%23000' stroke-width='3'/%3E%3Cpath d='M8 1v14M1 8h14' stroke='%23fff' stroke-width='1'/%3E%3Crect x='14.5' y='14.5' width='10' height='10' fill='%23fff' stroke='%23000'/%3E%3Cpath d='M16.5 19.5h6' stroke='%23000' stroke-width='1.5'/%3E%3C/svg%3E")
+      8 8,
+    crosshair;
+}
 
 .eraser-controls {
   display: inline-flex;
@@ -1436,6 +1449,20 @@ details.advanced[open] {
 /* Wand settings only matter while the wand is armed. */
 .wand-option {
   display: none;
+}
+/* New / add / subtract, mainly for touch where there are no modifier keys. */
+.selection-mode {
+  display: none;
+  align-items: center;
+}
+body:has(
+    #marquee-rect[aria-pressed="true"],
+    #marquee-ellipse[aria-pressed="true"],
+    #polygon-lasso[aria-pressed="true"],
+    #magic-wand[aria-pressed="true"]
+  )
+  .selection-mode {
+  display: inline-flex;
 }
 /* Three wand sliders share the toolbar with the tools: keep them compact. */
 .wand-option input {
@@ -2041,7 +2068,8 @@ dialog::backdrop {
     display: none;
     order: 2;
   }
-  .wand-option {
+  .wand-option,
+  .selection-mode {
     order: 2;
   }
   body:has(#eraser-tool[aria-pressed="true"], #blob-fill-tool[aria-pressed="true"]) .eraser-size,
@@ -2058,6 +2086,9 @@ dialog::backdrop {
       #eraser-tool[aria-pressed="true"],
       #blob-fill-tool[aria-pressed="true"],
       #blob-fill-pick[aria-pressed="true"],
+      #marquee-rect[aria-pressed="true"],
+      #marquee-ellipse[aria-pressed="true"],
+      #polygon-lasso[aria-pressed="true"],
       #magic-wand[aria-pressed="true"],
       #selection-actions:not([hidden]) #selection-fill:not([hidden]),
       #eraser-clear:not(:disabled)
@@ -2178,7 +2209,8 @@ dialog::backdrop {
 
 /* Between the phone layout and wide desktops the wand's sliders do not fit
    beside the tools, so they wrap to a second toolbar line while it is armed. */
-@media (min-width: 901px) and (max-width: 1180px) {
+@media (min-width: 901px) and (max-width: 1320px),
+  (pointer: coarse) and (min-width: 901px) and (max-width: 1440px) {
   body:has(#magic-wand[aria-pressed="true"]) .app-header {
     height: 126px;
     min-height: 126px;
@@ -2320,7 +2352,7 @@ dialog::backdrop {
   }
 }
 
-@media (pointer: coarse) and (min-width: 901px) and (max-width: 1180px) {
+@media (pointer: coarse) and (min-width: 901px) and (max-width: 1440px) {
   body:has(#magic-wand[aria-pressed="true"]) .app-header {
     height: 160px;
     min-height: 160px;
