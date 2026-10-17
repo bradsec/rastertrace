@@ -53,7 +53,7 @@
       }
     </script>
 
-    <link rel="stylesheet" href="css/styles.css?v=83" />
+    <link rel="stylesheet" href="css/styles.css?v=84" />
   </head>
   <body>
     <header class="app-header">
@@ -596,6 +596,10 @@
                   Pick from result
                 </button>
               </div>
+              <p id="palette-hidden-note" hidden>
+                <span class="material-icon icon-visibility_off" aria-hidden="true"></span>
+                <span id="palette-hidden-count"></span>
+              </p>
               <div id="palette-grid" class="palette-grid" role="list" hidden></div>
               <p id="palette-hint" class="palette-hint">
                 Pick a color from the result to edit it. The full palette shows at 32 colors or
@@ -611,8 +615,8 @@
                 <div class="palette-editor-head">
                   <span id="palette-original-swatch" class="palette-chip" aria-hidden="true"></span>
                   <span
-                    >Original
-                    <code id="palette-original-hex" title="Traced color">#000000</code></span
+                    >Original <code id="palette-original-hex" title="Traced color">#000000</code
+                    ><span id="palette-original-hidden" hidden>, hidden</span></span
                   >
                   <button
                     type="button"
@@ -674,12 +678,7 @@
                 <button type="button" id="palette-reset" class="button button-secondary">
                   Reset color
                 </button>
-                <button
-                  type="button"
-                  id="palette-hide"
-                  class="button button-secondary"
-                  aria-pressed="false"
-                >
+                <button type="button" id="palette-hide" class="button button-secondary">
                   Hide color
                 </button>
               </div>
@@ -1524,6 +1523,6 @@
         location.reload();
       };
     </script>
-    <script type="module" src="js/app.js?v=105" onerror="window.recoverRasterTraceBoot()"></script>
+    <script type="module" src="js/app.js?v=107" onerror="window.recoverRasterTraceBoot()"></script>
   </body>
 </html>

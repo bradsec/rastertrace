@@ -724,11 +724,40 @@ body:has(#empty-state:not([hidden])) .eraser-controls {
   top: 50%;
   left: 5%;
   width: 90%;
-  height: 2px;
+  height: 3px;
   background: var(--text);
   box-shadow: 0 0 0 1px #000;
   transform: translateY(-50%) rotate(-45deg);
   pointer-events: none;
+}
+.swatch-hidden-badge {
+  position: absolute;
+  bottom: 1px;
+  right: 1px;
+  display: grid;
+  place-items: center;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--surface-3);
+  color: var(--text);
+  pointer-events: none;
+}
+.swatch-hidden-badge .material-icon {
+  width: 10px;
+  height: 10px;
+}
+#palette-hidden-note {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin: 8px 0 0;
+  color: var(--accent-hover);
+  font-size: 12px;
+}
+#palette-hidden-note .material-icon {
+  width: 12px;
+  height: 12px;
 }
 .palette-hint {
   margin: 8px 0 0;
@@ -1333,6 +1362,9 @@ details.advanced[open] {
   -webkit-mask: var(--icon) center / contain no-repeat;
   mask: var(--icon) center / contain no-repeat;
   forced-color-adjust: none;
+}
+.icon-visibility_off {
+  --icon: url("../assets/icons/material/visibility_off.svg");
 }
 .icon-brush {
   --icon: url("../assets/icons/material/brush.svg");
@@ -2230,11 +2262,27 @@ dialog::backdrop {
 /* Box shadows are removed in forced colors, so focus and pressed states
    that rely on them need an outline or system colors instead. */
 @media (forced-colors: active) {
+  .swatch.hidden-color,
+  .palette-chip.hidden-color {
+    opacity: 1;
+  }
+  .swatch-hidden-badge {
+    forced-color-adjust: none;
+    background: Canvas;
+    color: CanvasText;
+  }
+  .swatch.hidden-color .swatch-hidden-badge .material-icon,
+  #palette-hidden-note .material-icon {
+    background: CanvasText;
+  }
+  #palette-hidden-note {
+    color: CanvasText;
+  }
   .swatch.hidden-color::before,
   .palette-chip.hidden-color::before {
     forced-color-adjust: none;
     background: CanvasText;
-    box-shadow: 0 0 0 1px Canvas;
+    outline: 1px solid Canvas;
   }
   .material-icon {
     background: ButtonText;

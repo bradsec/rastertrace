@@ -30,7 +30,7 @@ import {
   setSelectionTool,
   setView,
 } from "./cleanup-tools.js?v=28";
-import { afterTrace, resetPalette } from "./palette-ui.js?v=10";
+import { afterTrace, resetPalette } from "./palette-ui.js?v=12";
 import {
   applyExportProfile,
   applyMeasurementUnit,

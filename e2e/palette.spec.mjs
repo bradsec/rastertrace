@@ -258,20 +258,29 @@ test("hide color toggles transparency and restores the original fill", async ({ 
   const original = await swatch.getAttribute("data-fill");
   await swatch.click();
   await page.locator("#palette-hide").click();
-  await expect(page.locator("#palette-hide")).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator("#palette-hide")).toHaveText("Show color");
   await expect.poll(() => resultSvg(page)).toContain('fill="none"');
   await expect(swatch).toHaveClass(/hidden-color/);
+  await expect(swatch.locator(".swatch-hidden-badge .icon-visibility_off")).toBeVisible();
+  await expect(page.locator("#palette-hidden-note")).toBeVisible();
+  await expect(page.locator("#palette-hidden-note")).toHaveText("1 color hidden");
+  await expect(page.locator("#palette-summary")).toContainText("1 hidden");
+  await expect(page.locator("#palette-summary")).not.toContainText("edited");
+  await expect(page.locator("#palette-original-hex").locator("..")).toHaveText(
+    `Original ${original}, hidden`,
+  );
   await expect(swatch).toHaveAttribute("aria-label", `Color ${original} hidden`);
   for (const id of ["color", "hex", "r", "g", "b"]) {
     await expect(page.locator(`#palette-${id}`)).toBeDisabled();
   }
   await expect(page.locator("#palette-edits")).toContainText(`${original} hidden`);
   await page.locator("#palette-hide").click();
-  await expect(page.locator("#palette-hide")).toHaveAttribute("aria-pressed", "false");
+  await expect(page.locator("#palette-hide")).toHaveText("Hide color");
   await expect
     .poll(async () => (await resultSvg(page)).toUpperCase())
     .toContain(`FILL="${original}"`);
   await expect(swatch).not.toHaveClass(/hidden-color/);
+  await expect(page.locator("#palette-hidden-note")).toBeHidden();
   await expect(page.locator("#palette-edits li")).toHaveCount(0);
 });
 
@@ -282,7 +291,9 @@ test("unhiding restores a custom color after closing the editor", async ({ page 
   await expect.poll(() => resultSvg(page)).toContain('fill="none"');
   await page.locator("#palette-close").click();
   await page.locator("#palette-grid .swatch").first().click();
+  await expect(page.locator("#palette-hide")).toHaveText("Show color");
   await page.locator("#palette-hide").click();
+  await expect(page.locator("#palette-hide")).toHaveText("Hide color");
   await expect.poll(() => resultSvg(page)).toContain('fill="#00FF00"');
   await expect(page.locator("#palette-hex")).toBeEnabled();
   await expect(page.locator("#palette-hex")).toHaveValue("#00FF00");
@@ -297,6 +308,7 @@ test("hidden colors offer cutout layering and survive its retrace", async ({ pag
   await expect(note).toBeVisible();
   await traced(page, () => page.locator("#palette-use-cutout").click());
   await expect(page.locator("#hierarchical")).toHaveValue("cutout");
+  await expect(page.locator("#palette-hide")).toHaveText("Show color");
   await expect(note).toBeHidden();
   expect(await resultSvg(page)).toContain('fill="none"');
   await traced(page, () => page.locator("#hierarchical").selectOption("stacked"));

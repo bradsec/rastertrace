@@ -17,6 +17,15 @@ import {
 import { parseHexColor, toHexColor } from "./preprocess.js?v=53";
 
 // Local lookup: adding it to els would bump context.js at every importer.
+const paletteHiddenNote = /** @type {HTMLElement} */ (
+  document.getElementById("palette-hidden-note")
+);
+const paletteHiddenCount = /** @type {HTMLElement} */ (
+  document.getElementById("palette-hidden-count")
+);
+const paletteOriginalHidden = /** @type {HTMLElement} */ (
+  document.getElementById("palette-original-hidden")
+);
 const paletteError = /** @type {HTMLElement} */ (document.getElementById("palette-error"));
 
 /** Original fill the editor is open on, or null when closed. */
@@ -46,7 +55,8 @@ paletteUseCutout.addEventListener("click", () => {
 function syncEditor() {
   if (!editing) return;
   const hidden = editedFill(editing) === "none";
-  paletteHide.setAttribute("aria-pressed", String(hidden));
+  paletteOriginalHidden.hidden = !hidden;
+  paletteHide.textContent = hidden ? "Show color" : "Hide color";
   for (const input of [
     els.paletteColor,
     els.paletteHex,
@@ -56,7 +66,6 @@ function syncEditor() {
   ]) {
     input.disabled = hidden;
   }
-  syncFields(hidden ? (hiddenColors.get(editing) ?? editing) : editedFill(editing));
 }
 
 // The native color input fires `input` continuously while dragging, and
@@ -103,11 +112,15 @@ function swatchButton(fill, className) {
 }
 
 export function renderPalette() {
+  if (editing) syncEditor();
   syncLayeringNote();
   const palette = currentPalette();
-  const edited = state.colorEdits.size;
+  const hiddenCount = [...state.colorEdits.values()].filter((value) => value === "none").length;
+  const edited = state.colorEdits.size - hiddenCount;
+  paletteHiddenNote.hidden = hiddenCount === 0;
+  paletteHiddenCount.textContent = `${hiddenCount} ${hiddenCount === 1 ? "color" : "colors"} hidden`;
   els.paletteSummary.textContent = palette.length
-    ? `${palette.length} colors${edited ? `, ${edited} edited` : ""}`
+    ? `${palette.length} colors${edited ? `, ${edited} edited` : ""}${hiddenCount ? `, ${hiddenCount} hidden` : ""}`
     : "No trace";
   els.palettePick.disabled = !palette.length;
 
@@ -127,7 +140,16 @@ export function renderPalette() {
             : state.colorEdits.has(fill)
               ? `${fill} changed to ${editedFill(fill)}`
               : fill;
-          button.classList.toggle("edited", state.colorEdits.has(fill));
+          if (hidden) {
+            const badge = document.createElement("span");
+            badge.className = "swatch-hidden-badge";
+            badge.setAttribute("aria-hidden", "true");
+            const icon = document.createElement("span");
+            icon.className = "material-icon icon-visibility_off";
+            badge.append(icon);
+            button.append(badge);
+          }
+          button.classList.toggle("edited", state.colorEdits.has(fill) && !hidden);
           button.setAttribute("aria-pressed", String(fill === editing));
           return button;
         })
@@ -159,7 +181,7 @@ export function renderPalette() {
       return item;
     }),
   );
-  els.paletteResetAll.disabled = edited === 0;
+  els.paletteResetAll.disabled = state.colorEdits.size === 0;
 }
 
 /** Show `hex` in every editor field except `source`, the one being typed in. */
@@ -194,6 +216,7 @@ function openEditor(fill) {
   els.paletteEditor.hidden = false;
   els.paletteOriginalSwatch.style.background = fill;
   els.paletteOriginalHex.textContent = fill;
+  syncFields(editedFill(fill) === "none" ? (hiddenColors.get(fill) ?? fill) : editedFill(fill));
   syncEditor();
   renderPalette();
 }
@@ -263,6 +286,7 @@ els.paletteReset.addEventListener("click", () => {
   if (!editing) return;
   hiddenColors.delete(editing);
   applyEdit(editing);
+  syncFields(editing);
   syncEditor();
 });
 paletteHide.addEventListener("click", () => {
@@ -274,12 +298,14 @@ paletteHide.addEventListener("click", () => {
     hiddenColors.set(editing, editedFill(editing));
     applyEdit("none");
   }
+  syncFields(editedFill(editing) === "none" ? hiddenColors.get(editing) : editedFill(editing));
   syncEditor();
 });
 els.paletteClose.addEventListener("click", closeEditor);
 els.paletteResetAll.addEventListener("click", () => {
   state.colorEdits.clear();
   hiddenColors.clear();
+  if (editing) syncFields(editing);
   syncEditor();
   renderPalette();
   scheduleRefresh();

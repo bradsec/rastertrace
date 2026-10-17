@@ -17,6 +17,7 @@ const icons = [
   "save",
   "undo",
   "upload_file",
+  "visibility_off",
 ];
 
 for (const name of icons) {
