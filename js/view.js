@@ -3,8 +3,8 @@
 // register after the selection and eraser handlers in cleanup-tools.js
 // (which stop propagation while a tool is active), so app.js imports
 // this module last.
-import { els, state } from "./context.js?v=14";
-import { renderSelection } from "./cleanup-tools.js?v=23";
+import { els, hooks, state } from "./context.js?v=15";
+import { renderSelection } from "./cleanup-tools.js?v=24";
 
 const view = { scale: 1, tx: 0, ty: 0 };
 const ZOOM_MIN = 0.001;
@@ -130,6 +130,20 @@ els.preview.addEventListener("pointerdown", (e) => {
     // synthetic events have no active pointer; drag still works unbounded
   }
 });
+
+// Cleanup tools own single touches, so a pinch that starts mid-stroke
+// arrives here with its first finger already down.
+hooks.startPinch = (first, second) => {
+  pointers.clear();
+  pointers.set(first.id, { x: first.x, y: first.y });
+  pointers.set(second.pointerId, { x: second.clientX, y: second.clientY });
+  gesture = pinchState();
+  try {
+    els.preview.setPointerCapture(second.pointerId);
+  } catch {
+    // synthetic events have no active pointer
+  }
+};
 
 els.preview.addEventListener("pointermove", (e) => {
   if (!pointers.has(e.pointerId)) return;

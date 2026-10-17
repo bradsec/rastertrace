@@ -141,6 +141,11 @@ export const els = {
   marqueeEllipse: /** @type {HTMLButtonElement} */ ($("marquee-ellipse")),
   polygonLasso: /** @type {HTMLButtonElement} */ ($("polygon-lasso")),
   selectionOverlay: $("selection-overlay"),
+  selectionActions: /** @type {HTMLElement} */ ($("selection-actions")),
+  selectionClose: /** @type {HTMLButtonElement} */ ($("selection-close")),
+  selectionErase: /** @type {HTMLButtonElement} */ ($("selection-erase")),
+  selectionFill: /** @type {HTMLButtonElement} */ ($("selection-fill")),
+  selectionCancel: /** @type {HTMLButtonElement} */ ($("selection-cancel")),
   preferencesDialog: /** @type {HTMLDialogElement} */ ($("preferences-dialog")),
   measurementUnitPreference: /** @type {HTMLSelectElement} */ (
     document.querySelector('#preferences-dialog [name="measurementUnit"]')
@@ -188,6 +193,11 @@ export const preferences = { measurementUnit: "mm" };
 export const hooks = {
   scheduleRetrace: () => {},
   cancelPalettePick: () => {},
+  /**
+   * Start a pinch from a tool's touch plus a new one (set by view.js).
+   * @type {(first: { id: number, x: number, y: number }, second: PointerEvent) => void}
+   */
+  startPinch: () => {},
 };
 
 export function showError(message) {

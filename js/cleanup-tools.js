@@ -5,8 +5,8 @@
 // module first.
 import { brushSizeForShortcut, snapPointToAngle, svgViewBox } from "./eraser.js?v=9";
 import { parseHexColor, sampleRasterColor, toHexColor } from "./preprocess.js?v=52";
-import { els, hooks, state } from "./context.js?v=14";
-import { refreshExport } from "./exporters.js?v=19";
+import { els, hooks, state } from "./context.js?v=15";
+import { refreshExport } from "./exporters.js?v=20";
 
 export function setView(view) {
   const showResult = view === "result";
@@ -100,7 +100,8 @@ document.addEventListener(
   "pointerdown",
   (event) => {
     if (!(event.target instanceof Element)) return;
-    if (event.target.closest(".eraser-controls, #preview, #pick-from-image")) return;
+    if (event.target.closest(".eraser-controls, #preview, #pick-from-image, #selection-actions"))
+      return;
     deactivateCleanupTools();
   },
   { capture: true },
@@ -247,6 +248,22 @@ els.sourceView.addEventListener("click", (e) => {
 export function clearSelection() {
   state.selection = null;
   els.selectionOverlay.setAttribute("hidden", "");
+  updateSelectionActions();
+}
+
+/** Buttons that finish a selection without a keyboard (WCAG 2.5.7). */
+function updateSelectionActions() {
+  const selection = state.selection;
+  const ready = Boolean(selection?.finalized);
+  const closable =
+    selection?.type === "polygon" && !selection.finalized && selection.points.length >= 3;
+  els.selectionClose.hidden = !closable;
+  els.selectionErase.hidden = !ready;
+  els.selectionFill.hidden = !ready;
+  const hadFocus = els.selectionActions.contains(document.activeElement);
+  els.selectionActions.hidden = !ready && !closable;
+  // Committing hides the buttons; keep keyboard focus on the canvas.
+  if (hadFocus && els.selectionActions.hidden) els.preview.focus({ preventScroll: true });
 }
 
 export function setSelectionTool(tool) {
@@ -306,6 +323,7 @@ function marqueeGeometry(selection) {
 
 export function renderSelection() {
   const selection = state.selection;
+  updateSelectionActions();
   if (!selection) {
     els.selectionOverlay.setAttribute("hidden", "");
     return;
@@ -402,7 +420,7 @@ function finishPolygon() {
   state.selection.hover = null;
   renderSelection();
   els.status.textContent =
-    "Selection ready. Delete removes it; Ctrl/Cmd+Backspace fills it with the brush color.";
+    "Selection ready. Erase or fill it, or press Delete or Ctrl/Cmd+Backspace.";
 }
 
 function commitSelection(mode) {
@@ -447,6 +465,58 @@ els.polygonLasso.addEventListener("click", () => {
   clearSelection();
   setSelectionTool("polygon");
 });
+els.selectionClose.addEventListener("click", finishPolygon);
+els.selectionErase.addEventListener("click", () => commitSelection("erase"));
+els.selectionFill.addEventListener("click", () => commitSelection("fill"));
+els.selectionCancel.addEventListener("click", () => {
+  clearSelection();
+  els.status.textContent = "Selection cancelled.";
+});
+
+// -- Touch: a second finger hands the gesture to pinch-zoom -------------
+
+/** The touch a tool is using, with how to undo what it started. */
+let toolTouch = null;
+
+function claimTouch(event, undo) {
+  if (event.pointerType !== "touch") return;
+  toolTouch = { id: event.pointerId, x: event.clientX, y: event.clientY, undo };
+}
+
+// Registered before the tool handlers below, so the second finger never
+// starts a stroke or adds a point of its own. view.js cannot see the first
+// finger (the tool stopped it), so it gets that position here.
+els.preview.addEventListener(
+  "pointerdown",
+  (event) => {
+    if (event.pointerType !== "touch" || !toolTouch || toolTouch.id === event.pointerId) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    const first = toolTouch;
+    toolTouch = null;
+    first.undo();
+    hooks.startPinch(first, event);
+  },
+  true,
+);
+els.preview.addEventListener(
+  "pointermove",
+  (event) => {
+    if (toolTouch?.id !== event.pointerId) return;
+    toolTouch.x = event.clientX;
+    toolTouch.y = event.clientY;
+  },
+  true,
+);
+for (const type of ["pointerup", "pointercancel"]) {
+  els.preview.addEventListener(
+    type,
+    (event) => {
+      if (toolTouch?.id === /** @type {PointerEvent} */ (event).pointerId) toolTouch = null;
+    },
+    true,
+  );
+}
 
 let selectionPointer = null;
 
@@ -511,6 +581,13 @@ els.preview.addEventListener(
       state.selection.points.push(
         constrainedPolygonPoint({ x: point.x, y: point.y }, event.shiftKey),
       );
+      claimTouch(event, () => {
+        const selection = state.selection;
+        if (selection?.type !== "polygon" || selection.finalized) return;
+        selection.points.pop();
+        if (selection.points.length) renderSelection();
+        else clearSelection();
+      });
       renderSelection();
       return;
     }
@@ -524,6 +601,10 @@ els.preview.addEventListener(
     };
     selectionPointer = event.pointerId;
     els.preview.setPointerCapture(event.pointerId);
+    claimTouch(event, () => {
+      selectionPointer = null;
+      clearSelection();
+    });
     renderSelection();
   },
   true,
@@ -584,7 +665,7 @@ for (const type of ["pointerup", "pointercancel"]) {
       state.selection.finalized = true;
       renderSelection();
       els.status.textContent =
-        "Selection ready. Delete removes it; Ctrl/Cmd+Backspace fills it with the brush color.";
+        "Selection ready. Erase or fill it, or press Delete or Ctrl/Cmd+Backspace.";
     },
     true,
   );
@@ -775,6 +856,7 @@ els.preview.addEventListener(
     if (!point) return;
     const box = svgViewBox(state.svgRaw || "");
     if (!box) return;
+    const redo = state.eraseRedo;
     state.eraseRedo = [];
     eraseStroke = {
       mode: state.blobFilling ? "fill" : "erase",
@@ -782,9 +864,17 @@ els.preview.addEventListener(
       diameter: Number(els.eraserSize.value) / Math.min(box.width, box.height),
       points: [{ x: point.x, y: point.y }],
     };
-    state.eraseStrokes.push(eraseStroke);
+    const stroke = eraseStroke;
+    state.eraseStrokes.push(stroke);
     erasePointer = event.pointerId;
     els.preview.setPointerCapture(event.pointerId);
+    claimTouch(event, () => {
+      if (state.eraseStrokes.at(-1) === stroke) state.eraseStrokes.pop();
+      state.eraseRedo = redo;
+      erasePointer = null;
+      eraseStroke = null;
+      refreshExport();
+    });
     redrawErasure();
   },
   true,

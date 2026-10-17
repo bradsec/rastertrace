@@ -36,15 +36,15 @@ Convert raster images to clean, scalable SVG vectors entirely in your browser. [
 - DXF export (R12) for CAD, CNC, and cutters: one closed polyline per shape, one layer per color, mm units when a physical size is set
 - Settings persist across visits and image replacements: with color auto-detection off, every setting carries over unchanged; one-click Reset settings
 - Works offline after the first visit (service worker, everything stays local)
-- Zoomable preview: pinch, scroll wheel, buttons, Fit, or Actual size (1:1); drag to pan
+- Zoomable preview: pinch, scroll wheel, buttons, Fit, or Actual size (1:1); drag to pan. A second finger during an eraser, brush, or selection gesture switches to pinch-zoom and undoes the partial stroke
 - Vector eraser that works across the full preview, including strokes started outside an image edge, with a zoom-aware circular cursor, adjustable diameter, `[` and `]` size shortcuts, undo/redo, and Restore Original. Cleanup masks are included in SVG and PNG exports.
 - Palette editing: change any traced color by HEX or RGB without retracing. Pick a color from the result at any palette size, or choose from the swatch grid when the trace has 16 colors or fewer. Edits apply to the preview and to SVG, PNG, PDF and DXF exports, survive retraces that keep the color, and reset when a new image loads. Each edit follows a reduced-palette color, so every traced region of that color changes together; with Colors set to All (no reduction) and in stencil mode, edits match exact traced fills
 - Vector blob-fill brush with adjustable diameter, color picker, editable hex color, active traced-palette eyedropper, and shared cleanup undo/redo. Fill strokes are included in SVG and PNG exports.
-- Photoshop-style rectangular and elliptical marquees plus a point-to-point polygonal lasso. Use `M`, `Shift+M`, or `L`, hold Shift to constrain proportions, hold Alt/Option to draw from center, then press Delete/Backspace to remove the selected area or Ctrl/Cmd+Backspace to fill it with the blob-brush color.
+- Photoshop-style rectangular and elliptical marquees plus a point-to-point polygonal lasso. Use `M`, `Shift+M`, or `L`, hold Shift to constrain proportions, hold Alt/Option to draw from center, then use the Erase, Fill, or Cancel buttons below the preview, or press Delete/Backspace to remove the selected area or Ctrl/Cmd+Backspace to fill it with the blob-brush color. A Close shape button finishes a lasso without a keyboard.
 - Rotate the loaded image in 90 degree steps
 - Trace size capped at 2048 px on the longest side: small images upscale for smoother curves, large photos downscale proportionally (the status line reports the applied scale). Opt-in Ultra mode raises the cap to 4096 px for the cleanest fabrication exports (slower, high memory)
 - Guidance built in: photographic sources and high path counts get footer status suggestions, with separate tracing, vector cleanup, and SVG export guides available from Help
-- Three-panel editor with a canvas-only center, independently scrolling controls, responsive mobile stacking, keyboard operation, and WCAG AA contrast
+- Three-panel editor with a canvas-only center, independently scrolling controls, responsive mobile stacking, keyboard operation, and WCAG AA contrast. On small screens the status line and zoom controls stay pinned to the bottom, and brush size, color, and Restore appear while a cleanup tool needs them
 
 ## Structure
 

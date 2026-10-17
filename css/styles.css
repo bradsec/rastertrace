@@ -889,6 +889,7 @@ details.advanced[open] {
 /* ---------- Preview ---------- */
 .preview-pane {
   grid-area: canvas;
+  position: relative;
   display: grid;
   grid-template-rows: minmax(0, 1fr);
   min-width: 0;
@@ -1032,6 +1033,32 @@ details.advanced[open] {
   outline-offset: -2px;
   box-shadow: inset 0 0 0 2px var(--accent);
   border-radius: 0;
+}
+
+.selection-actions {
+  position: absolute;
+  left: 50%;
+  bottom: 12px;
+  z-index: 3;
+  display: flex;
+  gap: 6px;
+  max-width: calc(100% - 24px);
+  padding: 6px;
+  transform: translateX(-50%);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r);
+  background: var(--surface-1);
+  box-shadow: 0 4px 16px rgb(0 0 0 / 40%);
+}
+.selection-actions[hidden],
+.selection-actions [hidden] {
+  display: none;
+}
+/* 44px touch targets (Apple HIG); also comfortable with a mouse. */
+.selection-actions .button {
+  min-height: 44px;
+  min-width: 64px;
+  padding-inline: 14px;
 }
 
 .preview.panning {
@@ -1633,26 +1660,91 @@ dialog::backdrop {
     margin-left: -8px;
     justify-content: flex-start;
   }
+  /* The page scrolls here, so the header can grow: tool options wrap onto
+     their own line only while a tool needs them. */
+  .app-header {
+    height: auto;
+    max-height: none;
+    flex-basis: auto;
+    grid-template-rows: 50px auto;
+  }
+  .header-canvas-tools {
+    height: auto;
+    min-height: 40px;
+    overflow: visible;
+  }
+  .header-canvas-tools > .eraser-controls {
+    flex: 1 1 100%;
+    flex-wrap: wrap;
+    row-gap: 6px;
+  }
+  .eraser-controls::after {
+    content: "";
+    display: none;
+    order: 1;
+    flex-basis: 100%;
+  }
   .eraser-size,
   .blob-color,
   .restore-original {
     display: none;
+    order: 2;
   }
-  .status-zoom {
-    display: none;
+  body:has(#eraser-tool[aria-pressed="true"], #blob-fill-tool[aria-pressed="true"]) .eraser-size,
+  body:has(
+      #blob-fill-tool[aria-pressed="true"],
+      #blob-fill-pick[aria-pressed="true"],
+      #selection-fill:not([hidden])
+    )
+    .blob-color,
+  .restore-original:not(:disabled) {
+    display: inline-flex;
+  }
+  body:has(
+      #eraser-tool[aria-pressed="true"],
+      #blob-fill-tool[aria-pressed="true"],
+      #blob-fill-pick[aria-pressed="true"],
+      #selection-fill:not([hidden]),
+      #eraser-clear:not(:disabled)
+    )
+    .eraser-controls::after {
+    display: block;
+  }
+  .eraser-size input {
+    width: 120px;
   }
   .trace-summary {
     display: none;
   }
-  .statusbar {
-    justify-content: center;
+  /* Status and zoom stay on screen while the settings scroll (WCAG 4.1.3:
+     a hidden live region is never announced). */
+  html {
+    scroll-padding-bottom: 56px;
   }
-  .statusbar #status,
+  .statusbar {
+    position: sticky;
+    bottom: 0;
+    z-index: 5;
+    flex-basis: auto;
+    min-height: 44px;
+    gap: 10px;
+  }
   .statusbar .repo-link {
     display: none;
   }
   .statusbar .app-version {
     display: inline;
+  }
+  .statusbar .status-zoom {
+    height: 34px;
+  }
+  .statusbar .status-zoom .header-tool {
+    height: 32px;
+    min-width: 40px;
+    font-size: 13px;
+  }
+  .statusbar .status-zoom .zoom-level {
+    min-width: 52px;
   }
   .app-menu summary {
     padding-inline: 7px;
@@ -1719,6 +1811,9 @@ dialog::backdrop {
   }
   /* The group keeps its aria-label; dropping the text fits Redo at 360px. */
   .eraser-tool-label {
+    display: none;
+  }
+  .statusbar .app-version {
     display: none;
   }
   #copy-svg {
