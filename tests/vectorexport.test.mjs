@@ -116,3 +116,26 @@ test("toPdf defaults page size to 72/96 of pixel dims", () => {
   const pdf = toPdf(parseSvgPaths(SAMPLE));
   assert.match(pdf, /MediaBox \[0 0 150 120\]/); // 200*0.75, 160*0.75
 });
+
+test("toPdf paints the white-ink stencil backing rect under the shapes", () => {
+  // applyStencilInk("white") output: white shapes over a black backing.
+  const svg = [
+    '<svg version="1.1" xmlns="http://www.w3.org/2000/svg" width="20" height="10" viewBox="0 0 20 10"><rect width="20" height="10" fill="#000000"/>',
+    '<path d="M2 2 L8 2 L8 8 L2 8 Z " fill="#ffffff" transform="translate(0,0)"/>',
+    "</svg>",
+  ].join("\n");
+  const parsed = parseSvgPaths(svg);
+  assert.equal(parsed.background, "#000000");
+  const pdf = toPdf(parsed);
+  const black = pdf.indexOf("0 0 0 rg\n0 0 20 10 re f");
+  const white = pdf.indexOf("1 1 1 rg");
+  assert.ok(black >= 0, "backing rect painted");
+  assert.ok(black < white, "backing painted before the shapes");
+});
+
+test("toDxf leaves the stencil backing out of the cut geometry", () => {
+  const svg =
+    '<svg width="20" height="10" viewBox="0 0 20 10"><rect width="20" height="10" fill="#000000"/><path d="M2 2 L8 2 L8 8 Z " fill="#ffffff"/></svg>';
+  const dxf = toDxf(parseSvgPaths(svg));
+  assert.equal((dxf.match(/\nPOLYLINE\n/g) || []).length, 1);
+});

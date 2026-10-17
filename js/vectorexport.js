@@ -7,7 +7,7 @@
  * @typedef {{ kind: "line", to: VecPoint } | { kind: "cubic", c1: VecPoint, c2: VecPoint, to: VecPoint }} VecSegment
  * @typedef {{ start: VecPoint, segments: VecSegment[], closed: boolean }} VecSubpath
  * @typedef {{ fill: string, subpaths: VecSubpath[] }} VecPath
- * @typedef {{ width: number, height: number, paths: VecPath[] }} ParsedSvg
+ * @typedef {{ width: number, height: number, paths: VecPath[], background: string | null }} ParsedSvg
  */
 
 /** Trim a number to a compact decimal string (max 4 places). */
@@ -19,7 +19,8 @@ function fmt(n) {
  * Parse the traced SVG into { width, height, paths } where each path is
  * { fill, subpaths: [{ start, segments, closed }] } and each segment is
  * { kind: "line", to } or { kind: "cubic", c1, c2, to }. Coordinates are
- * in viewBox space with the per-path translate applied.
+ * in viewBox space with the per-path translate applied. `background` is
+ * the fill of a full-canvas backing <rect> (white stencil ink), or null.
  *
  * @param {string} svgText
  * @returns {ParsedSvg}
@@ -53,7 +54,10 @@ export function parseSvgPaths(svgText) {
     const dy = tr ? Number(tr[2]) : 0;
     paths.push({ fill, subpaths: parsePathData(d, dx, dy) });
   }
-  return { width, height, paths };
+  // applyStencilInk("white") adds this rect so white shapes have a dark
+  // ground; it is paint, not geometry.
+  const background = svgText.match(/<rect\b[^>]*\sfill="([^"]*)"/)?.[1] ?? null;
+  return { width, height, paths, background };
 }
 
 function parsePathData(d, dx, dy) {
@@ -226,16 +230,19 @@ export function toDxf(parsed, { scale = 1 } = {}) {
  * @param {{ pageWidth?: number, pageHeight?: number }} [options]
  */
 export function toPdf(parsed, { pageWidth, pageHeight } = {}) {
-  const { width, height, paths } = parsed;
+  const { width, height, paths, background } = parsed;
   const pw = pageWidth ?? (width * 72) / 96;
   const ph = pageHeight ?? (height * 72) / 96;
 
   // One transform maps SVG space (y down) onto the page (y up).
   let content = `${fmt(pw / width)} 0 0 ${fmt(-ph / height)} 0 ${fmt(ph)} cm\n`;
+  const fillColor = (hex) => {
+    const n = parseInt(hex.slice(1), 16);
+    return `${[(n >> 16) & 255, (n >> 8) & 255, n & 255].map((v) => fmt(v / 255)).join(" ")} rg\n`;
+  };
+  if (background) content += `${fillColor(background)}0 0 ${fmt(width)} ${fmt(height)} re f\n`;
   for (const path of paths) {
-    const n = parseInt(path.fill.slice(1), 16);
-    const rgb = [(n >> 16) & 255, (n >> 8) & 255, n & 255].map((v) => fmt(v / 255));
-    content += `${rgb.join(" ")} rg\n`;
+    content += fillColor(path.fill);
     for (const sub of path.subpaths) {
       content += `${fmt(sub.start.x)} ${fmt(sub.start.y)} m\n`;
       for (const seg of sub.segments) {
