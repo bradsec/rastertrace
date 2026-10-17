@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="rastertrace rt logo">
-  <rect width="128" height="128" rx="26" fill="#1e2125"/>
-  <rect x="14" y="14" width="100" height="100" rx="18" fill="#282c31" stroke="#ff9a00" stroke-width="5"/>
-  <text x="64" y="80" fill="#ffb13b" font-family="Arial, sans-serif" font-size="51" font-weight="700" letter-spacing="-3" text-anchor="middle">rt</text>
+  <rect width="128" height="128" rx="26" fill="#181c22"/>
+  <rect x="14" y="14" width="100" height="100" rx="18" fill="#20252c" stroke="#ff9a00" stroke-width="5"/>
+  <path fill="#ffb13b" d="M50.65 80V59.38Q50.65 57.16 50.58 55.68Q50.52 54.2 50.45 53.06H57.12Q57.2 53.5 57.32 55.78Q57.44 58.06 57.44 58.81H57.54Q58.56 55.97 59.36 54.81Q60.16 53.65 61.25 53.09Q62.35 52.53 63.99 52.53Q65.34 52.53 66.16 52.91V58.76Q64.47 58.38 63.17 58.38Q60.56 58.38 59.1 60.5Q57.64 62.62 57.64 66.78V80ZM74.39 80.45Q71.3 80.45 69.63 78.77Q67.97 77.09 67.97 73.67V57.79H64.55V53.06H68.31L70.51 46.73H74.89V53.06H79.99V57.79H74.89V71.78Q74.89 73.75 75.64 74.68Q76.38 75.62 77.95 75.62Q78.77 75.62 80.29 75.27V79.6Q77.7 80.45 74.39 80.45Z"/>
 </svg>

@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import path from "node:path";
 
 test.beforeEach(async ({ page }) => {
   await page.goto("/");
@@ -32,6 +33,25 @@ test("cleanup toolbar fits a 360px screen", async ({ page }) => {
 test("page heading stays in the accessibility tree on phones", async ({ page }) => {
   await page.setViewportSize({ width: 360, height: 740 });
   await expect(page.getByRole("heading", { level: 1 })).toHaveCount(1);
+});
+
+test("green screen toggle looks different when on", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.locator("#file-input").setInputFiles(path.resolve("android-chrome-192x192.png"));
+  await expect(page.locator("#status")).toContainText(/Traced \d/, { timeout: 60_000 });
+  const button = page.locator("#green-screen");
+  const readStyle = () =>
+    button.evaluate((el) => {
+      const style = getComputedStyle(el);
+      return { boxShadow: style.boxShadow, backgroundColor: style.backgroundColor };
+    });
+  const before = await readStyle();
+  await button.click();
+  await expect(button).toHaveAttribute("aria-pressed", "true");
+  await expect
+    .poll(async () => (await readStyle()).backgroundColor)
+    .not.toBe(before.backgroundColor);
+  await expect.poll(async () => (await readStyle()).boxShadow).not.toBe(before.boxShadow);
 });
 
 test.describe("forced colors", () => {
