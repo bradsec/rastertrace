@@ -374,11 +374,21 @@ function loopsNode(loops, size) {
   return node;
 }
 
+/** Built nodes per parts array: redraws while dragging reuse them. */
+const partsNodes = new WeakMap();
+
 /** One shape draws as itself; several draw as their merged outline. */
-function partsNode(parts, outline, size) {
-  return parts.length === 1 && parts[0].op === "add"
-    ? shapeNode(parts[0].shape, size)
-    : loopsNode(outline ?? [], size);
+function partsNode(parts, size) {
+  const cached = partsNodes.get(parts);
+  if (cached?.width === size.width && cached.height === size.height) {
+    return /** @type {Element} */ (cached.node.cloneNode());
+  }
+  const node =
+    parts.length === 1 && parts[0].op === "add"
+      ? shapeNode(parts[0].shape, size)
+      : loopsNode(compositeOutline(parts), size);
+  partsNodes.set(parts, { ...size, node: node.cloneNode() });
+  return node;
 }
 
 function antsPair(node) {
@@ -408,7 +418,7 @@ export function renderSelection() {
   const size = { width: imageRect.width, height: imageRect.height };
   let shape;
   if (selection.type === "composite") {
-    shape = partsNode(selection.parts, selection.outline, size);
+    shape = partsNode(selection.parts, size);
   } else if (selection.type === "polygon") {
     shape = document.createElementNS(SVG_NS, "polyline");
     const points = selection.hover ? [...selection.points, selection.hover] : selection.points;
@@ -422,8 +432,7 @@ export function renderSelection() {
   const selectionNodes = antsPair(shape);
   // While a shape is drawn, keep showing the parts it will join.
   if (selection.type !== "composite" && selection.base?.length) {
-    if (selection.base.length > 1) selection.baseOutline ??= compositeOutline(selection.base);
-    selectionNodes.unshift(...antsPair(partsNode(selection.base, selection.baseOutline, size)));
+    selectionNodes.unshift(...antsPair(partsNode(selection.base, size)));
   }
   if (selection.finalized) {
     const defs = document.createElementNS(SVG_NS, "defs");
@@ -453,6 +462,17 @@ export function renderSelection() {
   }
   els.selectionOverlay.replaceChildren(...selectionNodes);
   els.selectionOverlay.removeAttribute("hidden");
+}
+
+let renderFrame = 0;
+
+/** Pointer moves can outpace the display: redraw at most once a frame. */
+function scheduleRenderSelection() {
+  if (renderFrame) return;
+  renderFrame = requestAnimationFrame(() => {
+    renderFrame = 0;
+    renderSelection();
+  });
 }
 
 // -- Combining selections: Shift adds, Alt/Option subtracts -------------
@@ -520,11 +540,14 @@ function setComposite(parts) {
     els.status.textContent = "Nothing is left selected after subtracting.";
     return;
   }
-  state.selection = { type: "composite", parts, outline, finalized: true };
+  state.selection = { type: "composite", parts, finalized: true };
   renderSelection();
   els.status.textContent =
     "Selection ready. Erase or fill it; Shift adds to it, Alt/Option subtracts.";
 }
+
+/** Traced outlines per parts array, so a drawn shape reuses its base's. */
+const outlines = new WeakMap();
 
 /**
  * Merged outline of several parts for the marching ants, traced from a
@@ -532,10 +555,56 @@ function setComposite(parts) {
  * vector masks.
  */
 function compositeOutline(parts) {
+  let outline = outlines.get(parts);
+  if (!outline) {
+    outline = traceOutline(parts);
+    outlines.set(parts, outline);
+  }
+  return outline;
+}
+
+/** Normalized bounds of the added parts: subtracting never grows a selection. */
+function addedBounds(parts) {
+  const box = { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity };
+  const include = (x, y) => {
+    box.minX = Math.min(box.minX, x);
+    box.minY = Math.min(box.minY, y);
+    box.maxX = Math.max(box.maxX, x);
+    box.maxY = Math.max(box.maxY, y);
+  };
+  for (const { op, shape } of parts) {
+    if (op === "subtract") continue;
+    if (shape.type === "rect") {
+      include(shape.x, shape.y);
+      include(shape.x + shape.width, shape.y + shape.height);
+    } else if (shape.type === "ellipse") {
+      include(shape.cx - Math.abs(shape.rx), shape.cy - Math.abs(shape.ry));
+      include(shape.cx + Math.abs(shape.rx), shape.cy + Math.abs(shape.ry));
+    } else {
+      for (const loop of shape.type === "region" ? shape.loops : [shape.points]) {
+        for (const p of loop) include(p.x, p.y);
+      }
+    }
+  }
+  return box;
+}
+
+function traceOutline(parts) {
   const width = state.processedRaster?.width || 1024;
   const height = state.processedRaster?.height || 1024;
-  const canvas = new OffscreenCanvas(width, height);
-  const ctx = /** @type {OffscreenCanvasRenderingContext2D} */ (canvas.getContext("2d"));
+  // Rasterize only the added parts' bounds, with a pixel of margin so the
+  // trace sees their edges: the whole raster is up to 4096 px a side.
+  const box = addedBounds(parts);
+  const x0 = Math.max(0, Math.floor(box.minX * width) - 1);
+  const y0 = Math.max(0, Math.floor(box.minY * height) - 1);
+  const cropWidth = Math.min(width, Math.ceil(box.maxX * width) + 1) - x0;
+  const cropHeight = Math.min(height, Math.ceil(box.maxY * height) + 1) - y0;
+  if (!(cropWidth > 0 && cropHeight > 0)) return [];
+  const canvas = new OffscreenCanvas(cropWidth, cropHeight);
+  const ctx = /** @type {OffscreenCanvasRenderingContext2D} */ (
+    canvas.getContext("2d", { willReadFrequently: true })
+  );
+  ctx.translate(-x0, -y0);
   ctx.scale(width, height);
   for (const { op, shape } of parts) {
     ctx.globalCompositeOperation = op === "subtract" ? "destination-out" : "source-over";
@@ -552,10 +621,19 @@ function compositeOutline(parts) {
     }
     ctx.fill("evenodd");
   }
-  const { data } = ctx.getImageData(0, 0, width, height);
-  const mask = new Uint8Array(width * height);
+  const { data } = ctx.getImageData(0, 0, cropWidth, cropHeight);
+  // Free the backing store now rather than at garbage collection: iOS
+  // Safari caps total canvas memory, and every add or subtract traces anew.
+  canvas.width = 0;
+  canvas.height = 0;
+  const mask = new Uint8Array(cropWidth * cropHeight);
   for (let i = 0; i < mask.length; i++) mask[i] = data[i * 4 + 3] >= 128 ? 1 : 0;
-  return maskLoops(mask, width, height, 1);
+  return maskLoops(mask, cropWidth, cropHeight, 1).map((loop) =>
+    loop.map((p) => ({
+      x: (x0 + p.x * cropWidth) / width,
+      y: (y0 + p.y * cropHeight) / height,
+    })),
+  );
 }
 
 const modeButtons = {
@@ -760,19 +838,26 @@ function regionShape(seeds) {
   return { type: "region", seeds, loops };
 }
 
+/** Each rebuild floods every wand region again: one per frame is plenty. */
+let wandRebuildFrame = 0;
+
 for (const input of [els.wandTolerance, els.wandExpand, els.wandSmooth]) {
   input.addEventListener("input", () => {
     els.wandToleranceOut.textContent = els.wandTolerance.value;
     els.wandExpandOut.textContent = `${els.wandExpand.value} px`;
     els.wandSmoothOut.textContent = els.wandSmooth.value;
-    if (state.selection?.type !== "composite") return;
-    setComposite(
-      state.selection.parts.map((part) =>
-        part.shape.type === "region"
-          ? { ...part, shape: regionShape(part.shape.seeds) ?? part.shape }
-          : part,
-      ),
-    );
+    if (state.selection?.type !== "composite" || wandRebuildFrame) return;
+    wandRebuildFrame = requestAnimationFrame(() => {
+      wandRebuildFrame = 0;
+      if (state.selection?.type !== "composite") return;
+      setComposite(
+        state.selection.parts.map((part) =>
+          part.shape.type === "region"
+            ? { ...part, shape: regionShape(part.shape.seeds) ?? part.shape }
+            : part,
+        ),
+      );
+    });
   });
 }
 
@@ -870,7 +955,7 @@ els.preview.addEventListener(
       // would dereference it.
       const point = selectionPoint(event, "free");
       state.selection.hover = point ? constrainedPolygonPoint(point, event.shiftKey) : null;
-      renderSelection();
+      scheduleRenderSelection();
     }
     if (selectionPointer !== event.pointerId || !state.selection) return;
     const point = selectionPoint(event, "free");
@@ -881,7 +966,7 @@ els.preview.addEventListener(
     if (!event.altKey) selection.holdAlt = false;
     selection.constrain = event.shiftKey && !selection.holdShift;
     selection.fromCenter = event.altKey && !selection.holdAlt;
-    renderSelection();
+    scheduleRenderSelection();
   },
   true,
 );

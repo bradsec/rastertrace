@@ -2172,6 +2172,14 @@ dialog::backdrop {
     min-height: 220px;
     max-height: none;
   }
+  /* The preview pane runs under the sticky status bar, further still when
+     the wand's sliders add toolbar rows, so pin the selection buttons to
+     the viewport just above the bar. */
+  .selection-actions {
+    position: fixed;
+    bottom: 60px;
+    z-index: 6;
+  }
   /* A fitted preview has nothing to pan: let one finger scroll the page
      past it. Two-finger pinches still reach view.js. */
   .preview.fitted:not(.erasing, .blob-filling, .blob-picking, .selecting) {

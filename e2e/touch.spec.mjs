@@ -49,6 +49,21 @@ test.describe("selection actions", () => {
     await expect(page.locator("#eraser-undo")).toBeEnabled();
   });
 
+  test("wand selection actions clear the status bar on a short phone", async ({ page }) => {
+    // Safari's toolbars leave an iPhone about this tall, and the wand's
+    // sliders push the preview pane under the sticky status bar.
+    await page.setViewportSize({ width: 390, height: 664 });
+    await page.locator("#magic-wand").click();
+    await clickResult(page, [0.5, 0.5]);
+    await expect(page.locator("#selection-actions")).toBeVisible();
+    const bar = await page.locator(".statusbar").boundingBox();
+    for (const id of ["#selection-erase", "#selection-fill", "#selection-cancel"]) {
+      await expect(page.locator(id)).toBeInViewport({ ratio: 1 });
+      const box = await page.locator(id).boundingBox();
+      expect(box.y + box.height).toBeLessThanOrEqual(bar.y);
+    }
+  });
+
   test("Fill commits the selection and Cancel discards it", async ({ page }) => {
     await page.locator("#marquee-ellipse").click();
     await dragResult(page, [0.2, 0.2], [0.6, 0.6]);
