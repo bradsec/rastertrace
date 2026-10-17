@@ -53,7 +53,7 @@
       }
     </script>
 
-    <link rel="stylesheet" href="css/styles.css?v=78" />
+    <link rel="stylesheet" href="css/styles.css?v=79" />
   </head>
   <body>
     <header class="app-header">
@@ -128,7 +128,7 @@
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
-              stroke-width="1.8"
+              stroke-width="2"
               stroke-linecap="round"
               stroke-linejoin="round"
               aria-hidden="true"
@@ -150,7 +150,7 @@
             disabled
             title="Paint vector color over the result (B)"
           >
-            <img class="material-icon" src="assets/icons/material/brush.svg" alt="" />
+            <span class="material-icon icon-brush" aria-hidden="true"></span>
           </button>
           <label
             class="eraser-size"
@@ -188,7 +188,7 @@
             disabled
             title="Pick fill color from the source image"
           >
-            <img class="material-icon" src="assets/icons/material/colorize.svg" alt="" />
+            <span class="material-icon icon-colorize" aria-hidden="true"></span>
           </button>
           <button
             type="button"
@@ -204,7 +204,7 @@
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
-              stroke-width="1.8"
+              stroke-width="2"
               stroke-linecap="round"
               aria-hidden="true"
               focusable="false"
@@ -226,7 +226,7 @@
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
-              stroke-width="1.8"
+              stroke-width="2"
               stroke-linecap="round"
               aria-hidden="true"
               focusable="false"
@@ -248,7 +248,7 @@
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
-              stroke-width="1.8"
+              stroke-width="2"
               stroke-linecap="round"
               stroke-linejoin="round"
               aria-hidden="true"
@@ -268,7 +268,7 @@
             disabled
             title="Undo cleanup (Ctrl/Cmd+Z)"
           >
-            <img class="material-icon" src="assets/icons/material/undo.svg" alt="" />
+            <span class="material-icon icon-undo" aria-hidden="true"></span>
           </button>
           <button
             type="button"
@@ -278,7 +278,7 @@
             disabled
             title="Redo cleanup (Ctrl/Cmd+Shift+Z)"
           >
-            <img class="material-icon" src="assets/icons/material/redo.svg" alt="" />
+            <span class="material-icon icon-redo" aria-hidden="true"></span>
           </button>
           <button
             type="button"
@@ -287,17 +287,14 @@
             disabled
             title="Remove all manual cleanup and restore the traced result"
           >
-            <img class="material-icon" src="assets/icons/material/restore.svg" alt="" /><span
-              >Restore</span
-            >
+            <span class="material-icon icon-restore" aria-hidden="true"></span><span>Restore</span>
           </button>
         </div>
       </div>
       <div class="topbar-actions" role="group" aria-label="Quick actions">
         <button class="header-action" type="button" data-action="open-image">
-          <img class="material-icon" src="assets/icons/material/folder_open.svg" alt="" /><span
-            >Open image</span
-          >
+          <span class="material-icon icon-folder_open" aria-hidden="true"></span
+          ><span>Open image</span>
         </button>
         <span class="action-divider" aria-hidden="true"></span>
         <div class="export-actions" role="group" aria-label="Export result">
@@ -308,9 +305,8 @@
             disabled
             title="Copy the SVG markup to the clipboard"
           >
-            <img class="material-icon" src="assets/icons/material/content_copy.svg" alt="" /><span
-              >Copy</span
-            >
+            <span class="material-icon icon-content_copy" aria-hidden="true"></span
+            ><span>Copy</span>
           </button>
           <button
             type="button"
@@ -319,9 +315,7 @@
             disabled
             title="Save a PNG at the trace resolution, choosing its name and location"
           >
-            <img class="material-icon" src="assets/icons/material/image.svg" alt="" /><span
-              >PNG</span
-            >
+            <span class="material-icon icon-image" aria-hidden="true"></span><span>PNG</span>
           </button>
           <button
             type="button"
@@ -330,9 +324,8 @@
             disabled
             title="Save a vector PDF, choosing its name and location"
           >
-            <img class="material-icon" src="assets/icons/material/picture_as_pdf.svg" alt="" /><span
-              >PDF</span
-            >
+            <span class="material-icon icon-picture_as_pdf" aria-hidden="true"></span
+            ><span>PDF</span>
           </button>
           <button
             type="button"
@@ -341,9 +334,7 @@
             disabled
             title="Save DXF geometry, choosing its name and location"
           >
-            <img class="material-icon" src="assets/icons/material/architecture.svg" alt="" /><span
-              >DXF</span
-            >
+            <span class="material-icon icon-architecture" aria-hidden="true"></span><span>DXF</span>
           </button>
           <button
             type="button"
@@ -352,11 +343,7 @@
             disabled
             title="Save the SVG, choosing its name and location"
           >
-            <img
-              class="material-icon material-icon-dark"
-              src="assets/icons/material/save.svg"
-              alt=""
-            /><span>Save SVG</span>
+            <span class="material-icon icon-save" aria-hidden="true"></span><span>Save SVG</span>
           </button>
         </div>
       </div>
@@ -380,11 +367,10 @@
             PNG, JPEG, WebP, GIF or BMP. Converted to SVG on your machine; no upload.
           </p>
           <button type="button" id="pick-file" class="button button-primary">
-            <img
-              class="material-icon material-icon-dark"
-              src="assets/icons/material/upload_file.svg"
-              alt=""
-            />Choose image
+            <span class="material-icon icon-upload_file" aria-hidden="true"></span>Choose image
+          </button>
+          <button type="button" id="try-sample" class="button button-ghost">
+            Try a sample image
           </button>
           <input
             type="file"
@@ -445,7 +431,7 @@
                   title="Rotate 90 degrees counter-clockwise"
                   aria-label="Rotate 90 degrees counter-clockwise"
                 >
-                  <img class="material-icon" src="assets/icons/material/rotate_left.svg" alt="" />
+                  <span class="material-icon icon-rotate_left" aria-hidden="true"></span>
                 </button>
                 <button
                   type="button"
@@ -454,7 +440,7 @@
                   title="Rotate 90 degrees clockwise"
                   aria-label="Rotate 90 degrees clockwise"
                 >
-                  <img class="material-icon" src="assets/icons/material/rotate_right.svg" alt="" />
+                  <span class="material-icon icon-rotate_right" aria-hidden="true"></span>
                 </button>
                 <button
                   type="button"
@@ -464,7 +450,7 @@
                   title="Invert colors (negative), useful for stencils"
                   aria-label="Invert image colors"
                 >
-                  <img class="material-icon" src="assets/icons/material/invert_colors.svg" alt="" />
+                  <span class="material-icon icon-invert_colors" aria-hidden="true"></span>
                 </button>
               </div>
             </div>
@@ -1521,6 +1507,6 @@
         location.reload();
       };
     </script>
-    <script type="module" src="js/app.js?v=100" onerror="window.recoverRasterTraceBoot()"></script>
+    <script type="module" src="js/app.js?v=102" onerror="window.recoverRasterTraceBoot()"></script>
   </body>
 </html>

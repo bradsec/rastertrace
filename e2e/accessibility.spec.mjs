@@ -27,7 +27,7 @@ test("cleanup toolbar fits a 360px screen", async ({ page }) => {
     .locator(".header-canvas-tools")
     .evaluate((bar) => bar.scrollWidth <= bar.clientWidth);
   expect(fits).toBe(true);
-  await expect(page.locator("#eraser-redo")).toBeInViewport({ ratio: 1 });
+  await expect(page.locator("#polygon-lasso")).toBeInViewport({ ratio: 1 });
 });
 
 test("page heading stays in the accessibility tree on phones", async ({ page }) => {

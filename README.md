@@ -8,9 +8,10 @@ Convert raster images to clean, scalable SVG vectors entirely in your browser. [
 
 ## Features
 
+- Try a sample image button in the empty state loads a built-in landscape for tracing.
 - PNG, JPEG, WebP, GIF, and BMP input, up to 50 MB and 100 megapixels
 - Premultiplied-alpha upscaling (no edge halos), binary alpha (no fringe fragmentation)
-- Median-cut + k-means color quantization in perceptual Oklab space with transparent-area backfill
+- Median-cut + k-means color quantization in perceptual Oklab space with transparent-area backfill; clusters below 0.1% of opaque pixels are reseeded toward the largest population-weighted color error so edge blends do not waste palette slots
 - 3x3 majority filter to clean quantization dither
 - Optional edge-preserving median denoise for photographic sources
 - Background removal: auto-detect from border sampling, hex color, or eyedropper pick from the image (sampled from the current preprocessed state, so the picked color matches the reduced palette); picked colors can be limited to areas connected to the edges, and edge removal can also clear enclosed background (letter counters, gaps between shapes) between adjustable minimum and maximum sizes and follow gradient backgrounds; with color reduction, edge-connected masks are built before quantizing so light subject edges do not leak; perceptual match tolerance; clean specks drops stray dots and fills pinholes; edge trim chokes the cutout and defringe repaints leftover fringe without shrinking thin details
@@ -53,6 +54,7 @@ index.html          app shell
 sw.js               service worker: offline cache for the static app
 css/styles.css      design tokens + layout
 assets/icons/       locally bundled Material SVG icons
+assets/samples/     built-in sample images
 js/preprocess.js    pure pixel/string ops (Node-testable, no browser APIs)
 js/vectorexport.js  DXF and PDF writers from traced SVG (Node-testable)
 js/eraser.js        eraser mask geometry (Node-testable)

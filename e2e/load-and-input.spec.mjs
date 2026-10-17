@@ -32,6 +32,12 @@ test.beforeEach(async ({ page }) => {
   await page.reload();
 });
 
+test("sample image loads and traces", async ({ page }) => {
+  await page.goto("/");
+  await page.locator("#try-sample").click();
+  await expect(page.locator("#status")).toContainText(/Traced \d/, { timeout: 60_000 });
+});
+
 test.describe("opening files", () => {
   test.use({ viewport: { width: 1280, height: 800 } });
 

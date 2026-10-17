@@ -10,7 +10,7 @@ import {
   rotateBitmap,
   sniffImageSize,
   Tracer,
-} from "./pipeline.js?v=52";
+} from "./pipeline.js?v=53";
 import {
   analyzeFlatness,
   detectedColorSettings,
@@ -20,17 +20,17 @@ import {
   MAX_TRACE_SIDE_ULTRA,
   parseHexColor,
   toHexColor,
-} from "./preprocess.js?v=52";
-import { $, els, hooks, preferences, showError, state } from "./context.js?v=16";
-import { refreshExport, setResultActions } from "./exporters.js?v=21";
+} from "./preprocess.js?v=53";
+import { $, els, hooks, preferences, showError, state } from "./context.js?v=17";
+import { refreshExport, setResultActions } from "./exporters.js?v=22";
 import {
   clearSelection,
   setBlobFill,
   setEraser,
   setSelectionTool,
   setView,
-} from "./cleanup-tools.js?v=25";
-import { afterTrace, resetPalette } from "./palette-ui.js?v=6";
+} from "./cleanup-tools.js?v=26";
+import { afterTrace, resetPalette } from "./palette-ui.js?v=7";
 import {
   applyExportProfile,
   applyMeasurementUnit,
@@ -46,12 +46,12 @@ import {
   updateOutputs,
   updateStencilFields,
   updateTransparencyFields,
-} from "./settings.js?v=23";
-import { actualSizeView, resetView } from "./view.js?v=24";
+} from "./settings.js?v=24";
+import { actualSizeView, resetView } from "./view.js?v=25";
 
 const EMPTY_IMAGE_SRC = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==";
 
-const tracer = new Tracer(new URL("./worker.js?v=55", import.meta.url));
+const tracer = new Tracer(new URL("./worker.js?v=56", import.meta.url));
 
 let elapsedTimer = 0;
 
@@ -335,6 +335,17 @@ function resetForNewImage() {
 // -- Events ------------------------------------------------------------
 
 els.pickFile.addEventListener("click", () => els.fileInput.click());
+document.getElementById("try-sample").addEventListener("click", async () => {
+  try {
+    const response = await fetch("assets/samples/sample-landscape.png");
+    if (!response.ok) throw new Error("Sample image request failed.");
+    const blob = await response.blob();
+    const file = new File([blob], "sample-landscape.png", { type: "image/png" });
+    await loadFile(file);
+  } catch {
+    showError("Could not load the sample image.");
+  }
+});
 els.errorDismiss.addEventListener("click", () => showError(""));
 // The whole drop zone opens the picker: phones cannot drop files.
 els.dropzone.addEventListener("click", (event) => {
