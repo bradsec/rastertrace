@@ -11,7 +11,7 @@
   /* 3:1 against every surface up to --surface-3 (WCAG 1.4.11). */
   --border-input: #6e7c8d;
   --border-hairline: #0d1013;
-  --text: #f4f6f8;
+  --text: #e9ecef;
   --text-dim: #c7cdd5;
   --text-faint: #98a3b0;
   --accent: #ff9a00;
@@ -137,7 +137,7 @@ body {
 .brand {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
+  gap: 8px;
   min-width: 0;
   margin: 0 8px 0 0;
   color: var(--text);
@@ -182,7 +182,7 @@ body {
   display: grid;
   width: max-content;
   max-width: calc(100vw - 16px);
-  padding: 5px;
+  padding: 4px;
   border: 1px solid var(--border-strong);
   border-radius: var(--r);
   background: var(--surface-3);
@@ -201,7 +201,7 @@ body {
   align-items: center;
   justify-content: space-between;
   gap: 24px;
-  padding: 5px 8px;
+  padding: 4px 8px;
   border: 0;
   border-radius: var(--r-xs);
   background: transparent;
@@ -214,8 +214,8 @@ body {
 }
 .menu-popover button:hover,
 .menu-popover > a:hover {
-  background: var(--accent);
-  color: var(--accent-ink);
+  background: var(--surface-hover);
+  color: var(--text);
 }
 .menu-popover button span {
   min-width: 38px;
@@ -224,7 +224,7 @@ body {
   text-align: right;
 }
 .menu-popover button:hover span {
-  color: var(--accent-ink);
+  color: var(--text-dim);
 }
 .menu-popover button:disabled {
   opacity: var(--disabled-opacity);
@@ -252,7 +252,7 @@ body {
   min-width: 30px;
   height: var(--control-h-sm);
   place-items: center;
-  padding: 0 7px;
+  padding: 0 8px;
   border: 0;
   border-right: 1px solid var(--border);
   background: var(--surface-2);
@@ -416,7 +416,7 @@ body:has(#empty-state:not([hidden])) .eraser-controls {
   justify-content: center;
   gap: 8px;
   min-height: var(--control-h);
-  padding: 0 11px;
+  padding: 0 12px;
   border-radius: var(--r-sm);
   border: 1px solid transparent;
   font: inherit;
@@ -868,9 +868,50 @@ input[type="color"] {
 }
 
 input[type="range"] {
+  appearance: none;
   width: 100%;
-  accent-color: var(--accent);
   min-height: 24px;
+  background: transparent;
+  cursor: pointer;
+}
+input[type="range"]::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--border-input);
+}
+input[type="range"]::-moz-range-track,
+input[type="range"]::-moz-range-progress {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--border-input);
+}
+input[type="range"]::-webkit-slider-thumb {
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  margin-top: -5px;
+  border: 2px solid var(--surface-1);
+  border-radius: 50%;
+  background: var(--accent);
+  box-sizing: border-box;
+}
+input[type="range"]::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--surface-1);
+  border-radius: 50%;
+  background: var(--accent);
+  box-sizing: border-box;
+}
+input[type="range"]:hover::-webkit-slider-thumb {
+  background: var(--accent-hover);
+}
+input[type="range"]:hover::-moz-range-thumb {
+  background: var(--accent-hover);
+}
+input[type="range"]:disabled {
+  opacity: var(--disabled-opacity);
+  cursor: default;
 }
 input[type="radio"],
 input[type="checkbox"] {
@@ -905,6 +946,8 @@ input[type="checkbox"] {
   text-transform: uppercase;
   border-radius: 0;
   user-select: none;
+  line-height: 16px;
+  color: var(--text-dim);
 }
 
 .panel > summary::-webkit-details-marker {
@@ -942,7 +985,12 @@ details.advanced[open] > summary::after {
 }
 
 .panel > summary:hover {
-  color: var(--accent);
+  color: var(--text);
+}
+
+.panel > summary:hover::after,
+details.advanced > summary:hover::after {
+  color: var(--text-dim);
 }
 
 .panel > summary:focus-visible {
@@ -1080,10 +1128,12 @@ details.advanced[open] {
 
 .guide-dialog-content > h2 {
   margin: 0 0 12px;
-  font-size: 13px;
+  font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: var(--text-faint);
+  color: var(--text-dim);
+  line-height: 16px;
+  font-weight: 600;
 }
 
 .guide-dialog-content a {
@@ -1139,7 +1189,7 @@ details.advanced[open] {
 .help-grid .support-link {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
+  gap: 8px;
   margin-top: 6px;
   text-decoration: none;
 }
@@ -1217,12 +1267,15 @@ details.advanced[open] {
 
 .eraser-tool-label {
   color: var(--text-dim);
-  font-size: 13px;
-  font-weight: 500;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 16px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 .eraser-tool {
   min-width: 34px;
-  padding-inline: 7px;
+  padding-inline: 8px;
 }
 
 .eraser-tool[aria-pressed="true"],
@@ -1234,7 +1287,7 @@ details.advanced[open] {
 
 .cleanup-tool {
   min-width: 34px;
-  padding-inline: 7px;
+  padding-inline: 8px;
 }
 .cleanup-tool-icon {
   display: block;
@@ -1288,7 +1341,7 @@ details.advanced[open] {
 .blob-color input[type="text"] {
   width: 68px;
   height: var(--control-h-sm);
-  padding: 3px 6px;
+  padding: 4px 6px;
   border: 1px solid var(--border);
   border-radius: var(--r-xs);
   color: var(--text);
@@ -1550,11 +1603,12 @@ details.advanced[open] {
 
 .trace-summary h2 {
   margin: 0 0 8px;
-  color: var(--text-faint);
+  color: var(--text-dim);
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
+  line-height: 16px;
 }
 
 .trace-summary-stats {
@@ -1607,7 +1661,7 @@ details.advanced[open] {
 .statusbar .status-zoom .header-tool {
   height: 20px;
   min-width: 24px;
-  padding-inline: 5px;
+  padding-inline: 4px;
   font-size: 11px;
 }
 .statusbar .status-zoom .zoom-level {
@@ -1649,7 +1703,7 @@ dialog::backdrop {
 }
 .dialog-form {
   display: grid;
-  gap: 15px;
+  gap: 16px;
   padding: 20px;
   font: 13px/1.4 var(--font-ui);
 }
@@ -1701,7 +1755,7 @@ dialog::backdrop {
   display: flex;
   justify-content: flex-end;
   gap: 8px;
-  margin-top: 3px;
+  margin-top: 4px;
 }
 /* Same look as .button-secondary. */
 .dialog-actions button {
@@ -1755,7 +1809,7 @@ dialog::backdrop {
     justify-self: start;
     width: calc(100% + 24px);
     margin-left: -12px;
-    padding: 5px 12px 7px;
+    padding: 4px 12px 8px;
     overflow-x: auto;
     overflow-y: hidden;
     justify-content: flex-start;
@@ -1778,10 +1832,10 @@ dialog::backdrop {
     display: none;
   }
   .topbar-actions {
-    gap: 3px;
+    gap: 4px;
   }
   .export-actions {
-    gap: 3px;
+    gap: 4px;
   }
   .header-action,
   .primary-action {
@@ -1908,7 +1962,7 @@ dialog::backdrop {
     min-width: 52px;
   }
   .app-menu summary {
-    padding-inline: 7px;
+    padding-inline: 8px;
   }
 
   main {
@@ -1986,6 +2040,15 @@ dialog::backdrop {
 /* 44px targets for coarse pointers (Apple HIG; WCAG 2.5.8's floor is
    24px). Width breakpoints alone gave landscape tablets desktop sizes. */
 @media (pointer: coarse) {
+  input[type="range"]::-webkit-slider-thumb {
+    width: 22px;
+    height: 22px;
+    margin-top: -9px;
+  }
+  input[type="range"]::-moz-range-thumb {
+    width: 22px;
+    height: 22px;
+  }
   .drop-copy {
     display: none;
   }
@@ -2091,6 +2154,26 @@ dialog::backdrop {
 /* Box shadows are removed in forced colors, so focus and pressed states
    that rely on them need an outline or system colors instead. */
 @media (forced-colors: active) {
+  input[type="range"] {
+    forced-color-adjust: none;
+  }
+  input[type="range"]::-webkit-slider-runnable-track {
+    background: CanvasText;
+  }
+  input[type="range"]::-moz-range-track,
+  input[type="range"]::-moz-range-progress {
+    background: CanvasText;
+  }
+  input[type="range"]::-webkit-slider-thumb,
+  input[type="range"]:hover::-webkit-slider-thumb {
+    background: Highlight;
+    border-color: Canvas;
+  }
+  input[type="range"]::-moz-range-thumb,
+  input[type="range"]:hover::-moz-range-thumb {
+    background: Highlight;
+    border-color: Canvas;
+  }
   /* Overrides the per-component outline: none rules. */
   :focus-visible {
     outline: 2px solid Highlight !important;
