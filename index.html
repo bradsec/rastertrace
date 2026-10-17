@@ -648,6 +648,24 @@
                   </div>
                   <input type="range" id="enclosed-size" min="1" max="64" step="1" value="16" />
                 </div>
+                <div class="subfield" id="enclosed-max-size-field" hidden>
+                  <div class="label-row">
+                    <label
+                      for="enclosed-max-size"
+                      title="Enclosed areas larger than this many source pixels across stay, such as a blank screen or a white shirt that shares the background color. Far right is no limit"
+                      >Largest enclosed area</label
+                    >
+                    <output id="enclosed-max-size-out" for="enclosed-max-size">No limit</output>
+                  </div>
+                  <input
+                    type="range"
+                    id="enclosed-max-size"
+                    min="8"
+                    max="512"
+                    step="8"
+                    value="512"
+                  />
+                </div>
                 <div class="subfield" id="gradient-field" hidden>
                   <label class="choice"
                     ><input type="checkbox" id="gradient" />
@@ -1359,6 +1377,6 @@
         location.reload();
       };
     </script>
-    <script type="module" src="js/app.js?v=93" onerror="window.recoverRasterTraceBoot()"></script>
+    <script type="module" src="js/app.js?v=94" onerror="window.recoverRasterTraceBoot()"></script>
   </body>
 </html>

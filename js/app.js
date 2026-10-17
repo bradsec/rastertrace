@@ -10,7 +10,7 @@ import {
   rotateBitmap,
   sniffImageSize,
   Tracer,
-} from "./pipeline.js?v=50";
+} from "./pipeline.js?v=51";
 import {
   analyzeFlatness,
   detectedColorSettings,
@@ -20,16 +20,16 @@ import {
   MAX_TRACE_SIDE_ULTRA,
   parseHexColor,
   toHexColor,
-} from "./preprocess.js?v=50";
-import { $, els, hooks, preferences, showError, state } from "./context.js?v=10";
-import { refreshExport, setResultActions } from "./exporters.js?v=15";
+} from "./preprocess.js?v=51";
+import { $, els, hooks, preferences, showError, state } from "./context.js?v=11";
+import { refreshExport, setResultActions } from "./exporters.js?v=16";
 import {
   clearSelection,
   setBlobFill,
   setEraser,
   setSelectionTool,
   setView,
-} from "./cleanup-tools.js?v=19";
+} from "./cleanup-tools.js?v=20";
 import {
   applyExportProfile,
   applyMeasurementUnit,
@@ -45,12 +45,12 @@ import {
   updateOutputs,
   updateStencilFields,
   updateTransparencyFields,
-} from "./settings.js?v=18";
-import { actualSizeView, resetView } from "./view.js?v=18";
+} from "./settings.js?v=19";
+import { actualSizeView, resetView } from "./view.js?v=19";
 
 const EMPTY_IMAGE_SRC = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==";
 
-const tracer = new Tracer(new URL("./worker.js?v=53", import.meta.url));
+const tracer = new Tracer(new URL("./worker.js?v=54", import.meta.url));
 
 let elapsedTimer = 0;
 
@@ -563,7 +563,14 @@ for (const input of [els.colors, els.speckle, els.layerDiff]) {
   });
 }
 
-for (const input of [els.fuzz, els.specks, els.enclosedSize, els.edgeTrim, els.defringe]) {
+for (const input of [
+  els.fuzz,
+  els.specks,
+  els.enclosedSize,
+  els.enclosedMaxSize,
+  els.edgeTrim,
+  els.defringe,
+]) {
   input.addEventListener("input", () => {
     updateOutputs();
     scheduleRetrace();

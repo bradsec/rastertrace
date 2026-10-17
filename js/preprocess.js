@@ -62,6 +62,7 @@ export const DEFAULTS = Object.freeze({
   contiguous: false,
   enclosed: false,
   enclosedSize: 16,
+  enclosedMaxSize: 512, // ENCLOSED_NO_LIMIT: declared below DEFAULTS
   gradient: false,
   specks: 0,
   edgeTrim: 0,
@@ -550,6 +551,7 @@ const SETTING_CHECKS = {
   contiguous: (v) => typeof v === "boolean",
   enclosed: (v) => typeof v === "boolean",
   enclosedSize: (v) => Number.isFinite(v) && v >= 1 && v <= 64,
+  enclosedMaxSize: (v) => Number.isFinite(v) && v >= 8 && v <= ENCLOSED_NO_LIMIT,
   gradient: (v) => typeof v === "boolean",
   specks: (v) => Number.isFinite(v) && v >= 0 && v <= 16,
   edgeTrim: (v) => Number.isFinite(v) && v >= 0 && v <= 16,
@@ -777,14 +779,18 @@ export function knockOutColor(img, color, fuzz) {
 }
 
 /**
- * Smallest enclosed region the "enclosed" option removes, in trace pixels:
- * `size` source pixels across, squared at the trace `scale`. The size is
- * user-set because no fixed limit separates letter counters (small) from
- * same-color subject areas such as a blank screen (large).
+ * Enclosed-area limit in trace pixels: `size` source pixels across,
+ * squared at the trace `scale`. The "enclosed" option removes regions
+ * between a user-set minimum and maximum, because no fixed limit
+ * separates letter counters (small) from same-color subject areas such
+ * as a blank screen (large).
  */
 export function enclosedAreaLimit(size, scale) {
   return Math.max(1, Math.round((size * scale) ** 2));
 }
+
+/** Largest-enclosed-area slider value that means "no maximum". */
+export const ENCLOSED_NO_LIMIT = 512;
 
 /**
  * Gradient flood limits, as multiples of fuzz. A real backdrop gradient
@@ -801,8 +807,9 @@ const GRADIENT_DRIFT_SCALE = 4;
  * image border whose color matches `color` within fuzz (perceptual
  * distance). Pixels of the same color inside the subject stay opaque
  * because they are not connected to the edge, unless `enclosedMinArea` is
- * positive: then enclosed matching regions of at least that many pixels
- * (letter counters, gaps between shapes) are removed too. With
+ * positive: then enclosed matching regions of at least that many pixels,
+ * and at most `enclosedMaxArea` (letter counters, gaps between shapes),
+ * are removed too. With
  * `gradient`, the fill spreads by small steps between neighbors instead
  * of matching the seed directly, so vignettes and lit backdrops go too
  * (see GRADIENT_STEP_SCALE); enclosed regions still match the seed.
@@ -813,7 +820,7 @@ export function knockOutConnected(
   color,
   fuzz,
   enclosedMinArea = 0,
-  { gradient = false } = {},
+  { gradient = false, enclosedMaxArea = Infinity } = {},
 ) {
   const { data, width, height } = img;
   const fuzzMatch = makeFuzzMatch(color, fuzz);
@@ -902,7 +909,7 @@ export function knockOutConnected(
         }
       }
     }
-    if (size >= enclosedMinArea) {
+    if (size >= enclosedMinArea && size <= enclosedMaxArea) {
       for (let k = 0; k < size; k++) data[stack[k] * 4 + 3] = 0;
     }
   }
@@ -914,10 +921,15 @@ export function knockOutConnected(
  * detectBackgroundColor and knockOutConnected). Returns the seed color,
  * or null when the border is already transparent. Mutates img in place.
  */
-export function knockOutEdges(img, fuzz, enclosedMinArea = 0, { gradient = false } = {}) {
+export function knockOutEdges(
+  img,
+  fuzz,
+  enclosedMinArea = 0,
+  { gradient = false, enclosedMaxArea = Infinity } = {},
+) {
   const seed = detectBackgroundColor(img);
   if (!seed) return null;
-  knockOutConnected(img, seed, fuzz, enclosedMinArea, { gradient });
+  knockOutConnected(img, seed, fuzz, enclosedMinArea, { gradient, enclosedMaxArea });
   return seed;
 }
 
@@ -955,9 +967,8 @@ export function snapToImageColor(img, [r, g, b], maxDistance) {
  * that would otherwise survive as a halo outline around the subject.
  * `contiguous` limits a picked color to regions connected to the border,
  * like edges mode; a positive `enclosedMinArea` then also removes
- * enclosed regions of at least that many pixels (edges and contiguous
- * only),
- * and `gradient` lets those modes follow a gradient backdrop (see
+ * enclosed regions of at least that many pixels and at most
+ * `enclosedMaxArea` (edges and contiguous only), and `gradient` lets those modes follow a gradient backdrop (see
  * knockOutConnected). Returns the removed color, or null when nothing
  * was removed.
  */
@@ -966,9 +977,11 @@ export function removeBackground(
   transparent,
   fuzz,
   quantized,
-  { contiguous = false, enclosedMinArea = 0, gradient = false } = {},
+  { contiguous = false, enclosedMinArea = 0, enclosedMaxArea = Infinity, gradient = false } = {},
 ) {
-  if (transparent === "edges") return knockOutEdges(img, fuzz, enclosedMinArea, { gradient });
+  if (transparent === "edges") {
+    return knockOutEdges(img, fuzz, enclosedMinArea, { gradient, enclosedMaxArea });
+  }
   let target = null;
   if (transparent === "auto") target = detectBackgroundColor(img);
   else if (Array.isArray(transparent)) target = transparent;
@@ -979,7 +992,7 @@ export function removeBackground(
     if (snapped) color = snapped;
   }
   if (contiguous && Array.isArray(transparent)) {
-    knockOutConnected(img, color, fuzz, enclosedMinArea, { gradient });
+    knockOutConnected(img, color, fuzz, enclosedMinArea, { gradient, enclosedMaxArea });
   } else {
     knockOutColor(img, color, fuzz);
   }
@@ -1043,8 +1056,9 @@ export const FRINGE_RINGS = 2;
  * collapse into the background's palette slot go with it ("N colors
  * where one is transparent"). `background` holds transparent, fuzz,
  * contiguous and gradient as removeBackground takes them, plus enclosed,
- * enclosedSize (source pixels across) and scale (trace pixels per source
- * pixel) for the enclosed-area limit.
+ * enclosedSize and enclosedMaxSize (source pixels across;
+ * ENCLOSED_NO_LIMIT for no maximum) and scale (trace pixels per source
+ * pixel) for the enclosed-area limits.
  * Returns the removed color, or null. Mutates img in place.
  * @param {(label: string) => void} [stage] progress reporter
  */
@@ -1055,12 +1069,15 @@ export function reduceAndRemoveBackground(img, colors, background, stage = () =>
     contiguous = false,
     enclosed = false,
     enclosedSize = DEFAULTS.enclosedSize,
+    enclosedMaxSize = DEFAULTS.enclosedMaxSize,
     gradient = false,
     scale = 1,
   } = background;
   const options = {
     contiguous,
     enclosedMinArea: enclosed ? enclosedAreaLimit(enclosedSize, scale) : 0,
+    enclosedMaxArea:
+      enclosedMaxSize >= ENCLOSED_NO_LIMIT ? Infinity : enclosedAreaLimit(enclosedMaxSize, scale),
     gradient,
   };
   const quantized = colors < 256;

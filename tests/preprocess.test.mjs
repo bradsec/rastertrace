@@ -6,6 +6,7 @@ import {
   applyStencilInk,
   assertRasterBudget,
   DEFAULTS,
+  ENCLOSED_NO_LIMIT,
   EXPORT_PROFILES,
   fillTransparent,
   MAX_TRACE_PIXELS,
@@ -1020,6 +1021,29 @@ test("knockOutEdges keeps enclosed background below the minimum area", async () 
   const img = ringImage();
   knockOutEdges(img, 16, 145);
   assert.equal(getPixel(img, 10, 10)[3], 255);
+});
+
+test("knockOutConnected keeps enclosed areas above the maximum area", async () => {
+  const { knockOutConnected } = await import("../js/preprocess.js");
+  const img = ringImage(); // enclosed hole is 12x12 = 144 px
+  for (let y = 8; y < 11; y++) for (let x = 8; x < 11; x++) setPixel(img, x, y, [0, 0, 0, 255]);
+  setPixel(img, 9, 9, [255, 255, 255, 255]); // 1 px enclosed region
+  knockOutConnected(img, [255, 255, 255], 16, 1, { enclosedMaxArea: 100 });
+  assert.equal(getPixel(img, 0, 0)[3], 0); // border-connected background still removed
+  assert.equal(getPixel(img, 9, 9)[3], 0); // small enclosed region removed
+  assert.equal(getPixel(img, 5, 5)[3], 255); // large enclosed region kept
+});
+
+test("reduceAndRemoveBackground sizes the enclosed maximum in source pixels", () => {
+  // Hole is 144 trace px. At scale 2, a 5 px maximum is 100 trace px:
+  // kept. ENCLOSED_NO_LIMIT removes it.
+  const bg = { transparent: "edges", fuzz: 16, enclosed: true, enclosedSize: 1, scale: 2 };
+  const capped = ringImage();
+  reduceAndRemoveBackground(capped, 256, { ...bg, enclosedMaxSize: 5 });
+  assert.equal(getPixel(capped, 10, 10)[3], 255);
+  const open = ringImage();
+  reduceAndRemoveBackground(open, 256, { ...bg, enclosedMaxSize: ENCLOSED_NO_LIMIT });
+  assert.equal(getPixel(open, 10, 10)[3], 0);
 });
 
 test("removeBackground enclosed option removes holes in edges and contiguous modes", () => {

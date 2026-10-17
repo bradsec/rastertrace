@@ -2,15 +2,16 @@
 // profiles and presets, and localStorage persistence across reloads.
 import {
   DEFAULTS,
+  ENCLOSED_NO_LIMIT,
   EXPORT_PROFILES,
   parseHexColor,
   PRESETS,
   sanitizeSettings,
   toGrayscaleColor,
-} from "./preprocess.js?v=50";
-import { els, preferences } from "./context.js?v=10";
-import { refreshExport, updatePhysicalHeightOut } from "./exporters.js?v=15";
-import { setEyedropper } from "./cleanup-tools.js?v=19";
+} from "./preprocess.js?v=51";
+import { els, preferences } from "./context.js?v=11";
+import { refreshExport, updatePhysicalHeightOut } from "./exporters.js?v=16";
+import { setEyedropper } from "./cleanup-tools.js?v=20";
 
 /** @returns {HTMLInputElement} */
 const radioEl = (selector) => /** @type {HTMLInputElement} */ (document.querySelector(selector));
@@ -98,6 +99,7 @@ export function currentSettings() {
     contiguous: els.contiguous.checked,
     enclosed: els.enclosed.checked,
     enclosedSize: Number(els.enclosedSize.value),
+    enclosedMaxSize: Number(els.enclosedMaxSize.value),
     gradient: els.gradient.checked,
     specks: Number(els.specks.value),
     fuzz: Number(els.fuzz.value),
@@ -116,6 +118,10 @@ export function updateOutputs() {
   els.fuzzOut.textContent = els.fuzz.value;
   els.specksOut.textContent = els.specks.value;
   els.enclosedSizeOut.textContent = `${els.enclosedSize.value} px`;
+  els.enclosedMaxSizeOut.textContent =
+    Number(els.enclosedMaxSize.value) >= ENCLOSED_NO_LIMIT
+      ? "No limit"
+      : `${els.enclosedMaxSize.value} px`;
   els.edgeTrimOut.textContent = els.edgeTrim.value;
   els.defringeOut.textContent = els.defringe.value;
   els.pathPrecisionOut.textContent = els.pathPrecision.value;
@@ -209,6 +215,7 @@ function snapshotSettings() {
     contiguous: els.contiguous.checked,
     enclosed: els.enclosed.checked,
     enclosedSize: Number(els.enclosedSize.value),
+    enclosedMaxSize: Number(els.enclosedMaxSize.value),
     gradient: els.gradient.checked,
     specks: Number(els.specks.value),
     fuzz: Number(els.fuzz.value),
@@ -280,6 +287,7 @@ export function restoreSettings() {
   check(els.contiguous, "contiguous");
   check(els.enclosed, "enclosed");
   set(els.enclosedSize, "enclosedSize");
+  set(els.enclosedMaxSize, "enclosedMaxSize");
   check(els.gradient, "gradient");
   set(els.specks, "specks");
   set(els.fuzz, "fuzz");
@@ -319,6 +327,7 @@ export function updateTransparencyFields() {
   const connected = mode === "edges" || (mode === "custom" && els.contiguous.checked);
   els.enclosedField.hidden = !connected;
   els.enclosedSizeField.hidden = !connected || !els.enclosed.checked;
+  els.enclosedMaxSizeField.hidden = els.enclosedSizeField.hidden;
   els.gradientField.hidden = !connected;
   els.fuzzField.hidden = mode === "";
   els.specksField.hidden = mode === "";
@@ -352,6 +361,7 @@ export function resetSettings() {
   els.contiguous.checked = DEFAULTS.contiguous;
   els.enclosed.checked = DEFAULTS.enclosed;
   els.enclosedSize.value = String(DEFAULTS.enclosedSize);
+  els.enclosedMaxSize.value = String(DEFAULTS.enclosedMaxSize);
   els.gradient.checked = DEFAULTS.gradient;
   els.specks.value = String(DEFAULTS.specks);
   els.fuzz.value = String(DEFAULTS.fuzz);

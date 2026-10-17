@@ -1,7 +1,7 @@
 // Shared DOM references and mutable app state, imported by every UI
 // module. Keeps no logic beyond tiny helpers so it can never participate
 // in an import cycle.
-import { MAX_TRACE_SIDE } from "./preprocess.js?v=50";
+import { MAX_TRACE_SIDE } from "./preprocess.js?v=51";
 
 /**
  * @template {Element} [T=HTMLElement]
@@ -62,6 +62,9 @@ export const els = {
   enclosedSizeField: $("enclosed-size-field"),
   enclosedSize: /** @type {HTMLInputElement} */ ($("enclosed-size")),
   enclosedSizeOut: $("enclosed-size-out"),
+  enclosedMaxSizeField: $("enclosed-max-size-field"),
+  enclosedMaxSize: /** @type {HTMLInputElement} */ ($("enclosed-max-size")),
+  enclosedMaxSizeOut: $("enclosed-max-size-out"),
   gradientField: $("gradient-field"),
   gradient: /** @type {HTMLInputElement} */ ($("gradient")),
   specksField: $("specks-field"),
