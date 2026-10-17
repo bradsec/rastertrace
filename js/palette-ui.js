@@ -16,6 +16,9 @@ import {
 } from "./palette.js?v=3";
 import { parseHexColor, toHexColor } from "./preprocess.js?v=52";
 
+// Local lookup: adding it to els would bump context.js at every importer.
+const paletteError = /** @type {HTMLElement} */ (document.getElementById("palette-error"));
+
 /** Original fill the editor is open on, or null when closed. */
 let editing = null;
 let refreshFrame = 0;
@@ -126,6 +129,19 @@ function syncFields(hex, source = null) {
   for (const input of [els.paletteHex, ...channels]) {
     if (input !== source) input.removeAttribute("aria-invalid");
   }
+  showFieldError();
+}
+
+/** Explain the first invalid field; color alone does not (WCAG 1.4.1). */
+function showFieldError() {
+  const invalid = (input) => input.getAttribute("aria-invalid") === "true";
+  let message = "";
+  if (invalid(els.paletteHex)) message = "Use six hex digits, like #336699.";
+  else if ([els.paletteR, els.paletteG, els.paletteB].some(invalid)) {
+    message = "Use a whole number from 0 to 255.";
+  }
+  paletteError.textContent = message;
+  paletteError.hidden = !message;
 }
 
 function openEditor(fill) {
@@ -156,6 +172,7 @@ function onHexInput() {
   const rgb = /** @type {[number, number, number] | null} */ (parseHexColor(els.paletteHex.value));
   if (!rgb) {
     els.paletteHex.setAttribute("aria-invalid", "true");
+    showFieldError();
     return;
   }
   els.paletteHex.removeAttribute("aria-invalid");
@@ -170,11 +187,15 @@ function onChannelInput(event) {
   const value = Number(raw);
   if (!/^\d{1,3}$/.test(raw) || value > 255) {
     input.setAttribute("aria-invalid", "true");
+    showFieldError();
     return;
   }
   input.removeAttribute("aria-invalid");
   const channels = [els.paletteR, els.paletteG, els.paletteB];
-  if (channels.some((c) => c.getAttribute("aria-invalid") === "true")) return;
+  if (channels.some((c) => c.getAttribute("aria-invalid") === "true")) {
+    showFieldError();
+    return;
+  }
   const hex = toHexColor(
     /** @type {[number, number, number]} */ (channels.map((c) => Number(c.value))),
   );

@@ -53,7 +53,7 @@
       }
     </script>
 
-    <link rel="stylesheet" href="css/styles.css?v=72" />
+    <link rel="stylesheet" href="css/styles.css?v=73" />
   </head>
   <body>
     <header class="app-header">
@@ -634,6 +634,7 @@
                     ><input
                       type="text"
                       id="palette-hex"
+                      aria-describedby="palette-error"
                       value="#000000"
                       maxlength="7"
                       spellcheck="false"
@@ -641,17 +642,39 @@
                   /></label>
                   <label class="palette-field"
                     ><span>R</span
-                    ><input type="number" id="palette-r" min="0" max="255" step="1" value="0"
+                    ><input
+                      type="number"
+                      id="palette-r"
+                      aria-describedby="palette-error"
+                      min="0"
+                      max="255"
+                      step="1"
+                      value="0"
                   /></label>
                   <label class="palette-field"
                     ><span>G</span
-                    ><input type="number" id="palette-g" min="0" max="255" step="1" value="0"
+                    ><input
+                      type="number"
+                      id="palette-g"
+                      aria-describedby="palette-error"
+                      min="0"
+                      max="255"
+                      step="1"
+                      value="0"
                   /></label>
                   <label class="palette-field"
                     ><span>B</span
-                    ><input type="number" id="palette-b" min="0" max="255" step="1" value="0"
+                    ><input
+                      type="number"
+                      id="palette-b"
+                      aria-describedby="palette-error"
+                      min="0"
+                      max="255"
+                      step="1"
+                      value="0"
                   /></label>
                 </div>
+                <p id="palette-error" class="palette-error" hidden></p>
                 <button type="button" id="palette-reset" class="button button-secondary">
                   Reset color
                 </button>
@@ -1096,7 +1119,7 @@
       <dialog id="tracing-guide-dialog" class="guide-dialog" aria-labelledby="tracing-guide-title">
         <form method="dialog" class="dialog-form guide-dialog-content">
           <div class="dialog-heading">
-            <h2 id="tracing-guide-title">Tracing settings</h2>
+            <h2 id="tracing-guide-title" tabindex="-1" autofocus>Tracing settings</h2>
             <p>Controls for turning raster artwork into clean vector paths.</p>
           </div>
           <dl class="help-settings">
@@ -1200,7 +1223,7 @@
       <dialog id="cleanup-guide-dialog" class="guide-dialog" aria-labelledby="cleanup-guide-title">
         <form method="dialog" class="dialog-form guide-dialog-content">
           <div class="dialog-heading">
-            <h2 id="cleanup-guide-title">Vector cleanup</h2>
+            <h2 id="cleanup-guide-title" tabindex="-1" autofocus>Vector cleanup</h2>
             <p>Remove unwanted areas from the traced vector result.</p>
           </div>
           <dl class="help-settings">
@@ -1266,7 +1289,7 @@
       <dialog id="export-guide-dialog" class="guide-dialog" aria-labelledby="export-guide-title">
         <form method="dialog" class="dialog-form guide-dialog-content">
           <div class="dialog-heading">
-            <h2 id="export-guide-title">SVG export guide</h2>
+            <h2 id="export-guide-title" tabindex="-1" autofocus>SVG export guide</h2>
             <p>Choose an output profile, size, and format for your destination.</p>
           </div>
           <div class="help-grid">
@@ -1470,6 +1493,6 @@
         location.reload();
       };
     </script>
-    <script type="module" src="js/app.js?v=97" onerror="window.recoverRasterTraceBoot()"></script>
+    <script type="module" src="js/app.js?v=98" onerror="window.recoverRasterTraceBoot()"></script>
   </body>
 </html>

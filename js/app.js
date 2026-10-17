@@ -30,7 +30,7 @@ import {
   setSelectionTool,
   setView,
 } from "./cleanup-tools.js?v=23";
-import { afterTrace, resetPalette } from "./palette-ui.js?v=3";
+import { afterTrace, resetPalette } from "./palette-ui.js?v=4";
 import {
   applyExportProfile,
   applyMeasurementUnit,
@@ -362,6 +362,22 @@ for (const panel of panels) {
     } catch {
       // Opening and closing panels does not depend on persistence.
     }
+  });
+}
+
+// Dialogs open from menu items that close with the menu, so focus would
+// drop to <body> on close. Return it to the menu button instead.
+for (const dialog of document.querySelectorAll("dialog")) {
+  let opener = null;
+  dialog.addEventListener("focusin", (event) => {
+    const from = event.relatedTarget;
+    if (!opener && from instanceof HTMLElement && !dialog.contains(from)) opener = from;
+  });
+  dialog.addEventListener("close", () => {
+    const menu = opener?.closest("details.app-menu");
+    const target = menu?.querySelector("summary") ?? opener;
+    opener = null;
+    if (target instanceof HTMLElement && target.isConnected) target.focus({ preventScroll: true });
   });
 }
 

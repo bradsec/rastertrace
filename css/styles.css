@@ -78,7 +78,9 @@ body {
 }
 
 :focus-visible {
-  outline: none;
+  /* Transparent until forced colors repaint it: box-shadow is dropped there. */
+  outline: 2px solid transparent;
+  outline-offset: 2px;
   box-shadow: var(--ring);
   border-radius: var(--r-sm);
 }
@@ -595,7 +597,7 @@ main {
 }
 .palette-grid .swatch,
 .palette-chip {
-  border: 1px solid var(--border-strong);
+  border: 1px solid var(--border-input);
   border-radius: var(--r-sm);
 }
 .palette-grid .swatch {
@@ -715,6 +717,11 @@ main {
 }
 .palette-field input[aria-invalid="true"] {
   border-color: var(--error);
+}
+.palette-error {
+  margin: 6px 0 0;
+  color: var(--error);
+  font-size: 12px;
 }
 .palette-edits {
   display: grid;
@@ -1018,6 +1025,13 @@ details.advanced[open] {
   padding: 16px;
   cursor: grab;
   touch-action: none;
+}
+
+/* The pane clips overflow, so an outer ring would be cut off. */
+.preview:focus-visible {
+  outline-offset: -2px;
+  box-shadow: inset 0 0 0 2px var(--accent);
+  border-radius: 0;
 }
 
 .preview.panning {
@@ -1482,6 +1496,11 @@ dialog::backdrop {
   gap: 4px;
 }
 .dialog-heading h2,
+/* Guide headings take initial focus so long dialogs open at the top;
+   they are not controls, so no ring. */
+.dialog-heading h2[tabindex="-1"]:focus-visible {
+  box-shadow: none;
+}
 .dialog-heading p {
   margin: 0;
 }
@@ -1691,9 +1710,51 @@ dialog::backdrop {
 
 @media (max-width: 520px) {
   .brand {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  /* The group keeps its aria-label; dropping the text fits Redo at 360px. */
+  .eraser-tool-label {
     display: none;
   }
   #copy-svg {
     display: none;
+  }
+}
+
+/* ---------- Forced colors (Windows High Contrast) ---------- */
+/* Box shadows are removed in forced colors, so focus and pressed states
+   that rely on them need an outline or system colors instead. */
+@media (forced-colors: active) {
+  /* Overrides the per-component outline: none rules. */
+  :focus-visible {
+    outline: 2px solid Highlight !important;
+    outline-offset: 2px;
+  }
+  .preview:focus-visible {
+    outline-offset: -2px;
+  }
+  /* Component pressed rules are more specific and their colors get forced
+     to Canvas, which hides the state. Opting out of adjustment drops the
+     Canvas text backplate that otherwise hides HighlightText. */
+  button[aria-pressed="true"] {
+    forced-color-adjust: none;
+    background: Highlight !important;
+    color: HighlightText !important;
+    border-color: Highlight !important;
+  }
+  /* Swatches show traced colors, which forced colors would otherwise erase. */
+  .palette-grid .swatch,
+  .palette-chip {
+    forced-color-adjust: none;
+    border-color: CanvasText;
+  }
+  .palette-grid .swatch[aria-pressed="true"] {
+    outline: 3px solid Highlight;
+    outline-offset: 1px;
   }
 }

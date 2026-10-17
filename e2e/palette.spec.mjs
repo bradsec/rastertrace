@@ -113,6 +113,22 @@ test("partial hex is ignored", async ({ page }) => {
   expect(await resultSvg(page)).toContain('fill="#00FF00"');
 });
 
+test("invalid fields explain the expected format", async ({ page }) => {
+  await loadShapes(page);
+  await editFirstSwatch(page, "#12zz");
+  const error = page.locator("#palette-error");
+  await expect(error).toHaveText("Use six hex digits, like #336699.");
+  await expect(page.locator("#palette-hex")).toHaveAccessibleDescription(
+    "Use six hex digits, like #336699.",
+  );
+  await page.locator("#palette-hex").fill("#336699");
+  await expect(error).toBeHidden();
+  await page.locator("#palette-g").fill("300");
+  await expect(error).toHaveText("Use a whole number from 0 to 255.");
+  await page.locator("#palette-g").fill("30");
+  await expect(error).toBeHidden();
+});
+
 test("reset color restores the original fill", async ({ page }) => {
   await loadShapes(page);
   const original = await editFirstSwatch(page, "#00FF00");

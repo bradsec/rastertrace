@@ -1,0 +1,57 @@
+import { expect, test } from "@playwright/test";
+
+test.beforeEach(async ({ page }) => {
+  await page.goto("/");
+  await page.evaluate(() => localStorage.clear());
+  await page.reload();
+});
+
+test("guide dialog opens at its heading and returns focus to the menu", async ({ page }) => {
+  await page.setViewportSize({ width: 360, height: 740 });
+  const help = page.locator("summary", { hasText: "Help" });
+  await help.focus();
+  await page.keyboard.press("Enter");
+  await page.locator('[data-action="tracing-guide"]').focus();
+  await page.keyboard.press("Enter");
+  await expect(page.locator("#tracing-guide-title")).toBeFocused();
+  const scrollTop = await page.locator("#tracing-guide-dialog form").evaluate((f) => f.scrollTop);
+  expect(scrollTop).toBe(0);
+  await page.keyboard.press("Escape");
+  await expect(help).toBeFocused();
+});
+
+test("cleanup toolbar fits a 360px screen", async ({ page }) => {
+  await page.setViewportSize({ width: 360, height: 740 });
+  const fits = await page
+    .locator(".header-canvas-tools")
+    .evaluate((bar) => bar.scrollWidth <= bar.clientWidth);
+  expect(fits).toBe(true);
+  await expect(page.locator("#eraser-redo")).toBeInViewport({ ratio: 1 });
+});
+
+test("page heading stays in the accessibility tree on phones", async ({ page }) => {
+  await page.setViewportSize({ width: 360, height: 740 });
+  await expect(page.getByRole("heading", { level: 1 })).toHaveCount(1);
+});
+
+test.describe("forced colors", () => {
+  test.use({ colorScheme: "dark" });
+
+  test.beforeEach(async ({ page }) => {
+    await page.emulateMedia({ forcedColors: "active" });
+    await page.setViewportSize({ width: 1280, height: 800 });
+  });
+
+  test("focus shows an outline", async ({ page }) => {
+    await page.keyboard.press("Tab");
+    const outline = await page.evaluate(
+      () => getComputedStyle(document.activeElement).outlineStyle,
+    );
+    expect(outline).toBe("solid");
+  });
+
+  test("pressed toggle differs from unpressed", async ({ page }) => {
+    const bg = (id) => page.locator(id).evaluate((el) => getComputedStyle(el).backgroundColor);
+    expect(await bg("#show-result")).not.toBe(await bg("#show-source"));
+  });
+});
