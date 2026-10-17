@@ -8,7 +8,9 @@
   --surface-hover: #313946;
   --border: #343c47;
   --border-strong: #4f5b69;
-  --border-input: #687687;
+  /* 3:1 against every surface up to --surface-3 (WCAG 1.4.11). */
+  --border-input: #6e7c8d;
+  --border-hairline: #0d1013;
   --text: #f4f6f8;
   --text-dim: #c7cdd5;
   --text-faint: #98a3b0;
@@ -19,8 +21,14 @@
   --accent-ink: #181109;
   --error: #f0766b;
   --success: #62c598;
-  --r: 8px;
+  --r-xs: 4px;
   --r-sm: 6px;
+  --r: 8px;
+  --r-lg: 12px;
+  --shadow-1: 0 1px 2px rgb(0 0 0 / 24%);
+  --shadow-2: 0 4px 16px rgb(0 0 0 / 40%);
+  --shadow-3: 0 16px 48px rgb(0 0 0 / 50%);
+  --disabled-opacity: 0.4;
   --check-a: #303741;
   --check-b: #242a32;
   --ring: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent);
@@ -82,7 +90,20 @@ body {
   outline: 2px solid transparent;
   outline-offset: 2px;
   box-shadow: var(--ring);
-  border-radius: var(--r-sm);
+}
+
+/* Short state transitions so hover and pressed changes do not snap. */
+:where(button, summary, select, input) {
+  transition:
+    background-color 120ms ease-out,
+    border-color 120ms ease-out,
+    color 120ms ease-out,
+    box-shadow 120ms ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  :where(button, summary, select, input) {
+    transition: none;
+  }
 }
 
 /* ---------- App header and menus ---------- */
@@ -97,7 +118,7 @@ body {
   gap: 16px;
   padding: 0 12px;
   background: var(--surface-1);
-  border-bottom: 1px solid #0d1013;
+  border-bottom: 1px solid var(--border-hairline);
   box-shadow: inset 0 -1px rgb(255 255 255 / 5%);
 }
 
@@ -166,7 +187,7 @@ body {
   border: 1px solid var(--border-strong);
   border-radius: var(--r);
   background: var(--surface-3);
-  box-shadow: 0 18px 48px rgb(0 0 0 / 46%);
+  box-shadow: var(--shadow-3);
   font:
     13px/1.4 ui-sans-serif,
     system-ui,
@@ -186,7 +207,7 @@ body {
   gap: 24px;
   padding: 5px 8px;
   border: 0;
-  border-radius: var(--r);
+  border-radius: var(--r-xs);
   background: transparent;
   color: inherit;
   font: inherit;
@@ -210,7 +231,7 @@ body {
   color: var(--accent-ink);
 }
 .menu-popover button:disabled {
-  opacity: 0.42;
+  opacity: var(--disabled-opacity);
   cursor: default;
 }
 .menu-popover button:disabled:hover {
@@ -241,7 +262,7 @@ body {
   background: var(--surface-2);
   color: var(--text-dim);
   font:
-    600 13px/1 ui-sans-serif,
+    500 13px/1 ui-sans-serif,
     system-ui,
     sans-serif;
   cursor: pointer;
@@ -257,7 +278,7 @@ body {
   background: var(--surface-1);
 }
 .header-tool:disabled {
-  opacity: 0.42;
+  opacity: var(--disabled-opacity);
   cursor: default;
 }
 .header-tool:disabled:hover {
@@ -292,11 +313,12 @@ body {
   justify-content: center;
   gap: 6px;
   padding: 0 8px;
-  border: 1px solid var(--border);
-  border-radius: var(--r);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-sm);
   background: var(--surface-2);
   color: var(--text-dim);
   font: inherit;
+  font-weight: 500;
   white-space: nowrap;
   cursor: pointer;
 }
@@ -310,7 +332,7 @@ body {
   transform: translateY(1px);
 }
 .header-action:disabled {
-  opacity: 0.42;
+  opacity: var(--disabled-opacity);
   cursor: default;
 }
 .primary-action {
@@ -318,14 +340,14 @@ body {
   border-color: var(--accent);
   background: var(--accent);
   color: var(--accent-ink);
-  font-weight: 650;
+  font-weight: 600;
 }
 .primary-action:hover {
   border-color: var(--accent-hover);
   background: var(--accent-hover);
 }
 .primary-action:disabled {
-  opacity: 0.42;
+  opacity: var(--disabled-opacity);
   cursor: default;
 }
 
@@ -338,6 +360,15 @@ main {
 }
 
 /* ---------- Empty state ---------- */
+/* Center the drop zone in the whole window, not the top 55%. */
+main:has(> #empty-state:not([hidden])) {
+  display: grid;
+}
+/* Tools have nothing to act on yet: hide them instead of showing a row of
+   disabled controls. Opacity keeps the layout and the toolbar box. */
+body:has(#empty-state:not([hidden])) .eraser-controls {
+  opacity: 0;
+}
 .stage-empty {
   display: grid;
   min-height: 55vh;
@@ -377,7 +408,7 @@ main {
 .dropzone-title {
   margin: 0;
   font-size: 18px;
-  font-weight: 650;
+  font-weight: 600;
 }
 .dropzone-hint {
   margin: 0;
@@ -396,7 +427,7 @@ main {
   border-radius: var(--r-sm);
   border: 1px solid transparent;
   font: inherit;
-  font-weight: 600;
+  font-weight: 500;
   cursor: pointer;
   text-decoration: none;
 }
@@ -415,7 +446,7 @@ main {
 .button-secondary {
   background: var(--surface-2);
   color: var(--text);
-  border-color: var(--border-input);
+  border-color: var(--border-strong);
 }
 .button-secondary:hover {
   border-color: var(--text-faint);
@@ -423,8 +454,7 @@ main {
 
 .button[disabled],
 .button[aria-disabled="true"] {
-  opacity: 0.45;
-  cursor: not-allowed;
+  opacity: var(--disabled-opacity);
   pointer-events: none;
 }
 
@@ -504,7 +534,7 @@ main {
   justify-content: space-between;
   gap: 8px;
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 500;
   padding: 0;
 }
 .label-row {
@@ -513,9 +543,11 @@ main {
   gap: 8px;
 }
 
+/* Values stay quiet: orange is reserved for the primary action, the
+   current selection and focus. */
 .field output {
   font-variant-numeric: tabular-nums;
-  color: var(--accent);
+  color: var(--text-dim);
 }
 
 .choice {
@@ -646,7 +678,7 @@ main {
   padding: 10px;
   border: 1px solid var(--border);
   border-radius: var(--r-sm);
-  background: var(--surface-1);
+  background: var(--surface-2);
 }
 .palette-editor[hidden] {
   display: none;
@@ -783,6 +815,9 @@ input[type="range"] {
 }
 input[type="radio"],
 input[type="checkbox"] {
+  flex: none;
+  /* UA margins pushed boxes off the label column and below the text. */
+  margin: 0;
   accent-color: var(--accent);
   width: 16px;
   height: 16px;
@@ -832,6 +867,21 @@ input[type="checkbox"] {
   transform: rotate(225deg) translate(-1px, -1px);
 }
 
+details.advanced > summary::after {
+  content: "";
+  width: 6px;
+  height: 6px;
+  margin-right: 1px;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  color: var(--text-faint);
+  transform: rotate(45deg) translate(-1px, -1px);
+  transition: transform 160ms ease-out;
+}
+details.advanced[open] > summary::after {
+  transform: rotate(225deg) translate(-1px, -1px);
+}
+
 .panel > summary:hover {
   color: var(--accent);
 }
@@ -877,15 +927,22 @@ input[type="checkbox"] {
 
 /* Nested advanced block: quieter than a top-level panel */
 details.advanced > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  list-style: none;
   cursor: pointer;
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--text-dim);
   user-select: none;
 }
+details.advanced > summary::-webkit-details-marker {
+  display: none;
+}
 
 details.advanced > summary:hover {
-  color: var(--accent);
+  color: var(--text);
 }
 
 details.advanced[open] {
@@ -920,7 +977,7 @@ details.advanced[open] {
   background: var(--surface-2);
   color: var(--text-dim);
   font: inherit;
-  font-weight: 600;
+  font-weight: 500;
   cursor: pointer;
 }
 
@@ -928,8 +985,9 @@ details.advanced[open] {
   border-right: 0;
 }
 .toggle[aria-pressed="true"] {
-  background: var(--accent);
-  color: var(--accent-ink);
+  background: var(--surface-hover);
+  color: var(--text);
+  box-shadow: inset 0 -2px var(--accent);
 }
 
 .restored-note {
@@ -1054,8 +1112,8 @@ details.advanced[open] {
   transform: translateX(-50%);
   border: 1px solid var(--border-strong);
   border-radius: var(--r);
-  background: var(--surface-1);
-  box-shadow: 0 4px 16px rgb(0 0 0 / 40%);
+  background: var(--surface-3);
+  box-shadow: var(--shadow-2);
 }
 .selection-actions[hidden],
 .selection-actions [hidden] {
@@ -1091,7 +1149,7 @@ details.advanced[open] {
 .eraser-tool-label {
   color: var(--text-dim);
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 500;
 }
 .eraser-tool {
   min-width: 34px;
@@ -1163,7 +1221,7 @@ details.advanced[open] {
   height: 26px;
   padding: 3px 6px;
   border: 1px solid var(--border);
-  border-radius: 3px;
+  border-radius: var(--r-xs);
   color: var(--text);
   background: var(--surface-1);
   font:
@@ -1177,7 +1235,7 @@ details.advanced[open] {
   outline: none;
 }
 .blob-color input:disabled {
-  opacity: 0.5;
+  opacity: var(--disabled-opacity);
 }
 .eraser-action {
   padding-inline: 8px;
@@ -1323,7 +1381,7 @@ details.advanced[open] {
   border: 1px solid var(--border-strong);
   border-radius: var(--r-sm);
   background: var(--surface-2);
-  box-shadow: 0 1px 2px rgb(0 0 0 / 24%);
+  box-shadow: var(--shadow-1);
 }
 .zoom-level {
   font-size: 12px;
@@ -1336,7 +1394,7 @@ details.advanced[open] {
   inset: 0;
   display: grid;
   place-items: center;
-  background: rgba(20, 21, 23, 0.72);
+  background: rgb(17 20 25 / 72%);
   font-weight: 600;
 }
 
@@ -1404,8 +1462,8 @@ details.advanced[open] {
   transform: translateX(-50%);
   border: 1px solid var(--error);
   border-radius: var(--r);
-  background: var(--surface-1);
-  box-shadow: 0 6px 20px rgb(0 0 0 / 45%);
+  background: var(--surface-3);
+  box-shadow: var(--shadow-2);
 }
 .error[hidden] {
   display: none;
@@ -1429,7 +1487,7 @@ details.advanced[open] {
   margin: 0 0 8px;
   color: var(--text-faint);
   font-size: 11px;
-  font-weight: 650;
+  font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
@@ -1453,7 +1511,7 @@ details.advanced[open] {
   overflow: hidden;
   color: var(--text);
   font-size: 12px;
-  font-weight: 650;
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1468,7 +1526,7 @@ details.advanced[open] {
   min-height: 26px;
   padding: 0 10px;
   background: var(--surface-1);
-  border-top: 1px solid #101216;
+  border-top: 1px solid var(--border-hairline);
   color: var(--text-dim);
   font-size: 11px;
 }
@@ -1478,7 +1536,7 @@ details.advanced[open] {
 }
 .statusbar .status-zoom {
   height: 22px;
-  border-radius: 3px;
+  border-radius: var(--r-xs);
   box-shadow: none;
 }
 .statusbar .status-zoom .header-tool {
@@ -1515,10 +1573,10 @@ dialog {
   padding: 0;
   overflow: auto;
   border: 1px solid var(--border-strong);
-  border-radius: 8px;
-  background: #25292e;
+  border-radius: var(--r-lg);
+  background: var(--surface-3);
   color: var(--text);
-  box-shadow: 0 24px 70px rgb(0 0 0 / 60%);
+  box-shadow: var(--shadow-3);
 }
 
 dialog::backdrop {
@@ -1554,17 +1612,17 @@ dialog::backdrop {
   gap: 4px;
 }
 .dialog-heading h2,
+.dialog-heading p {
+  margin: 0;
+}
 /* Guide headings take initial focus so long dialogs open at the top;
    they are not controls, so no ring. */
 .dialog-heading h2[tabindex="-1"]:focus-visible {
   box-shadow: none;
 }
-.dialog-heading p {
-  margin: 0;
-}
 .dialog-heading h2 {
   font-size: 18px;
-  font-weight: 650;
+  font-weight: 600;
 }
 .dialog-heading p {
   color: var(--text-dim);
@@ -1583,22 +1641,30 @@ dialog::backdrop {
   gap: 8px;
   margin-top: 3px;
 }
+/* Same look as .button-secondary. */
 .dialog-actions button {
-  min-height: 34px;
-  padding: 7px 12px;
-  border: 1px solid var(--border);
-  border-radius: var(--r);
-  background: var(--surface-3);
+  min-height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-sm);
+  background: var(--surface-2);
   color: var(--text);
   font: inherit;
+  font-weight: 500;
   cursor: pointer;
+}
+.dialog-actions button:hover {
+  background: var(--surface-hover);
 }
 
 /* ---------- Small screens ---------- */
 @media (max-width: 1660px) {
   .app-header {
     grid-template-columns: minmax(0, 1fr) auto;
-    grid-template-rows: minmax(0, 50px) minmax(0, 40px);
+    /* The second row takes what the 1px bottom border leaves. The 16px
+       column gap would also split the rows, clipping the menu row. */
+    grid-template-rows: minmax(0, 50px) minmax(0, 1fr);
+    row-gap: 0;
     height: 90px;
     min-height: 90px;
     max-height: 90px;
@@ -1621,8 +1687,10 @@ dialog::backdrop {
     position: static;
     grid-column: 1 / -1;
     grid-row: 2;
-    height: 40px;
+    height: auto;
+    align-self: stretch;
     min-height: 0;
+    justify-self: start;
     width: calc(100% + 24px);
     margin-left: -12px;
     padding: 5px 12px 7px;
@@ -1915,7 +1983,7 @@ dialog::backdrop {
 
 @media (pointer: coarse) and (max-width: 1660px) {
   .app-header {
-    grid-template-rows: minmax(0, 56px) minmax(0, 52px);
+    grid-template-rows: minmax(0, 56px) minmax(0, 1fr);
     height: 108px;
     min-height: 108px;
     max-height: 108px;
@@ -1926,7 +1994,7 @@ dialog::backdrop {
     height: 56px;
   }
   .header-canvas-tools {
-    height: 52px;
+    height: auto;
   }
   .workspace {
     height: calc(100dvh - 156px);

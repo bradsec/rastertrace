@@ -1,6 +1,6 @@
 {
-  "name": "RasterTrace",
-  "short_name": "RasterTrace",
+  "name": "rastertrace",
+  "short_name": "rastertrace",
   "description": "Convert raster images to clean SVG vectors entirely in your browser.",
   "start_url": ".",
   "display": "standalone",

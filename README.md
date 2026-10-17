@@ -1,10 +1,10 @@
-# RasterTrace
+# rastertrace
 
 Convert raster images to clean, scalable SVG vectors entirely in your browser. [vtracer](https://github.com/visioncortex/vtracer) compiled to WebAssembly plus a Canvas/JS preprocessing stage. Images never leave your machine: no upload, no backend.
 
 **Live app: https://rastertrace.com/**
 
-![RasterTrace app interface](screenshot.png)
+![rastertrace app interface](screenshot.png)
 
 ## Features
 
