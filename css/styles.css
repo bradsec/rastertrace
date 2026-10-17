@@ -1404,9 +1404,6 @@ details.advanced[open] {
 .blob-color input:disabled {
   opacity: var(--disabled-opacity);
 }
-.eraser-controls .eraser-action:disabled {
-  visibility: hidden;
-}
 
 .eraser-action {
   padding-inline: 8px;
