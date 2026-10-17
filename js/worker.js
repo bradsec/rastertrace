@@ -10,10 +10,11 @@ import {
   medianFilter,
   reduceAndRemoveBackground,
   removeSpecks,
+  smoothAlpha,
   straightenPaths,
   thresholdImage,
   toGrayscale,
-} from "./preprocess.js?v=53";
+} from "./preprocess.js?v=54";
 
 // Explicit versioned URL: the glue's own wasm fetch drops the ?v= query,
 // so a rebuilt binary would otherwise be served from stale browser cache
@@ -64,6 +65,12 @@ self.onmessage = async (event) => {
       if (knockedOut && settings.specks > 0) {
         stage("Cleaning specks…");
         removeSpecks(img, settings.specks);
+      }
+      // Round off jagged cutout edges before trimming, so the trim and
+      // defringe follow the smoothed boundary.
+      if (knockedOut && settings.edgeSmooth > 0) {
+        stage("Smoothing edges…");
+        smoothAlpha(img, settings.edgeSmooth);
       }
       // Choke the matte: the knockout leaves a fringe of background-blend
       // colors along the boundary that no color tolerance can catch.

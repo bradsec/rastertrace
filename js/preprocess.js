@@ -66,6 +66,7 @@ export const DEFAULTS = Object.freeze({
   gradient: false,
   specks: 0,
   edgeTrim: 0,
+  edgeSmooth: 0,
   defringe: 0,
   stencil: false,
   stencilThreshold: 128,
@@ -555,6 +556,7 @@ const SETTING_CHECKS = {
   gradient: (v) => typeof v === "boolean",
   specks: (v) => Number.isFinite(v) && v >= 0 && v <= 16,
   edgeTrim: (v) => Number.isFinite(v) && v >= 0 && v <= 16,
+  edgeSmooth: (v) => Number.isFinite(v) && v >= 0 && v <= 8,
   defringe: (v) => Number.isFinite(v) && v >= 0 && v <= 8,
   pathPrecision: (v) => Number.isFinite(v) && v >= 1 && v <= 4,
   lengthThreshold: (v) => Number.isFinite(v) && v >= 3.5 && v <= 10,
@@ -1210,6 +1212,78 @@ export function erodeAlpha(img, passes) {
     }
     if (peel.length === 0) break;
     for (const p of peel) data[p * 4 + 3] = 0;
+  }
+  return img;
+}
+
+/**
+ * Matte smoothing: box-blur the opaque mask twice with a (2r+1) window and
+ * threshold it at half, so bumps and notches narrower than about `radius`
+ * flatten while straight edges stay put; corners round by about `radius`
+ * and features thinner than it vanish. Pixels outside the image count as
+ * their nearest edge pixel, so the canvas border is not eaten. Newly
+ * opaque pixels take the color of an adjacent opaque pixel. Mutates img.
+ */
+export function smoothAlpha(img, radius) {
+  if (radius <= 0) return img;
+  const { data, width, height } = img;
+  const n = width * height;
+  let mask = new Float32Array(n);
+  for (let p = 0; p < n; p++) mask[p] = data[p * 4 + 3] >= ALPHA_THRESHOLD ? 1 : 0;
+  const window = 2 * radius + 1;
+  // Separable running-sum box blur with edge replication.
+  const blur = (src, length, count, stride, step) => {
+    const out = new Float32Array(n);
+    for (let line = 0; line < count; line++) {
+      const base = line * stride;
+      const at = (i) => src[base + Math.min(length - 1, Math.max(0, i)) * step];
+      let sum = 0;
+      for (let i = -radius; i <= radius; i++) sum += at(i);
+      for (let i = 0; i < length; i++) {
+        out[base + i * step] = sum / window;
+        sum += at(i + radius + 1) - at(i - radius);
+      }
+    }
+    return out;
+  };
+  for (let pass = 0; pass < 2; pass++) {
+    mask = blur(mask, width, height, width, 1);
+    mask = blur(mask, height, width, 1, width);
+  }
+
+  /** @type {number[]} newly opaque pixels still waiting for a color */
+  let pending = [];
+  for (let p = 0; p < n; p++) {
+    const was = data[p * 4 + 3] >= ALPHA_THRESHOLD;
+    const now = mask[p] >= 0.5;
+    if (was && !now) data[p * 4 + 3] = 0;
+    else if (!was && now) pending.push(p);
+  }
+  const colored = new Uint8Array(n);
+  for (let p = 0; p < n; p++) colored[p] = data[p * 4 + 3] >= ALPHA_THRESHOLD ? 1 : 0;
+  // Grow colors ring by ring into the filled-in pixels.
+  while (pending.length) {
+    const next = [];
+    const filled = [];
+    for (const p of pending) {
+      const x = p % width;
+      const neighbours = [
+        x > 0 ? p - 1 : -1,
+        x < width - 1 ? p + 1 : -1,
+        p >= width ? p - width : -1,
+        p < n - width ? p + width : -1,
+      ];
+      const source = neighbours.find((q) => q >= 0 && colored[q]);
+      if (source === undefined) next.push(p);
+      else filled.push([p, source]);
+    }
+    if (!filled.length) break;
+    for (const [p, q] of filled) {
+      data.copyWithin(p * 4, q * 4, q * 4 + 3);
+      data[p * 4 + 3] = 255;
+      colored[p] = 1;
+    }
+    pending = next;
   }
   return img;
 }

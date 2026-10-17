@@ -8,10 +8,10 @@ import {
   PRESETS,
   sanitizeSettings,
   toGrayscaleColor,
-} from "./preprocess.js?v=53";
-import { els, preferences } from "./context.js?v=20";
-import { refreshExport, updatePhysicalHeightOut } from "./exporters.js?v=27";
-import { setEyedropper } from "./cleanup-tools.js?v=33";
+} from "./preprocess.js?v=54";
+import { els, preferences } from "./context.js?v=21";
+import { refreshExport, updatePhysicalHeightOut } from "./exporters.js?v=28";
+import { setEyedropper } from "./cleanup-tools.js?v=34";
 
 /** @returns {HTMLInputElement} */
 const radioEl = (selector) => /** @type {HTMLInputElement} */ (document.querySelector(selector));
@@ -105,6 +105,7 @@ export function currentSettings() {
     fuzz: Number(els.fuzz.value),
     edgeTrim: Number(els.edgeTrim.value),
     defringe: Number(els.defringe.value),
+    edgeSmooth: Number(els.edgeSmooth.value),
   };
 }
 
@@ -124,6 +125,7 @@ export function updateOutputs() {
       : `${els.enclosedMaxSize.value} px`;
   els.edgeTrimOut.textContent = els.edgeTrim.value;
   els.defringeOut.textContent = els.defringe.value;
+  els.edgeSmoothOut.textContent = els.edgeSmooth.value;
   els.pathPrecisionOut.textContent = els.pathPrecision.value;
   els.lengthThresholdOut.textContent = els.lengthThreshold.value;
   els.spliceThresholdOut.textContent = els.spliceThreshold.value;
@@ -221,6 +223,7 @@ function snapshotSettings() {
     fuzz: Number(els.fuzz.value),
     edgeTrim: Number(els.edgeTrim.value),
     defringe: Number(els.defringe.value),
+    edgeSmooth: Number(els.edgeSmooth.value),
     pathPrecision: Number(els.pathPrecision.value),
     lengthThreshold: Number(els.lengthThreshold.value),
     spliceThreshold: Number(els.spliceThreshold.value),
@@ -293,6 +296,7 @@ export function restoreSettings() {
   set(els.fuzz, "fuzz");
   set(els.edgeTrim, "edgeTrim");
   set(els.defringe, "defringe");
+  set(els.edgeSmooth, "edgeSmooth");
   set(els.pathPrecision, "pathPrecision");
   set(els.lengthThreshold, "lengthThreshold");
   set(els.spliceThreshold, "spliceThreshold");
@@ -333,6 +337,7 @@ export function updateTransparencyFields() {
   els.specksField.hidden = mode === "";
   els.edgeTrimField.hidden = mode === "";
   els.defringeField.hidden = mode === "";
+  els.edgeSmoothField.hidden = mode === "";
   els.backgroundSummary.textContent =
     els.transparent.selectedOptions[0]?.textContent || "Keep background";
 }
@@ -367,6 +372,7 @@ export function resetSettings() {
   els.fuzz.value = String(DEFAULTS.fuzz);
   els.edgeTrim.value = String(DEFAULTS.edgeTrim);
   els.defringe.value = String(DEFAULTS.defringe);
+  els.edgeSmooth.value = String(DEFAULTS.edgeSmooth);
   els.stencil.checked = false;
   els.stencilThreshold.value = "128";
   radioEl('input[name="stencil-ink"][value="black"]').checked = true;

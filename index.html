@@ -846,6 +846,17 @@
                   </div>
                   <input type="range" id="specks" min="0" max="16" step="1" value="0" />
                 </div>
+                <div class="subfield" id="edge-smooth-field" hidden>
+                  <div class="label-row">
+                    <label
+                      for="edge-smooth"
+                      title="Rounds off jagged steps and small bumps along the cutout edge. Corners round and details thinner than this many pixels disappear. 0 is off"
+                      >Edge smooth</label
+                    >
+                    <output id="edge-smooth-out" for="edge-smooth">0</output>
+                  </div>
+                  <input type="range" id="edge-smooth" min="0" max="8" step="1" value="0" />
+                </div>
                 <div class="subfield" id="edge-trim-field" hidden>
                   <div class="label-row">
                     <label
@@ -1260,8 +1271,9 @@
                 Makes the background transparent: connected-from-edges, auto-detected color, or a
                 picked color. A picked color can be limited to areas connected to the edges, and
                 edge removal can also clear enclosed background or follow a gradient background.
-                Tolerance widens the match; clean specks removes stray dots and pinholes; edge trim
-                and defringe clean the cutout boundary.
+                Tolerance widens the match; clean specks removes stray dots and pinholes; edge
+                smooth rounds off jagged cutout edges (corners round and details thinner than the
+                setting disappear); edge trim and defringe clean the cutout boundary.
               </dd>
             </div>
             <div>
@@ -1567,6 +1579,6 @@
         location.reload();
       };
     </script>
-    <script type="module" src="js/app.js?v=112" onerror="window.recoverRasterTraceBoot()"></script>
+    <script type="module" src="js/app.js?v=113" onerror="window.recoverRasterTraceBoot()"></script>
   </body>
 </html>

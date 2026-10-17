@@ -1,9 +1,9 @@
 // Palette panel: swatch grid, color editor, and the result eyedropper
 // that picks a traced color to edit. Edits recolor fills only; they
 // only retrace when switching layering.
-import { els, hooks, state } from "./context.js?v=20";
-import { deactivateCleanupTools, setView } from "./cleanup-tools.js?v=33";
-import { refreshExport } from "./exporters.js?v=27";
+import { els, hooks, state } from "./context.js?v=21";
+import { deactivateCleanupTools, setView } from "./cleanup-tools.js?v=34";
+import { refreshExport } from "./exporters.js?v=28";
 import {
   nearestFill,
   paletteMapping,
@@ -13,8 +13,8 @@ import {
   rasterPalette,
   stencilFill,
   svgPalette,
-} from "./palette.js?v=6";
-import { parseHexColor, toHexColor } from "./preprocess.js?v=53";
+} from "./palette.js?v=7";
+import { parseHexColor, toHexColor } from "./preprocess.js?v=54";
 
 // Local lookup: adding it to els would bump context.js at every importer.
 const paletteHiddenNote = /** @type {HTMLElement} */ (
