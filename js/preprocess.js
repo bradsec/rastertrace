@@ -746,12 +746,18 @@ function fuzzDistance(a, b) {
  * scaled so 0-255 fuzz values stay comparable to the old per-channel
  * scale. Doubling the a/b (chroma) axes keeps hue shifts (subject edges)
  * protected while letting pure lightness noise (shadows, JPEG artifacts)
- * count as background. Allocation-free per call: runs per pixel.
+ * count as background. Allocation-free per call: runs per pixel, and
+ * remembers the last color, since flat art repeats it along whole runs.
  */
 function makeFuzzMatch(target, fuzz) {
   const [L1, A1, B1] = srgbToOklab(target);
   const lut = linearLut();
+  let lastKey = -1;
+  let lastResult = false;
   return (r, g, b) => {
+    const key = (r << 16) | (g << 8) | b;
+    if (key === lastKey) return lastResult;
+    lastKey = key;
     const lr = lut[r];
     const lg = lut[g];
     const lb = lut[b];
@@ -761,7 +767,8 @@ function makeFuzzMatch(target, fuzz) {
     const dL = L1 - (0.2104542553 * l + 0.793617785 * m - 0.0040720468 * s);
     const dA = (A1 - (1.9779984951 * l - 2.428592205 * m + 0.4505937099 * s)) * 2;
     const dB = (B1 - (0.0259040371 * l + 0.7827717662 * m - 0.808675766 * s)) * 2;
-    return Math.sqrt(dL * dL + dA * dA + dB * dB) * 255 <= fuzz;
+    lastResult = Math.sqrt(dL * dL + dA * dA + dB * dB) * 255 <= fuzz;
+    return lastResult;
   };
 }
 
@@ -1417,146 +1424,205 @@ export function analyzeFlatness(img) {
   };
 }
 
+// Quantize clusters colors at 6 bits per channel: a 4 MP photo carries
+// around two million unique colors, which made median cut and k-means
+// take tens of seconds. Bins 4 levels wide are invisible after reducing
+// to at most 128 colors, and cap the work at 2^18 entries.
+const QUANT_SHIFT = 2;
+const QUANT_BITS = 8 - QUANT_SHIFT;
+
 /**
- * Median-cut color quantization to at most `colors` colors. The palette
- * comes from opaque pixels only: hidden pixels carry garbage colors, and
- * counting a large knocked-out area as any one color would crowd small
- * visible details out of the palette. Transparent pixels are then painted
- * with the dominant opaque color's palette entry; alpha is untouched.
- * Mutates img in place.
+ * Median-cut color quantization to at most `colors` colors, refined with
+ * k-means in Oklab. Images that already have at most `colors` exact
+ * colors are left untouched. The palette comes from opaque pixels only:
+ * hidden pixels carry garbage colors, and counting a large knocked-out
+ * area as any one color would crowd small visible details out of the
+ * palette. Transparent pixels are then painted with the dominant opaque
+ * color's palette entry; alpha is untouched. Mutates img in place.
  */
 export function quantize(img, colors) {
   const { data } = img;
+  const exact = new Set();
+  for (let i = 0; i < data.length && exact.size <= colors; i += 4) {
+    if (data[i + 3] < ALPHA_THRESHOLD) continue;
+    exact.add((data[i] << 16) | (data[i + 1] << 8) | data[i + 2]);
+  }
+  if (exact.size <= colors) return img;
   const backfill = dominantOpaqueColor(img);
 
-  const hist = new Map();
+  const binOf = (r, g, b) =>
+    ((r >> QUANT_SHIFT) << (2 * QUANT_BITS)) |
+    ((g >> QUANT_SHIFT) << QUANT_BITS) |
+    (b >> QUANT_SHIFT);
+  const binCount = 1 << (3 * QUANT_BITS);
+  const sumR = new Float64Array(binCount);
+  const sumG = new Float64Array(binCount);
+  const sumB = new Float64Array(binCount);
+  const hits = new Uint32Array(binCount);
   for (let i = 0; i < data.length; i += 4) {
     if (data[i + 3] < ALPHA_THRESHOLD) continue;
-    const key = (data[i] << 16) | (data[i + 1] << 8) | data[i + 2];
-    hist.set(key, (hist.get(key) || 0) + 1);
+    const bin = binOf(data[i], data[i + 1], data[i + 2]);
+    sumR[bin] += data[i];
+    sumG[bin] += data[i + 1];
+    sumB[bin] += data[i + 2];
+    hits[bin] += 1;
   }
-  if (hist.size <= colors) return img;
 
-  // Clustering runs in Oklab so splits and distances are perceptual:
-  // low color counts keep visually distinct hues apart instead of
-  // merging them by raw RGB proximity.
-  const entries = [...hist.entries()].map(([key, count]) => {
-    const rgb = [(key >> 16) & 0xff, (key >> 8) & 0xff, key & 0xff];
-    const [L, A, B] = srgbToOklab(rgb);
-    return { key, L, A, B, count };
-  });
+  // One entry per occupied bin, at the bin's mean color. Clustering runs
+  // in Oklab so splits and distances are perceptual: low color counts
+  // keep visually distinct hues apart instead of merging them by raw RGB
+  // proximity.
+  let n = 0;
+  for (let bin = 0; bin < binCount; bin++) if (hits[bin]) n += 1;
+  const entryBin = new Int32Array(n);
+  const count = new Float64Array(n);
+  const lab = [new Float64Array(n), new Float64Array(n), new Float64Array(n)];
+  for (let bin = 0, e = 0; bin < binCount; bin++) {
+    const h = hits[bin];
+    if (!h) continue;
+    const [L, A, B] = srgbToOklab([
+      Math.round(sumR[bin] / h),
+      Math.round(sumG[bin] / h),
+      Math.round(sumB[bin] / h),
+    ]);
+    entryBin[e] = bin;
+    count[e] = h;
+    lab[0][e] = L;
+    lab[1][e] = A;
+    lab[2][e] = B;
+    e += 1;
+  }
 
   // Median cut: repeatedly split the box with the largest channel range.
-  const boxes = [entries];
-  while (boxes.length < colors) {
-    let boxIndex = -1;
-    let boxRange = -1;
-    let boxChannel = "L";
-    for (let i = 0; i < boxes.length; i++) {
-      if (boxes[i].length < 2) continue;
-      for (const ch of ["L", "A", "B"]) {
+  // A box's widest channel is computed once, when the box is created.
+  const makeBox = (members) => {
+    let range = -1;
+    let channel = 0;
+    if (members.length >= 2) {
+      for (let c = 0; c < 3; c++) {
         // Oklab, not RGB: a and b are signed and routinely negative, so RGB
         // sentinels leave max pinned at 0 and report an all-negative axis as
         // |min|, which wins splits it should lose.
+        const values = lab[c];
         let min = Infinity;
         let max = -Infinity;
-        for (const e of boxes[i]) {
-          if (e[ch] < min) min = e[ch];
-          if (e[ch] > max) max = e[ch];
+        for (const e of members) {
+          if (values[e] < min) min = values[e];
+          if (values[e] > max) max = values[e];
         }
-        const range = max - min;
-        if (range > boxRange) {
-          boxRange = range;
-          boxIndex = i;
-          boxChannel = ch;
+        if (max - min > range) {
+          range = max - min;
+          channel = c;
         }
+      }
+    }
+    return { members, range, channel };
+  };
+  const all = new Int32Array(n);
+  for (let e = 0; e < n; e++) all[e] = e;
+  const boxes = [makeBox(all)];
+  while (boxes.length < colors) {
+    let boxIndex = -1;
+    for (let i = 0; i < boxes.length; i++) {
+      if (boxes[i].range >= 0 && (boxIndex === -1 || boxes[i].range > boxes[boxIndex].range)) {
+        boxIndex = i;
       }
     }
     if (boxIndex === -1) break;
-    const box = boxes[boxIndex];
-    box.sort((a, b) => a[boxChannel] - b[boxChannel]);
+    const { members, channel } = boxes[boxIndex];
+    const values = lab[channel];
+    members.sort((a, b) => values[a] - values[b]);
     // Split at the pixel-weighted median so dominant colors get their own
     // box instead of being averaged away with rare neighbors.
-    const totalCount = box.reduce((sum, e) => sum + e.count, 0);
+    let totalCount = 0;
+    for (const e of members) totalCount += count[e];
     let acc = 0;
     let half = 0;
-    while (half < box.length - 1 && acc + box[half].count < totalCount / 2) {
-      acc += box[half].count;
+    while (half < members.length - 1 && acc + count[members[half]] < totalCount / 2) {
+      acc += count[members[half]];
       half += 1;
     }
     if (half === 0) half = 1;
-    boxes.splice(boxIndex, 1, box.slice(0, half), box.slice(half));
+    boxes.splice(boxIndex, 1, makeBox(members.subarray(0, half)), makeBox(members.subarray(half)));
   }
 
   // Weighted average color per box seeds the palette.
-  let palette = boxes.map((box) => {
-    let L = 0;
-    let A = 0;
-    let B = 0;
+  const k = boxes.length;
+  const palette = new Float64Array(k * 3);
+  boxes.forEach(({ members }, b) => {
     let total = 0;
-    for (const e of box) {
-      L += e.L * e.count;
-      A += e.A * e.count;
-      B += e.B * e.count;
-      total += e.count;
+    for (const e of members) {
+      palette[b * 3] += lab[0][e] * count[e];
+      palette[b * 3 + 1] += lab[1][e] * count[e];
+      palette[b * 3 + 2] += lab[2][e] * count[e];
+      total += count[e];
     }
-    return [L / total, A / total, B / total];
+    for (let c = 0; c < 3; c++) palette[b * 3 + c] /= total;
   });
 
-  // Lloyd (k-means) refinement over the histogram. Median-cut alone leaves
+  // Lloyd (k-means) refinement over the entries. Median-cut alone leaves
   // centroids off the natural clusters, so gradient pixels flip between
   // adjacent palette entries and trace into thousands of ragged paths.
-  const assign = new Int32Array(entries.length);
+  const assign = new Int32Array(n).fill(-1);
+  const sums = new Float64Array(k * 4);
   for (let iter = 0; iter < 10; iter++) {
     let changed = false;
-    for (let i = 0; i < entries.length; i++) {
-      const e = entries[i];
+    for (let e = 0; e < n; e++) {
+      const L = lab[0][e];
+      const A = lab[1][e];
+      const B = lab[2][e];
       let best = 0;
       let bestDist = Infinity;
-      for (let k = 0; k < palette.length; k++) {
-        const dL = e.L - palette[k][0];
-        const dA = e.A - palette[k][1];
-        const dB = e.B - palette[k][2];
+      for (let p = 0; p < k; p++) {
+        const dL = L - palette[p * 3];
+        const dA = A - palette[p * 3 + 1];
+        const dB = B - palette[p * 3 + 2];
         const dist = dL * dL + dA * dA + dB * dB;
         if (dist < bestDist) {
           bestDist = dist;
-          best = k;
+          best = p;
         }
       }
-      if (assign[i] !== best) {
-        assign[i] = best;
+      if (assign[e] !== best) {
+        assign[e] = best;
         changed = true;
       }
     }
-    if (!changed && iter > 0) break;
-    const sums = palette.map(() => [0, 0, 0, 0]);
-    for (let i = 0; i < entries.length; i++) {
-      const e = entries[i];
-      const s = sums[assign[i]];
-      s[0] += e.L * e.count;
-      s[1] += e.A * e.count;
-      s[2] += e.B * e.count;
-      s[3] += e.count;
+    if (!changed) break;
+    sums.fill(0);
+    for (let e = 0; e < n; e++) {
+      const p = assign[e] * 4;
+      sums[p] += lab[0][e] * count[e];
+      sums[p + 1] += lab[1][e] * count[e];
+      sums[p + 2] += lab[2][e] * count[e];
+      sums[p + 3] += count[e];
     }
-    palette = sums.map((s, k) => (s[3] > 0 ? [s[0] / s[3], s[1] / s[3], s[2] / s[3]] : palette[k]));
+    for (let p = 0; p < k; p++) {
+      const w = sums[p * 4 + 3];
+      if (w > 0) {
+        palette[p * 3] = sums[p * 4] / w;
+        palette[p * 3 + 1] = sums[p * 4 + 1] / w;
+        palette[p * 3 + 2] = sums[p * 4 + 2] / w;
+      }
+    }
   }
 
-  // Every unique color maps to its (now converged) nearest palette entry.
-  const rounded = palette.map(oklabToSrgb);
-  const colorToPalette = new Map();
-  for (let i = 0; i < entries.length; i++) {
-    colorToPalette.set(entries[i].key, rounded[assign[i]]);
+  // Every pixel maps through its bin to the (now converged) palette entry.
+  const rgb = new Uint8Array(k * 3);
+  for (let p = 0; p < k; p++) {
+    rgb.set(oklabToSrgb([palette[p * 3], palette[p * 3 + 1], palette[p * 3 + 2]]), p * 3);
   }
-
+  const binToPalette = new Int32Array(binCount);
+  for (let e = 0; e < n; e++) binToPalette[entryBin[e]] = assign[e];
+  const backfillEntry = binToPalette[binOf(backfill[0], backfill[1], backfill[2])] * 3;
   for (let i = 0; i < data.length; i += 4) {
-    const key =
+    const p =
       data[i + 3] < ALPHA_THRESHOLD
-        ? (backfill[0] << 16) | (backfill[1] << 8) | backfill[2]
-        : (data[i] << 16) | (data[i + 1] << 8) | data[i + 2];
-    const [r, g, b] = colorToPalette.get(key);
-    data[i] = r;
-    data[i + 1] = g;
-    data[i + 2] = b;
+        ? backfillEntry
+        : binToPalette[binOf(data[i], data[i + 1], data[i + 2])] * 3;
+    data[i] = rgb[p];
+    data[i + 1] = rgb[p + 1];
+    data[i + 2] = rgb[p + 2];
   }
   return img;
 }

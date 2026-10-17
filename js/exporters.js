@@ -2,9 +2,9 @@
 // the traced SVG, drives the result stats and action buttons, and saves
 // SVG/PNG/PDF/DXF through the File System Access API or a download.
 import { applyCleanupActions } from "./eraser.js?v=9";
-import { applyExportOptions, countPaths, physicalWidthValue } from "./preprocess.js?v=51";
-import { parseSvgPaths, toDxf, toPdf } from "./vectorexport.js?v=41";
-import { els, preferences, showError, state } from "./context.js?v=11";
+import { applyExportOptions, countPaths, physicalWidthValue } from "./preprocess.js?v=52";
+import { parseSvgPaths, toDxf, toPdf } from "./vectorexport.js?v=42";
+import { els, preferences, showError, state } from "./context.js?v=12";
 
 const DISPLAY_UNITS_PER_INCH = { px: 96, in: 1, cm: 2.54, mm: 25.4 };
 
@@ -79,6 +79,20 @@ export function updatePhysicalHeightOut() {
   els.physicalHeightOut.textContent = `× ${height} ${els.physicalUnit.value}`;
 }
 
+// Last applyExportOptions result. Minify rewrites every path (about
+// 0.7 s on a 6 MB trace), and eraser drags refresh once per frame with
+// only the cleanup strokes changing.
+let exportCache = { raw: "", key: "", svg: "" };
+
+function exportedSvg() {
+  const options = exportOptions();
+  const key = JSON.stringify(options);
+  if (exportCache.raw !== state.svgRaw || exportCache.key !== key) {
+    exportCache = { raw: state.svgRaw, key, svg: applyExportOptions(state.svgRaw, options) };
+  }
+  return exportCache.svg;
+}
+
 /**
  * Re-apply export post-processing (physical size, title, minify) to the
  * last trace and refresh preview, stats, and download. Pure string work:
@@ -90,11 +104,7 @@ export function refreshExport() {
     document.querySelector('input[name="mode"]:checked')
   );
   const pixelExact = selectedMode?.value === "none";
-  state.svg = applyCleanupActions(
-    applyExportOptions(state.svgRaw, exportOptions()),
-    state.eraseStrokes,
-    { pixelExact },
-  );
+  state.svg = applyCleanupActions(exportedSvg(), state.eraseStrokes, { pixelExact });
 
   // Rendered via <img> + blob URL: sandboxes the generated markup and
   // avoids inflating the DOM with thousands of inline path nodes.
@@ -258,14 +268,16 @@ els.downloadPdf.addEventListener("click", async () => {
   if (!state.svgRaw || els.downloadPdf.disabled || state.eraseStrokes.length) return;
   showError("");
   try {
+    // Pick the file first: the save picker needs the click's transient
+    // activation, which a slow conversion of a large trace can outlast.
+    const fileHandle = await chooseSaveFile("pdf", "application/pdf");
+    if (fileHandle === undefined) return;
     const parsed = parseSvgPaths(state.svgRaw);
     // Page size in points: the physical size when set, else source
     // pixels at 96 dpi (72/96 pt per px).
     const widthPt = physicalWidthIn(72 / 25.4, 72) ?? state.sourceWidth * 0.75;
     const heightPt = widthPt * (state.sourceHeight / state.sourceWidth);
     const pdf = toPdf(parsed, { pageWidth: widthPt, pageHeight: heightPt });
-    const fileHandle = await chooseSaveFile("pdf", "application/pdf");
-    if (fileHandle === undefined) return;
     const result = await saveBlob(new Blob([pdf], { type: "application/pdf" }), "pdf", fileHandle);
     if (!result.cancelled) {
       els.status.textContent = saveStatus(
@@ -283,13 +295,14 @@ els.downloadDxf.addEventListener("click", async () => {
   if (!state.svgRaw || els.downloadDxf.disabled || state.eraseStrokes.length) return;
   showError("");
   try {
+    // File first, as for PDF: keep the picker inside the click's activation.
+    const fileHandle = await chooseSaveFile("dxf", "image/vnd.dxf");
+    if (fileHandle === undefined) return;
     const parsed = parseSvgPaths(state.svgRaw);
     // DXF units: mm when a physical size is set, else source pixels.
     const widthUnits = physicalWidthIn(1, 25.4) ?? state.sourceWidth;
     const dxf = toDxf(parsed, { scale: widthUnits / parsed.width });
     const physicalSize = els.exportSize.value === "physical";
-    const fileHandle = await chooseSaveFile("dxf", "image/vnd.dxf");
-    if (fileHandle === undefined) return;
     const result = await saveBlob(new Blob([dxf], { type: "image/vnd.dxf" }), "dxf", fileHandle);
     if (!result.cancelled) {
       const detail = physicalSize
