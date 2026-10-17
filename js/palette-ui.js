@@ -2,7 +2,7 @@
 // that picks a traced color to edit. Edits recolor fills only; they
 // only retrace when switching layering.
 import { els, hooks, state } from "./context.js?v=23";
-import { deactivateCleanupTools, setView } from "./cleanup-tools.js?v=37";
+import { deactivateCleanupTools, setView } from "./cleanup-tools.js?v=38";
 import { refreshExport } from "./exporters.js?v=30";
 import {
   nearestFill,

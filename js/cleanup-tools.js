@@ -6,7 +6,7 @@
 import { brushSizeForShortcut, snapPointToAngle, svgViewBox } from "./eraser.js?v=11";
 import { parseHexColor, sampleRasterColor, toHexColor } from "./preprocess.js?v=54";
 import { els, hooks, state } from "./context.js?v=23";
-import { floodRegion, growMask, maskLoops, unionMasks } from "./magicwand.js?v=5";
+import { floodRegion, growMask, maskLoops, unionMasks } from "./magicwand.js?v=6";
 import { refreshExport } from "./exporters.js?v=30";
 
 export function setView(view) {
@@ -295,6 +295,12 @@ export function setSelectionTool(tool) {
   els.magicWand.setAttribute("aria-pressed", String(tool === "wand"));
   els.preview.classList.toggle("selecting", Boolean(tool));
   updateSelectCursor();
+  if (tool === "wand" && state.svg) {
+    // Render ahead of the first click; a failure surfaces on that click.
+    resultRaster().catch(() => {});
+  } else if (tool !== "wand") {
+    wandRaster = null;
+  }
   if (tool === "wand") {
     els.status.textContent =
       "Click a color to select that connected area. Shift+click adds, Alt/Option+click subtracts.";
@@ -805,8 +811,18 @@ function selectionIntersectsImage(selection) {
 }
 
 /** Select the connected region of the clicked color and combine it. */
-function wandSelect(point, op) {
-  const shape = regionShape([point]);
+async function wandSelect(point, op) {
+  let raster;
+  try {
+    raster = await resultRaster();
+  } catch (error) {
+    console.error(error);
+    els.status.textContent = "Could not read the result to select from. Try again.";
+    return;
+  }
+  // The tool may have been switched while the result rendered.
+  if (state.selectionTool !== "wand") return;
+  const shape = regionShape(raster, [point]);
   if (!shape) {
     els.status.textContent =
       "No color here to select: that area is transparent or outside the image.";
@@ -818,16 +834,67 @@ function wandSelect(point, op) {
 /** Tolerance slider (0 to 50) as an Oklab distance (0 to 0.2). */
 const wandTolerance = () => Number(els.wandTolerance.value) / 250;
 
+/** The result as the wand last rendered it: { svg, pixels } or pending. */
+let wandRaster = null;
+
+/**
+ * The result's pixels as displayed, so the wand selects the flat traced
+ * shapes the user sees. The reduced raster can differ widely: at 256
+ * colors it is not quantized at all, and tracing merges similar clusters.
+ */
+function resultRaster() {
+  const svg = state.svg;
+  if (wandRaster?.svg !== svg) {
+    const pixels = renderResultRaster(svg);
+    wandRaster = { svg, pixels };
+    // A failed render is reported by the caller; the next click retries.
+    pixels.catch(() => {
+      if (wandRaster?.pixels === pixels) wandRaster = null;
+    });
+  }
+  return wandRaster.pixels;
+}
+
+async function renderResultRaster(svg) {
+  const box = svgViewBox(svg);
+  const width = state.processedRaster?.width || Math.ceil(box?.width || 1024);
+  const height = state.processedRaster?.height || Math.ceil(box?.height || 1024);
+  // Without antialiasing, a shape's edge pixels keep its exact fill instead
+  // of a blend with its neighbour that a low tolerance would stop at.
+  const crisp = svg.replace(
+    /<svg\b[^>]*>/,
+    (tag) => `${tag}<style>*{shape-rendering:crispEdges}</style>`,
+  );
+  const url = URL.createObjectURL(new Blob([crisp], { type: "image/svg+xml" }));
+  try {
+    const image = new Image();
+    image.src = url;
+    await image.decode();
+    const canvas = new OffscreenCanvas(width, height);
+    const ctx = /** @type {OffscreenCanvasRenderingContext2D} */ (
+      canvas.getContext("2d", { willReadFrequently: true })
+    );
+    ctx.drawImage(image, 0, 0, width, height);
+    const pixels = ctx.getImageData(0, 0, width, height);
+    // iOS Safari caps total canvas memory; free it now, not at collection.
+    canvas.width = 0;
+    canvas.height = 0;
+    return pixels;
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
 /**
  * A wand region from its clicked points. Kept with the points, so changing
  * Tolerance, Expand or Smooth rebuilds the current selection in place.
  */
-function regionShape(seeds) {
+function regionShape(raster, seeds) {
   let mask = null;
   let width = 0;
   let height = 0;
   for (const seed of seeds) {
-    const region = floodRegion(state.processedRaster, seed.x, seed.y, wandTolerance());
+    const region = floodRegion(raster, seed.x, seed.y, wandTolerance());
     if (!region) continue;
     ({ width, height } = region);
     mask = mask ? unionMasks(mask, region.mask) : region.mask;
@@ -847,13 +914,21 @@ for (const input of [els.wandTolerance, els.wandExpand, els.wandSmooth]) {
     els.wandExpandOut.textContent = `${els.wandExpand.value} px`;
     els.wandSmoothOut.textContent = els.wandSmooth.value;
     if (state.selection?.type !== "composite" || wandRebuildFrame) return;
-    wandRebuildFrame = requestAnimationFrame(() => {
+    wandRebuildFrame = requestAnimationFrame(async () => {
       wandRebuildFrame = 0;
+      let raster;
+      try {
+        raster = await resultRaster();
+      } catch (error) {
+        console.error(error);
+        els.status.textContent = "Could not read the result to select from. Try again.";
+        return;
+      }
       if (state.selection?.type !== "composite") return;
       setComposite(
         state.selection.parts.map((part) =>
           part.shape.type === "region"
-            ? { ...part, shape: regionShape(part.shape.seeds) ?? part.shape }
+            ? { ...part, shape: regionShape(raster, part.shape.seeds) ?? part.shape }
             : part,
         ),
       );

@@ -52,6 +52,97 @@ test.beforeEach(async ({ page }) => {
   await page.reload();
 });
 
+/** The whole rendered result as RGBA at source size. */
+async function resultPixels(page) {
+  return page.evaluate(async ([width, height]) => {
+    const view = /** @type {HTMLImageElement} */ (document.getElementById("result-view"));
+    await view.decode();
+    const canvas = new OffscreenCanvas(width, height);
+    const ctx = canvas.getContext("2d");
+    ctx.drawImage(view, 0, 0, width, height);
+    return [...ctx.getImageData(0, 0, width, height).data];
+  }, SIZE);
+}
+
+test("the wand selects the shape as traced, not the raster under it", async ({ page }) => {
+  // A gradient traces to a few flat bands, but at 256 colors the raster
+  // skips quantizing and keeps every shade of it.
+  const base64 = await page.evaluate(async ([width, height]) => {
+    const canvas = new OffscreenCanvas(width, height);
+    const ctx = canvas.getContext("2d");
+    ctx.fillStyle = "#f3ead8";
+    ctx.fillRect(0, 0, width, height);
+    const gradient = ctx.createLinearGradient(10, 0, 150, 0);
+    gradient.addColorStop(0, "#b02828");
+    gradient.addColorStop(1, "#bc3434");
+    ctx.fillStyle = gradient;
+    ctx.fillRect(10, 20, 140, 40);
+    const bytes = new Uint8Array(await (await canvas.convertToBlob()).arrayBuffer());
+    let binary = "";
+    for (const byte of bytes) binary += String.fromCharCode(byte);
+    return btoa(binary);
+  }, SIZE);
+  await page.locator("#file-input").setInputFiles({
+    name: "gradient.png",
+    mimeType: "image/png",
+    buffer: Buffer.from(base64, "base64"),
+  });
+  await expect(page.locator("#status")).toContainText(/Traced \d/, { timeout: 60_000 });
+  const firstTrace = await page.locator("#result-view").getAttribute("src");
+  await page.locator("#auto-detect").uncheck();
+  await page.locator("#colors").fill("256");
+  await page.locator("#colors").dispatchEvent("change");
+  await expect(page.locator("#result-view")).not.toHaveAttribute("src", firstTrace ?? "", {
+    timeout: 60_000,
+  });
+  await expect(page.locator("#status")).toContainText(/Traced \d/, { timeout: 60_000 });
+
+  // The band under the click, as displayed: same color, 4-connected.
+  const [width, height] = SIZE;
+  const before = await resultPixels(page);
+  const seed = 40 * width + 40;
+  const color = (i) => before.slice(i * 4, i * 4 + 4).join();
+  const band = new Set([seed]);
+  for (const stack = [seed]; stack.length;) {
+    const i = /** @type {number} */ (stack.pop());
+    const x = i % width;
+    for (const n of [x > 0 && i - 1, x < width - 1 && i + 1, i - width, i + width]) {
+      if (n !== false && n >= 0 && n < width * height && !band.has(n) && color(n) === color(seed)) {
+        band.add(n);
+        stack.push(n);
+      }
+    }
+  }
+  expect(band.size).toBeGreaterThan(200);
+
+  await page.locator("#magic-wand").click();
+  await page.locator("#wand-tolerance").fill("0");
+  await clickResult(page, [40, 40]);
+  await page.locator("#selection-erase").click();
+  await expect.poll(async () => (await resultPixels(page))[seed * 4 + 3]).toBe(0);
+  const after = await resultPixels(page);
+  // Skip three pixels either side of the band's edge: this render is
+  // antialiased, so its edge rows blend into a color of their own.
+  const near = (i, inBand) => {
+    const x = i % width;
+    const y = Math.floor(i / width);
+    for (let dy = -3; dy <= 3; dy++) {
+      for (let dx = -3; dx <= 3; dx++) {
+        if (band.has((y + dy) * width + x + dx) === inBand) return true;
+      }
+    }
+    return false;
+  };
+  let missed = 0;
+  let overreached = 0;
+  for (let i = 0; i < width * height; i++) {
+    const erased = after[i * 4 + 3] === 0 && before[i * 4 + 3] !== 0;
+    if (band.has(i) && !near(i, false) && !erased) missed++;
+    if (!band.has(i) && !near(i, true) && erased) overreached++;
+  }
+  expect({ missed, overreached }).toEqual({ missed: 0, overreached: 0 });
+});
+
 test("magic wand erases only the clicked connected area", async ({ page }) => {
   await loadTwoBlocks(page);
   await page.locator("#magic-wand").click();

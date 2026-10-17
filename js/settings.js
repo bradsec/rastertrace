@@ -11,7 +11,7 @@ import {
 } from "./preprocess.js?v=54";
 import { els, preferences } from "./context.js?v=23";
 import { refreshExport, updatePhysicalHeightOut } from "./exporters.js?v=30";
-import { setEyedropper } from "./cleanup-tools.js?v=37";
+import { setEyedropper } from "./cleanup-tools.js?v=38";
 
 /** @returns {HTMLInputElement} */
 const radioEl = (selector) => /** @type {HTMLInputElement} */ (document.querySelector(selector));

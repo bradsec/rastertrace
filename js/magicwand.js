@@ -1,11 +1,11 @@
-// Magic wand: select the contiguous region of one color in the reduced
-// raster and outline it as vector loops for the cleanup mask.
+// Magic wand: select the contiguous region of one color in the rendered
+// result and outline it as vector loops for the cleanup mask.
 import { ALPHA_THRESHOLD, srgbToOklab } from "./preprocess.js?v=54";
 
 /**
  * Pixels 4-connected to (nx, ny) whose opaque color is within `tolerance`
  * (Oklab distance) of the clicked color. Zero matches the exact flat
- * palette color; a little tolerance also takes near shades along edges.
+ * fill color; a little tolerance also takes near-duplicate traced fills.
  * @param {{ width: number, height: number, data: Uint8ClampedArray } | null} imageData
  * @param {number} nx normalized x
  * @param {number} ny normalized y
