@@ -29,8 +29,8 @@ import {
   setEraser,
   setSelectionTool,
   setView,
-} from "./cleanup-tools.js?v=30";
-import { afterTrace, resetPalette } from "./palette-ui.js?v=14";
+} from "./cleanup-tools.js?v=31";
+import { afterTrace, resetPalette } from "./palette-ui.js?v=15";
 import {
   applyExportProfile,
   applyMeasurementUnit,
@@ -46,8 +46,8 @@ import {
   updateOutputs,
   updateStencilFields,
   updateTransparencyFields,
-} from "./settings.js?v=28";
-import { actualSizeView, resetView } from "./view.js?v=29";
+} from "./settings.js?v=29";
+import { actualSizeView, resetView } from "./view.js?v=30";
 
 const EMPTY_IMAGE_SRC = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==";
 

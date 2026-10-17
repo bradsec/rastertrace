@@ -135,8 +135,11 @@ document.addEventListener("keydown", (event) => {
     );
     return;
   }
+  // A focused slider (e.g. wand Tolerance) takes only arrow keys, so tool
+  // shortcuts and Delete still act on the selection.
   const editing =
     target instanceof HTMLElement &&
+    !rangeFocused &&
     (/^(INPUT|SELECT|TEXTAREA)$/.test(target.tagName) || target.isContentEditable);
   if (editing) return;
   const key = event.key.toLowerCase();

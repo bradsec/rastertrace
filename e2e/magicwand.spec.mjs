@@ -104,3 +104,15 @@ test("expand slider grows the selection past the block edge", async ({ page }) =
   await expect.poll(async () => (await resultPixel(page, [52, 40]))[3]).toBe(0);
   expect((await resultPixel(page, [56, 40]))[3]).toBe(255);
 });
+
+test("delete erases the wand selection after a slider was used", async ({ page }) => {
+  await loadTwoBlocks(page);
+  await page.locator("#magic-wand").click();
+  await page.locator("#wand-tolerance").click();
+  await clickResult(page, [30, 40]);
+  await expect(page.locator("#selection-erase")).toBeVisible();
+  await page.locator("#wand-expand").focus();
+  await page.keyboard.press("Delete");
+  await expect(page.locator("#eraser-undo")).toBeEnabled();
+  await expect.poll(async () => (await resultPixel(page, [30, 40]))[3]).toBe(0);
+});
