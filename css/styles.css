@@ -1396,6 +1396,9 @@ details.advanced[open] {
 .icon-architecture {
   --icon: url("../assets/icons/material/architecture.svg");
 }
+.icon-auto_fix_high {
+  --icon: url("../assets/icons/material/auto_fix_high.svg");
+}
 .icon-save {
   --icon: url("../assets/icons/material/save.svg");
 }
@@ -1416,7 +1419,8 @@ details.advanced[open] {
   gap: 6px;
 }
 
-.eraser-size {
+.eraser-size,
+.wand-option {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -1425,10 +1429,19 @@ details.advanced[open] {
   white-space: nowrap;
 }
 
-.eraser-size input {
+.eraser-size input,
+.wand-option input {
   width: 86px;
 }
-.eraser-size output {
+/* Wand settings only matter while the wand is armed. */
+.wand-option {
+  display: none;
+}
+body:has(#magic-wand[aria-pressed="true"]) .wand-option {
+  display: inline-flex;
+}
+.eraser-size output,
+.wand-option output {
   min-width: 38px;
   color: var(--text);
   font-variant-numeric: tabular-nums;
@@ -2013,6 +2026,9 @@ dialog::backdrop {
     display: none;
     order: 2;
   }
+  .wand-option {
+    order: 2;
+  }
   body:has(#eraser-tool[aria-pressed="true"], #blob-fill-tool[aria-pressed="true"]) .eraser-size,
   body:has(
       #blob-fill-tool[aria-pressed="true"],
@@ -2027,6 +2043,7 @@ dialog::backdrop {
       #eraser-tool[aria-pressed="true"],
       #blob-fill-tool[aria-pressed="true"],
       #blob-fill-pick[aria-pressed="true"],
+      #magic-wand[aria-pressed="true"],
       #selection-actions:not([hidden]) #selection-fill:not([hidden]),
       #eraser-clear:not(:disabled)
     )

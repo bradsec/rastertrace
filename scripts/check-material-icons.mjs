@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 
 const icons = [
   "architecture",
+  "auto_fix_high",
   "brush",
   "colorize",
   "content_copy",

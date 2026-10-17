@@ -1,12 +1,13 @@
-// Cleanup tools: eyedropper background sampling, marquee and polygon
-// lasso selections, and the vector eraser with its undo/redo stack.
+// Cleanup tools: eyedropper background sampling, marquee, polygon lasso
+// and magic wand selections, and the vector eraser with its undo/redo stack.
 // Listener order matters: the selection and eraser pointer handlers must
 // register before the pan handlers in view.js, so app.js imports this
 // module first.
-import { brushSizeForShortcut, snapPointToAngle, svgViewBox } from "./eraser.js?v=9";
+import { brushSizeForShortcut, snapPointToAngle, svgViewBox } from "./eraser.js?v=10";
 import { parseHexColor, sampleRasterColor, toHexColor } from "./preprocess.js?v=53";
-import { els, hooks, state } from "./context.js?v=17";
-import { refreshExport } from "./exporters.js?v=24";
+import { els, hooks, state } from "./context.js?v=19";
+import { floodRegion, growMask, maskLoops, unionMasks } from "./magicwand.js?v=2";
+import { refreshExport } from "./exporters.js?v=26";
 
 export function setView(view) {
   const showResult = view === "result";
@@ -160,6 +161,10 @@ document.addEventListener("keydown", (event) => {
     event.preventDefault();
     clearSelection();
     setSelectionTool("polygon");
+  } else if (!event.ctrlKey && !event.metaKey && !event.altKey && key === "w" && state.svg) {
+    event.preventDefault();
+    clearSelection();
+    setSelectionTool("wand");
   } else if (event.key === "Enter" && state.selection?.type === "polygon") {
     event.preventDefault();
     finishPolygon();
@@ -284,8 +289,12 @@ export function setSelectionTool(tool) {
   els.marqueeRect.setAttribute("aria-pressed", String(tool === "rect"));
   els.marqueeEllipse.setAttribute("aria-pressed", String(tool === "ellipse"));
   els.polygonLasso.setAttribute("aria-pressed", String(tool === "polygon"));
+  els.magicWand.setAttribute("aria-pressed", String(tool === "wand"));
   els.preview.classList.toggle("selecting", Boolean(tool));
-  if (tool === "polygon") {
+  if (tool === "wand") {
+    els.status.textContent =
+      "Click a color to select that connected area. Shift+click adds another area.";
+  } else if (tool === "polygon") {
     els.status.textContent =
       "Click around an area. Hold Shift for 45° segments; double-click or press Enter to close.";
   } else if (tool) {
@@ -338,7 +347,25 @@ export function renderSelection() {
   els.selectionOverlay.setAttribute("viewBox", `0 0 ${imageRect.width} ${imageRect.height}`);
   const px = (point) => ({ x: point.x * imageRect.width, y: point.y * imageRect.height });
   let shape;
-  if (selection.type === "polygon") {
+  if (selection.type === "region") {
+    shape = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    shape.setAttribute(
+      "d",
+      selection.loops
+        .map(
+          (loop) =>
+            loop
+              .map((point, index) => {
+                const p = px(point);
+                return `${index ? "L" : "M"}${p.x} ${p.y}`;
+              })
+              .join("") + "Z",
+        )
+        .join(""),
+    );
+    shape.setAttribute("fill-rule", "evenodd");
+    shape.setAttribute("clip-rule", "evenodd");
+  } else if (selection.type === "polygon") {
     shape = document.createElementNS(
       "http://www.w3.org/2000/svg",
       selection.finalized ? "polygon" : "polyline",
@@ -428,7 +455,9 @@ function commitSelection(mode) {
   if (!selection?.finalized) return;
   state.eraseRedo = [];
   const fill = mode === "fill" ? { mode: "fill", color: els.blobFillColor.value } : {};
-  if (selection.type === "polygon") {
+  if (selection.type === "region") {
+    state.eraseStrokes.push({ type: "region", loops: selection.loops, ...fill });
+  } else if (selection.type === "polygon") {
     state.eraseStrokes.push({ type: "polygon", points: selection.points, ...fill });
   } else {
     const geometry = marqueeGeometry(selection);
@@ -460,6 +489,10 @@ els.marqueeRect.addEventListener("click", () => {
 els.marqueeEllipse.addEventListener("click", () => {
   clearSelection();
   setSelectionTool("ellipse");
+});
+els.magicWand.addEventListener("click", () => {
+  clearSelection();
+  setSelectionTool("wand");
 });
 els.polygonLasso.addEventListener("click", () => {
   clearSelection();
@@ -552,6 +585,55 @@ function selectionIntersectsImage(selection) {
   );
 }
 
+/**
+ * Select the connected region of the clicked color in the reduced raster,
+ * or add it to the current wand selection with Shift.
+ */
+function wandSelect(point, add) {
+  if (!floodRegion(state.processedRaster, point.x, point.y)) {
+    els.status.textContent =
+      "No color here to select: that area is transparent or outside the image.";
+    return;
+  }
+  const previous = add && state.selection?.type === "region" ? state.selection.seeds : [];
+  state.selection = wandSelection([...previous, point]);
+  renderSelection();
+  els.status.textContent =
+    "Area selected. Erase or fill it, Shift+click to add more, or press Delete or Ctrl/Cmd+Backspace.";
+}
+
+/** Tolerance slider (0 to 50) as an Oklab distance (0 to 0.2). */
+const wandTolerance = () => Number(els.wandTolerance.value) / 250;
+
+/**
+ * Rebuild the wand selection from its clicked points, so changing
+ * Tolerance or Expand updates the current selection in place.
+ */
+function wandSelection(seeds) {
+  let mask = null;
+  let width = 0;
+  let height = 0;
+  for (const seed of seeds) {
+    const region = floodRegion(state.processedRaster, seed.x, seed.y, wandTolerance());
+    if (!region) continue;
+    ({ width, height } = region);
+    mask = mask ? unionMasks(mask, region.mask) : region.mask;
+  }
+  if (!mask) return null;
+  const grown = growMask(mask, width, height, Number(els.wandExpand.value));
+  return { type: "region", seeds, loops: maskLoops(grown, width, height), finalized: true };
+}
+
+for (const input of [els.wandTolerance, els.wandExpand]) {
+  input.addEventListener("input", () => {
+    els.wandToleranceOut.textContent = els.wandTolerance.value;
+    els.wandExpandOut.textContent = `${els.wandExpand.value} px`;
+    if (state.selection?.type !== "region") return;
+    state.selection = wandSelection(state.selection.seeds);
+    renderSelection();
+  });
+}
+
 function constrainedPolygonPoint(point, shiftKey) {
   const selection = state.selection;
   if (!shiftKey || selection?.type !== "polygon" || !selection.points.length) return point;
@@ -570,6 +652,10 @@ els.preview.addEventListener(
     // An active selection tool owns the whole preview, including the empty
     // canvas around the image, so selection gestures never pan the artwork.
     if (!point) return;
+    if (state.selectionTool === "wand") {
+      wandSelect(point, event.shiftKey);
+      return;
+    }
     if (state.selectionTool === "polygon") {
       if (event.detail > 1) {
         finishPolygon();

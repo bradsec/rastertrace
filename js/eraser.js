@@ -78,6 +78,20 @@ function erasureMarkup(erasure, box, pixelExact) {
   if (erasure.type === "ellipse") {
     return `<ellipse cx="${n(box.x + erasure.cx * box.width)}" cy="${n(box.y + erasure.cy * box.height)}" rx="${n(erasure.rx * box.width)}" ry="${n(erasure.ry * box.height)}" fill="#000"/>`;
   }
+  if (erasure.type === "region") {
+    const d = erasure.loops
+      .map(
+        (loop) =>
+          loop
+            .map((point, index) => {
+              const p = pointInBox(point, box);
+              return `${index ? "L" : "M"}${n(p.x)} ${n(p.y)}`;
+            })
+            .join("") + "Z",
+      )
+      .join("");
+    return `<path d="${d}" fill-rule="evenodd" fill="#000"/>`;
+  }
   if (erasure.type === "polygon") {
     const points = erasure.points.map((point) => pointInBox(point, box));
     return `<polygon points="${points.map((point) => `${n(point.x)},${n(point.y)}`).join(" ")}" fill="#000"/>`;

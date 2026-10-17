@@ -1,11 +1,11 @@
 // Export pipeline and save handlers: applies export post-processing to
 // the traced SVG, drives the result stats and action buttons, and saves
 // SVG/PNG/PDF/DXF through the File System Access API or a download.
-import { applyCleanupActions } from "./eraser.js?v=9";
+import { applyCleanupActions } from "./eraser.js?v=10";
 import { applyExportOptions, countPaths, physicalWidthValue } from "./preprocess.js?v=53";
 import { recolorSvg } from "./palette.js?v=6";
 import { parseSvgPaths, toDxf, toPdf } from "./vectorexport.js?v=43";
-import { els, preferences, showError, state } from "./context.js?v=17";
+import { els, preferences, showError, state } from "./context.js?v=19";
 
 const DISPLAY_UNITS_PER_INCH = { px: 96, in: 1, cm: 2.54, mm: 25.4 };
 
@@ -30,6 +30,7 @@ export function setResultActions(enabled) {
   els.marqueeRect.disabled = !enabled;
   els.marqueeEllipse.disabled = !enabled;
   els.polygonLasso.disabled = !enabled;
+  els.magicWand.disabled = !enabled;
   const cleaned = enabled && state.eraseStrokes.length > 0;
   els.eraserUndo.disabled = !cleaned;
   els.eraserRedo.disabled = !enabled || !state.eraseRedo.length;

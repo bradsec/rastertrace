@@ -53,7 +53,7 @@
       }
     </script>
 
-    <link rel="stylesheet" href="css/styles.css?v=84" />
+    <link rel="stylesheet" href="css/styles.css?v=86" />
   </head>
   <body>
     <header class="app-header">
@@ -260,6 +260,31 @@
               <circle cx="20" cy="15.5" r="1.25" fill="currentColor" stroke="none" />
             </svg>
           </button>
+          <button
+            type="button"
+            id="magic-wand"
+            class="header-tool cleanup-tool"
+            aria-label="Magic wand"
+            aria-pressed="false"
+            disabled
+            title="Magic wand: select a connected area of one color (W)"
+          >
+            <span class="material-icon icon-auto_fix_high" aria-hidden="true"></span>
+          </button>
+          <label
+            class="wand-option"
+            for="wand-tolerance"
+            title="How different a color can be and still join the selection"
+          >
+            <span>Tolerance</span>
+            <input type="range" id="wand-tolerance" min="0" max="50" step="1" value="12" />
+            <output id="wand-tolerance-out" for="wand-tolerance">12</output>
+          </label>
+          <label class="wand-option" for="wand-expand" title="Grow the selection to cover edges">
+            <span>Expand</span>
+            <input type="range" id="wand-expand" min="0" max="8" step="1" value="2" />
+            <output id="wand-expand-out" for="wand-expand">2 px</output>
+          </label>
           <button
             type="button"
             id="eraser-undo"
@@ -1289,6 +1314,16 @@
               </dd>
             </div>
             <div>
+              <dt>Magic wand</dt>
+              <dd>
+                Press W or select the wand icon, then click a color in the result to select that
+                connected area only; the same color elsewhere stays unselected. Shift+click adds
+                more areas. Tolerance also takes similar shades, and Expand grows the selection to
+                cover leftover edges; both update the current selection. Erase makes the area
+                transparent, or Fill paints it with the brush color.
+              </dd>
+            </div>
+            <div>
               <dt>Erase or fill a selection</dt>
               <dd>
                 After closing a selection, select Erase or Fill below the preview, or press Delete
@@ -1523,6 +1558,6 @@
         location.reload();
       };
     </script>
-    <script type="module" src="js/app.js?v=107" onerror="window.recoverRasterTraceBoot()"></script>
+    <script type="module" src="js/app.js?v=109" onerror="window.recoverRasterTraceBoot()"></script>
   </body>
 </html>
