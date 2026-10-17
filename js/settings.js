@@ -9,8 +9,8 @@ import {
   sanitizeSettings,
   toGrayscaleColor,
 } from "./preprocess.js?v=52";
-import { els, preferences } from "./context.js?v=12";
-import { refreshExport, updatePhysicalHeightOut } from "./exporters.js?v=17";
+import { els, preferences } from "./context.js?v=13";
+import { refreshExport, updatePhysicalHeightOut } from "./exporters.js?v=18";
 import { setEyedropper } from "./cleanup-tools.js?v=21";
 
 /** @returns {HTMLInputElement} */

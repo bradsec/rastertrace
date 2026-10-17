@@ -48,7 +48,7 @@ Object.defineProperty(globalThis, "navigator", {
 });
 
 const { state } = await sharedContext("exporters.js");
-await import("../js/exporters.js?v=test");
+const { paletteSvg, refreshExport } = await import("../js/exporters.js?v=test");
 
 test("copy SVG rebuilds cleanup instead of using stale export state", async () => {
   state.fileName = "test.png";
@@ -128,4 +128,22 @@ test("export file names handle a source with no extension", async () => {
 
   await elements.get("download").listener("click")();
   assert.equal(suggested, "clipboard_rt.svg");
+});
+
+test("palette edits recolor the preview and every export source", () => {
+  state.fileName = "test.png";
+  state.svgRaw =
+    '<svg viewBox="0 0 10 10"><path fill="#ff0000" d="M0 0"/><path fill="#0000FF" d="M1 1"/></svg>';
+  state.eraseStrokes = [];
+  state.colorEdits = new Map([["#FF0000", "#00FF00"]]);
+
+  refreshExport();
+  assert.match(state.svg, /fill="#00FF00"/);
+  assert.doesNotMatch(state.svg, /#ff0000/i);
+  assert.match(paletteSvg(), /fill="#00FF00"/);
+
+  state.colorEdits.clear();
+  refreshExport();
+  assert.match(state.svg, /fill="#ff0000"/i);
+  assert.doesNotMatch(state.svg, /#00FF00/);
 });

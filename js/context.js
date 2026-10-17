@@ -148,6 +148,7 @@ export const state = {
   raster: null, // { scale, imageData } cache, keyed by current bitmap
   processedRaster: null, // worker pixels after current trace preprocessing
   picking: false,
+  colorEdits: /** @type {Map<string, string>} */ (new Map()), // original "#RRGGBB" to edited fill
   loadToken: 0, // guards against overlapping loads (drop while decoding)
   flatNote: null, // status prefix when load-time detection fired
   erasing: false,

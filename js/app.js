@@ -21,8 +21,8 @@ import {
   parseHexColor,
   toHexColor,
 } from "./preprocess.js?v=52";
-import { $, els, hooks, preferences, showError, state } from "./context.js?v=12";
-import { refreshExport, setResultActions } from "./exporters.js?v=17";
+import { $, els, hooks, preferences, showError, state } from "./context.js?v=13";
+import { refreshExport, setResultActions } from "./exporters.js?v=18";
 import {
   clearSelection,
   setBlobFill,

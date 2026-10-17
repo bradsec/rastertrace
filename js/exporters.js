@@ -3,8 +3,9 @@
 // SVG/PNG/PDF/DXF through the File System Access API or a download.
 import { applyCleanupActions } from "./eraser.js?v=9";
 import { applyExportOptions, countPaths, physicalWidthValue } from "./preprocess.js?v=52";
+import { recolorSvg } from "./palette.js?v=1";
 import { parseSvgPaths, toDxf, toPdf } from "./vectorexport.js?v=42";
-import { els, preferences, showError, state } from "./context.js?v=12";
+import { els, preferences, showError, state } from "./context.js?v=13";
 
 const DISPLAY_UNITS_PER_INCH = { px: 96, in: 1, cm: 2.54, mm: 25.4 };
 
@@ -83,12 +84,26 @@ export function updatePhysicalHeightOut() {
 // 0.7 s on a 6 MB trace), and eraser drags refresh once per frame with
 // only the cleanup strokes changing.
 let exportCache = { raw: "", key: "", svg: "" };
+let paletteCache = { raw: "", key: "", svg: "" };
+
+/**
+ * The trace with palette edits applied: the shared source for preview,
+ * SVG, PDF and DXF, so every output shows the same colors.
+ */
+export function paletteSvg() {
+  const key = JSON.stringify([...state.colorEdits]);
+  if (paletteCache.raw !== state.svgRaw || paletteCache.key !== key) {
+    paletteCache = { raw: state.svgRaw, key, svg: recolorSvg(state.svgRaw, state.colorEdits) };
+  }
+  return paletteCache.svg;
+}
 
 function exportedSvg() {
   const options = exportOptions();
+  const source = paletteSvg();
   const key = JSON.stringify(options);
-  if (exportCache.raw !== state.svgRaw || exportCache.key !== key) {
-    exportCache = { raw: state.svgRaw, key, svg: applyExportOptions(state.svgRaw, options) };
+  if (exportCache.raw !== source || exportCache.key !== key) {
+    exportCache = { raw: source, key, svg: applyExportOptions(source, options) };
   }
   return exportCache.svg;
 }
@@ -272,7 +287,7 @@ els.downloadPdf.addEventListener("click", async () => {
     // activation, which a slow conversion of a large trace can outlast.
     const fileHandle = await chooseSaveFile("pdf", "application/pdf");
     if (fileHandle === undefined) return;
-    const parsed = parseSvgPaths(state.svgRaw);
+    const parsed = parseSvgPaths(paletteSvg());
     // Page size in points: the physical size when set, else source
     // pixels at 96 dpi (72/96 pt per px).
     const widthPt = physicalWidthIn(72 / 25.4, 72) ?? state.sourceWidth * 0.75;
@@ -298,7 +313,7 @@ els.downloadDxf.addEventListener("click", async () => {
     // File first, as for PDF: keep the picker inside the click's activation.
     const fileHandle = await chooseSaveFile("dxf", "image/vnd.dxf");
     if (fileHandle === undefined) return;
-    const parsed = parseSvgPaths(state.svgRaw);
+    const parsed = parseSvgPaths(paletteSvg());
     // DXF units: mm when a physical size is set, else source pixels.
     const widthUnits = physicalWidthIn(1, 25.4) ?? state.sourceWidth;
     const dxf = toDxf(parsed, { scale: widthUnits / parsed.width });
