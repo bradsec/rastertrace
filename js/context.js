@@ -112,6 +112,8 @@ export const els = {
   veilStage: $("veil-stage"),
   veilElapsed: $("veil-elapsed"),
   error: $("error"),
+  errorText: $("error-text"),
+  errorDismiss: $("error-dismiss"),
   statPaths: $("stat-paths"),
   statSize: $("stat-size"),
   statTime: $("stat-time"),
@@ -201,6 +203,6 @@ export const hooks = {
 };
 
 export function showError(message) {
-  els.error.textContent = message;
+  els.errorText.textContent = message;
   els.error.hidden = !message;
 }

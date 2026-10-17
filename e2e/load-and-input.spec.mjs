@@ -1,0 +1,141 @@
+import { expect, test } from "@playwright/test";
+import path from "node:path";
+
+const IMAGE = path.resolve("android-chrome-192x192.png");
+const NOT_AN_IMAGE = {
+  name: "broken.png",
+  mimeType: "image/png",
+  buffer: Buffer.from("not an image"),
+};
+
+async function traced(page, action) {
+  await page.evaluate(() => (document.getElementById("status").textContent = ""));
+  await action();
+  await expect(page.locator("#status")).toContainText(/Traced \d/, { timeout: 60_000 });
+}
+
+async function eraseStroke(page) {
+  await page.locator("#eraser-tool").click();
+  const box = await page.locator("#result-view").boundingBox();
+  await page.mouse.move(box.x + box.width * 0.3, box.y + box.height * 0.3);
+  await page.mouse.down();
+  await page.mouse.move(box.x + box.width * 0.6, box.y + box.height * 0.6, { steps: 4 });
+  await page.mouse.up();
+  await expect(page.locator("#eraser-undo")).toBeEnabled();
+}
+
+const transform = (page) => page.locator("#pan-stage").evaluate((el) => el.style.transform);
+
+test.beforeEach(async ({ page }) => {
+  await page.goto("/");
+  await page.evaluate(() => localStorage.clear());
+  await page.reload();
+});
+
+test.describe("opening files", () => {
+  test.use({ viewport: { width: 1280, height: 800 } });
+
+  test("a file that fails to open keeps the current trace", async ({ page }) => {
+    await traced(page, () => page.locator("#file-input").setInputFiles(IMAGE));
+    const paths = await page.locator("#stat-paths").textContent();
+    await page.locator("#file-input").setInputFiles(NOT_AN_IMAGE);
+    await expect(page.locator("#error")).toBeVisible();
+    await expect(page.locator("#stat-paths")).toHaveText(paths);
+    await expect(page.locator("#workspace")).toBeVisible();
+    await expect(page.locator("#zoom-reset")).toBeInViewport({ ratio: 1 });
+    await page.locator("#error-dismiss").click();
+    await expect(page.locator("#error")).toBeHidden();
+  });
+
+  test("a file that fails to open from the empty state stays on it", async ({ page }) => {
+    await page.locator("#file-input").setInputFiles(NOT_AN_IMAGE);
+    await expect(page.locator("#error")).toBeVisible();
+    await expect(page.locator("#empty-state")).toBeVisible();
+  });
+
+  test("replacing an image with cleanup asks first", async ({ page }) => {
+    await traced(page, () => page.locator("#file-input").setInputFiles(IMAGE));
+    await eraseStroke(page);
+    let asked = 0;
+    page.once("dialog", (dialog) => {
+      asked++;
+      dialog.dismiss();
+    });
+    await page.locator("#file-input").setInputFiles(IMAGE);
+    await expect.poll(() => asked).toBe(1);
+    await expect(page.locator("#eraser-undo")).toBeEnabled();
+    page.once("dialog", (dialog) => dialog.accept());
+    await traced(page, () => page.locator("#file-input").setInputFiles(IMAGE));
+    await expect(page.locator("#eraser-undo")).toBeDisabled();
+  });
+});
+
+test.describe("preview navigation", () => {
+  test("arrow keys pan the preview", async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await traced(page, () => page.locator("#file-input").setInputFiles(IMAGE));
+    await page.locator("#preview").focus();
+    await page.keyboard.press("+");
+    const zoomed = await transform(page);
+    await page.keyboard.press("ArrowRight");
+    const step = await transform(page);
+    expect(step).not.toBe(zoomed);
+    await page.keyboard.press("Shift+ArrowDown");
+    expect(await transform(page)).not.toBe(step);
+  });
+
+  test("one finger scrolls the page past a fitted phone preview", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await traced(page, () => page.locator("#file-input").setInputFiles(IMAGE));
+    const touchAction = () =>
+      page.locator("#preview").evaluate((el) => getComputedStyle(el).touchAction);
+    expect(await touchAction()).toBe("pan-y");
+    await page.locator("#eraser-tool").click();
+    expect(await touchAction()).toBe("none");
+    await page.locator("#eraser-tool").click();
+    await page.locator("#zoom-in").click();
+    expect(await touchAction()).toBe("none");
+  });
+});
+
+test.describe("touch devices", () => {
+  test.use({ hasTouch: true, viewport: { width: 1180, height: 820 } });
+
+  test("controls meet 44px touch targets", async ({ page }) => {
+    await traced(page, () => page.locator("#file-input").setInputFiles(IMAGE));
+    const small = await page.evaluate(() => {
+      const selector =
+        ".header-tool, .header-action, .app-menu summary, .panel > summary, .advanced > summary, .button, .toggle, select";
+      return [...document.querySelectorAll(selector)]
+        .filter((el) => el.getClientRects().length && getComputedStyle(el).visibility !== "hidden")
+        .map((el) => ({
+          el: el.id || el.className || el.tagName,
+          h: el.getBoundingClientRect().height,
+        }))
+        .filter(({ h }) => h < 43.5);
+    });
+    expect(small).toEqual([]);
+  });
+
+  test("text inputs use 16px text so iOS does not zoom on focus", async ({ page }) => {
+    await traced(page, () => page.locator("#file-input").setInputFiles(IMAGE));
+    await page.evaluate(() => {
+      for (const details of document.querySelectorAll("details.panel")) details.open = true;
+    });
+    const small = await page.evaluate(() =>
+      [...document.querySelectorAll('input[type="text"], input[type="number"], select')]
+        .filter((el) => el.getClientRects().length)
+        .map((el) => ({ id: el.id, size: parseFloat(getComputedStyle(el).fontSize) }))
+        .filter(({ size }) => size < 16),
+    );
+    expect(small).toEqual([]);
+  });
+
+  test("empty state invites a tap instead of a drop", async ({ page }) => {
+    await expect(page.locator(".tap-copy")).toBeVisible();
+    await expect(page.locator(".drop-copy")).toBeHidden();
+    const chooser = page.waitForEvent("filechooser");
+    await page.locator(".dropzone-hint").click();
+    await chooser;
+  });
+});

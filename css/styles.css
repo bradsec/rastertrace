@@ -357,6 +357,13 @@ main {
   text-align: center;
 }
 
+.dropzone {
+  cursor: pointer;
+}
+.tap-copy {
+  display: none;
+}
+
 .dropzone.dragover {
   border-color: var(--accent);
   background: var(--accent-soft);
@@ -1382,10 +1389,34 @@ details.advanced[open] {
   }
 }
 
+/* Floats over the page so an error never changes the layout height. */
 .error {
+  position: fixed;
+  left: 50%;
+  bottom: 40px;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: max-content;
+  max-width: calc(100% - 32px);
+  padding: 10px 10px 10px 14px;
+  transform: translateX(-50%);
+  border: 1px solid var(--error);
+  border-radius: var(--r);
+  background: var(--surface-1);
+  box-shadow: 0 6px 20px rgb(0 0 0 / 45%);
+}
+.error[hidden] {
+  display: none;
+}
+.error p {
   margin: 0;
   color: var(--error);
   font-weight: 600;
+}
+.error .button {
+  flex: 0 0 auto;
 }
 
 .trace-summary {
@@ -1694,7 +1725,7 @@ dialog::backdrop {
   body:has(
       #blob-fill-tool[aria-pressed="true"],
       #blob-fill-pick[aria-pressed="true"],
-      #selection-fill:not([hidden])
+      #selection-actions:not([hidden]) #selection-fill:not([hidden])
     )
     .blob-color,
   .restore-original:not(:disabled) {
@@ -1704,7 +1735,7 @@ dialog::backdrop {
       #eraser-tool[aria-pressed="true"],
       #blob-fill-tool[aria-pressed="true"],
       #blob-fill-pick[aria-pressed="true"],
-      #selection-fill:not([hidden]),
+      #selection-actions:not([hidden]) #selection-fill:not([hidden]),
       #eraser-clear:not(:disabled)
     )
     .eraser-controls::after {
@@ -1786,6 +1817,11 @@ dialog::backdrop {
     min-height: 220px;
     max-height: none;
   }
+  /* A fitted preview has nothing to pan: let one finger scroll the page
+     past it. Two-finger pinches still reach view.js. */
+  .preview.fitted:not(.erasing, .blob-filling, .blob-picking, .selecting) {
+    touch-action: pan-y;
+  }
 }
 
 @media (max-width: 680px) {
@@ -1818,6 +1854,110 @@ dialog::backdrop {
   }
   #copy-svg {
     display: none;
+  }
+}
+
+/* ---------- Touch devices ---------- */
+/* 44px targets for coarse pointers (Apple HIG; WCAG 2.5.8's floor is
+   24px). Width breakpoints alone gave landscape tablets desktop sizes. */
+@media (pointer: coarse) {
+  .drop-copy {
+    display: none;
+  }
+  .tap-copy {
+    display: inline;
+  }
+  .header-tool,
+  .header-action,
+  .primary-action,
+  .app-menu summary,
+  .menu-popover button,
+  .menu-popover a,
+  .panel > summary,
+  details.advanced > summary,
+  .button,
+  .color-row .button,
+  .toggle,
+  select {
+    min-height: 44px;
+  }
+  .header-tool {
+    min-width: 44px;
+  }
+  .blob-color input[type="text"] {
+    width: 92px;
+  }
+  /* iOS Safari zooms the page when a focused field's text is under 16px. */
+  input[type="text"],
+  input[type="number"],
+  .blob-color input[type="text"],
+  select {
+    font-size: 16px;
+  }
+  .app-header {
+    flex-basis: 60px;
+  }
+  .statusbar {
+    flex-basis: 48px;
+    min-height: 48px;
+  }
+  .statusbar .status-zoom {
+    height: 46px;
+  }
+  .statusbar .status-zoom .header-tool {
+    height: 44px;
+    font-size: 13px;
+  }
+  .workspace {
+    height: calc(100dvh - 108px);
+  }
+}
+
+@media (pointer: coarse) and (max-width: 1660px) {
+  .app-header {
+    grid-template-rows: minmax(0, 56px) minmax(0, 52px);
+    height: 108px;
+    min-height: 108px;
+    max-height: 108px;
+    flex-basis: 108px;
+  }
+  .menubar,
+  .topbar-actions {
+    height: 56px;
+  }
+  .header-canvas-tools {
+    height: 52px;
+  }
+  .workspace {
+    height: calc(100dvh - 156px);
+  }
+}
+
+/* Nine cleanup tools at 44px do not fit 360px: keep the 44px height and
+   narrow them, still well over WCAG 2.5.8's 24px. */
+@media (pointer: coarse) and (max-width: 520px) {
+  .header-tool {
+    min-width: 36px;
+    padding-inline: 4px;
+  }
+  .header-canvas-tools > .eraser-controls {
+    column-gap: 2px;
+  }
+}
+
+@media (pointer: coarse) and (max-width: 900px) {
+  .app-header {
+    height: auto;
+    max-height: none;
+    flex-basis: auto;
+    grid-template-rows: 56px auto;
+  }
+  .header-canvas-tools {
+    height: auto;
+    min-height: 52px;
+  }
+  .workspace {
+    height: auto;
   }
 }
 

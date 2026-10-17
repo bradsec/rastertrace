@@ -53,7 +53,7 @@
       }
     </script>
 
-    <link rel="stylesheet" href="css/styles.css?v=74" />
+    <link rel="stylesheet" href="css/styles.css?v=75" />
   </head>
   <body>
     <header class="app-header">
@@ -361,13 +361,19 @@
     </header>
 
     <main id="main">
-      <p id="error" class="error" role="alert" hidden></p>
+      <div id="error" class="error" hidden>
+        <p id="error-text" role="alert"></p>
+        <button type="button" id="error-dismiss" class="button button-secondary">Dismiss</button>
+      </div>
 
       <!-- Empty state: the drop zone is the whole stage -->
       <section id="empty-state" class="stage-empty">
         <div id="dropzone" class="dropzone">
           <img class="dropzone-mark" src="assets/logo.svg?v=2" alt="" />
-          <p class="dropzone-title">Drop an image here</p>
+          <p class="dropzone-title">
+            <span class="drop-copy">Drop an image here</span
+            ><span class="tap-copy">Choose an image</span>
+          </p>
           <p class="dropzone-hint">
             PNG, JPEG, WebP, GIF or BMP. Converted to SVG on your machine; no upload.
           </p>
@@ -1076,9 +1082,9 @@
         <div class="preview-pane">
           <div
             id="preview"
-            class="preview checkerboard"
+            class="preview checkerboard fitted"
             tabindex="0"
-            aria-label="Conversion preview. Pinch, scroll, or use plus and minus to zoom; drag to pan."
+            aria-label="Conversion preview. Pinch, scroll, or use plus and minus to zoom; drag or use arrow keys to pan."
           >
             <div id="pan-stage" class="pan-stage">
               <img
@@ -1511,6 +1517,6 @@
         location.reload();
       };
     </script>
-    <script type="module" src="js/app.js?v=99" onerror="window.recoverRasterTraceBoot()"></script>
+    <script type="module" src="js/app.js?v=100" onerror="window.recoverRasterTraceBoot()"></script>
   </body>
 </html>

@@ -171,6 +171,7 @@ test("edits survive a palette-stable retrace and clear on new file", async ({ pa
   expect(await resultSvg(page)).toContain('fill="#00FF00"');
 
   const other = await makePng(page, "other.png", ...SIZE, CREAM, SHAPES);
+  page.once("dialog", (dialog) => dialog.accept());
   await traced(page, () => page.locator("#file-input").setInputFiles(other));
   await expect(page.locator("#palette-edits li")).toHaveCount(0);
 });

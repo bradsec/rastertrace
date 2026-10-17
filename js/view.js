@@ -3,8 +3,8 @@
 // register after the selection and eraser handlers in cleanup-tools.js
 // (which stop propagation while a tool is active), so app.js imports
 // this module last.
-import { els, hooks, state } from "./context.js?v=15";
-import { renderSelection } from "./cleanup-tools.js?v=24";
+import { els, hooks, state } from "./context.js?v=16";
+import { renderSelection } from "./cleanup-tools.js?v=25";
 
 const view = { scale: 1, tx: 0, ty: 0 };
 const ZOOM_MIN = 0.001;
@@ -23,8 +23,10 @@ function actualZoomPercent() {
 
 function applyView() {
   els.panStage.style.transform = `translate(${view.tx}px, ${view.ty}px) scale(${view.scale})`;
-  els.zoomReset.textContent =
-    view.scale === 1 && view.tx === 0 && view.ty === 0 ? "Fit" : `${actualZoomPercent()}%`;
+  const fitted = view.scale === 1 && view.tx === 0 && view.ty === 0;
+  els.zoomReset.textContent = fitted ? "Fit" : `${actualZoomPercent()}%`;
+  // At Fit there is nothing to pan, so phones let one finger scroll the page.
+  els.preview.classList.toggle("fitted", fitted);
   renderSelection();
 }
 
@@ -83,8 +85,18 @@ for (const type of ["touchstart", "touchmove"]) {
   );
 }
 
+const PAN_KEYS = { ArrowLeft: [1, 0], ArrowRight: [-1, 0], ArrowUp: [0, 1], ArrowDown: [0, -1] };
+
 els.preview.addEventListener("keydown", (e) => {
-  if (e.key === "+" || e.key === "=") zoomAtCenter(1.5);
+  const pan = PAN_KEYS[e.key];
+  if (pan) {
+    // Arrow keys move the view, like dragging: the keyboard alternative to
+    // panning (WCAG 2.1.1). Shift takes larger steps.
+    const step = e.shiftKey ? 160 : 40;
+    view.tx += pan[0] * step;
+    view.ty += pan[1] * step;
+    applyView();
+  } else if (e.key === "+" || e.key === "=") zoomAtCenter(1.5);
   else if (e.key === "-" || e.key === "_") zoomAtCenter(1 / 1.5);
   else if (e.key === "0") resetView();
   else return;

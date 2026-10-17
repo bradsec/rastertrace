@@ -21,16 +21,16 @@ import {
   parseHexColor,
   toHexColor,
 } from "./preprocess.js?v=52";
-import { $, els, hooks, preferences, showError, state } from "./context.js?v=15";
-import { refreshExport, setResultActions } from "./exporters.js?v=20";
+import { $, els, hooks, preferences, showError, state } from "./context.js?v=16";
+import { refreshExport, setResultActions } from "./exporters.js?v=21";
 import {
   clearSelection,
   setBlobFill,
   setEraser,
   setSelectionTool,
   setView,
-} from "./cleanup-tools.js?v=24";
-import { afterTrace, resetPalette } from "./palette-ui.js?v=5";
+} from "./cleanup-tools.js?v=25";
+import { afterTrace, resetPalette } from "./palette-ui.js?v=6";
 import {
   applyExportProfile,
   applyMeasurementUnit,
@@ -46,8 +46,8 @@ import {
   updateOutputs,
   updateStencilFields,
   updateTransparencyFields,
-} from "./settings.js?v=22";
-import { actualSizeView, resetView } from "./view.js?v=23";
+} from "./settings.js?v=23";
+import { actualSizeView, resetView } from "./view.js?v=24";
 
 const EMPTY_IMAGE_SRC = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==";
 
@@ -217,38 +217,21 @@ function applyDetectedSettings(bitmap) {
 
 async function loadFile(file) {
   if (!file) return;
+  // Cleanup strokes and palette edits belong to the current image only.
+  if (
+    state.bitmap &&
+    (state.eraseStrokes.length || state.colorEdits.size) &&
+    !window.confirm("Open a new image? Your cleanup and color edits will be lost.")
+  ) {
+    return;
+  }
   showError("");
   const token = ++state.loadToken;
-  clearTimeout(state.debounce);
-  tracer.cancelPending();
-  state.bitmap?.close();
-  state.bitmap = null;
-  setBitmapActionsEnabled(false);
-  state.file = null;
-  state.svgRaw = null;
-  state.svg = null;
-  state.raster = null;
-  state.processedRaster = null;
-  state.eraseStrokes = [];
-  state.eraseRedo = [];
-  state.flatNote = null;
-  resetPalette();
-  clearSelection();
-  setSelectionTool(null);
-  setEraser(false);
-  setBlobFill(false);
-  setResultActions(false);
-  if (state.downloadUrl) URL.revokeObjectURL(state.downloadUrl);
-  if (state.sourceUrl) URL.revokeObjectURL(state.sourceUrl);
-  state.downloadUrl = null;
-  state.sourceUrl = null;
-  els.resultView.src = EMPTY_IMAGE_SRC;
-  els.sourceView.src = EMPTY_IMAGE_SRC;
-  els.statPaths.textContent = "-";
-  els.statSize.textContent = "-";
-  els.statTime.textContent = "-";
-  els.emptyState.hidden = true;
-  els.workspace.hidden = false;
+  const wasEmpty = !state.bitmap;
+  if (wasEmpty) {
+    els.emptyState.hidden = true;
+    els.workspace.hidden = false;
+  }
   setBusy(true, "Loading image…");
   try {
     const sourceSize = await sniffImageSize(file);
@@ -262,6 +245,9 @@ async function loadFile(file) {
       bitmap.close(); // a newer load started while this one decoded
       return;
     }
+    // Reset only once the new file has decoded, so a file that fails to
+    // open leaves the current trace and its edits untouched.
+    resetForNewImage();
     // Settings survive image replacement (batch workflows tune once,
     // convert many); flat-image detection below still adjusts colors.
     state.bitmap = bitmap;
@@ -306,14 +292,55 @@ async function loadFile(file) {
     if (token === state.loadToken) {
       setBusy(false);
       els.status.textContent = "";
+      if (wasEmpty && !state.bitmap) {
+        els.workspace.hidden = true;
+        els.emptyState.hidden = false;
+      }
       showError(err.message || "Could not open that file.");
     }
   }
 }
 
+function resetForNewImage() {
+  clearTimeout(state.debounce);
+  tracer.cancelPending();
+  state.bitmap?.close();
+  state.bitmap = null;
+  setBitmapActionsEnabled(false);
+  state.file = null;
+  state.svgRaw = null;
+  state.svg = null;
+  state.raster = null;
+  state.processedRaster = null;
+  state.eraseStrokes = [];
+  state.eraseRedo = [];
+  state.flatNote = null;
+  resetPalette();
+  clearSelection();
+  setSelectionTool(null);
+  setEraser(false);
+  setBlobFill(false);
+  setResultActions(false);
+  if (state.downloadUrl) URL.revokeObjectURL(state.downloadUrl);
+  if (state.sourceUrl) URL.revokeObjectURL(state.sourceUrl);
+  state.downloadUrl = null;
+  state.sourceUrl = null;
+  els.resultView.src = EMPTY_IMAGE_SRC;
+  els.sourceView.src = EMPTY_IMAGE_SRC;
+  els.statPaths.textContent = "-";
+  els.statSize.textContent = "-";
+  els.statTime.textContent = "-";
+}
+
 // -- Events ------------------------------------------------------------
 
 els.pickFile.addEventListener("click", () => els.fileInput.click());
+els.errorDismiss.addEventListener("click", () => showError(""));
+// The whole drop zone opens the picker: phones cannot drop files.
+els.dropzone.addEventListener("click", (event) => {
+  if (event.target instanceof Element && event.target.closest("button, input")) return;
+  els.fileInput.click();
+});
 els.replaceImage.addEventListener("click", () => els.fileInput.click());
 
 for (const button of document.querySelectorAll('[data-action="open-image"]')) {
