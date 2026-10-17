@@ -7,10 +7,10 @@ import {
   PRESETS,
   sanitizeSettings,
   toGrayscaleColor,
-} from "./preprocess.js?v=48";
-import { els, preferences } from "./context.js?v=8";
-import { refreshExport, updatePhysicalHeightOut } from "./exporters.js?v=13";
-import { setEyedropper } from "./cleanup-tools.js?v=17";
+} from "./preprocess.js?v=49";
+import { els, preferences } from "./context.js?v=9";
+import { refreshExport, updatePhysicalHeightOut } from "./exporters.js?v=14";
+import { setEyedropper } from "./cleanup-tools.js?v=18";
 
 /** @returns {HTMLInputElement} */
 const radioEl = (selector) => /** @type {HTMLInputElement} */ (document.querySelector(selector));
@@ -95,6 +95,9 @@ export function currentSettings() {
     lengthThreshold: Number(els.lengthThreshold.value),
     spliceThreshold: Number(els.spliceThreshold.value),
     transparent,
+    contiguous: els.contiguous.checked,
+    enclosed: els.enclosed.checked,
+    specks: Number(els.specks.value),
     fuzz: Number(els.fuzz.value),
     edgeTrim: Number(els.edgeTrim.value),
     defringe: Number(els.defringe.value),
@@ -109,6 +112,7 @@ export function updateOutputs() {
   els.cornerThresholdOut.textContent = els.cornerThreshold.value;
   els.straightenOut.textContent = Number(els.straighten.value) === 0 ? "Off" : els.straighten.value;
   els.fuzzOut.textContent = els.fuzz.value;
+  els.specksOut.textContent = els.specks.value;
   els.edgeTrimOut.textContent = els.edgeTrim.value;
   els.defringeOut.textContent = els.defringe.value;
   els.pathPrecisionOut.textContent = els.pathPrecision.value;
@@ -196,6 +200,9 @@ function snapshotSettings() {
     stencilInk: radioEl('input[name="stencil-ink"]:checked').value,
     transparent: els.transparent.value,
     knockoutColor: els.knockoutColor.value,
+    contiguous: els.contiguous.checked,
+    enclosed: els.enclosed.checked,
+    specks: Number(els.specks.value),
     fuzz: Number(els.fuzz.value),
     edgeTrim: Number(els.edgeTrim.value),
     defringe: Number(els.defringe.value),
@@ -258,6 +265,9 @@ export function restoreSettings() {
   }
   set(els.transparent, "transparent");
   set(els.knockoutColor, "knockoutColor");
+  check(els.contiguous, "contiguous");
+  check(els.enclosed, "enclosed");
+  set(els.specks, "specks");
   set(els.fuzz, "fuzz");
   set(els.edgeTrim, "edgeTrim");
   set(els.defringe, "defringe");
@@ -289,7 +299,11 @@ export function applyPreset(name) {
 export function updateTransparencyFields() {
   const mode = els.transparent.value;
   els.knockoutColorField.hidden = mode !== "custom";
+  els.contiguousField.hidden = mode !== "custom";
+  // Enclosed holes only exist for border-connected removal.
+  els.enclosedField.hidden = !(mode === "edges" || (mode === "custom" && els.contiguous.checked));
   els.fuzzField.hidden = mode === "";
+  els.specksField.hidden = mode === "";
   els.edgeTrimField.hidden = mode === "";
   els.defringeField.hidden = mode === "";
   els.backgroundSummary.textContent =
@@ -316,6 +330,9 @@ export function resetSettings() {
   els.crisp.checked = DEFAULTS.crisp;
   els.transparent.value = DEFAULTS.transparent;
   els.knockoutColor.value = "#ffffff";
+  els.contiguous.checked = DEFAULTS.contiguous;
+  els.enclosed.checked = DEFAULTS.enclosed;
+  els.specks.value = String(DEFAULTS.specks);
   els.fuzz.value = String(DEFAULTS.fuzz);
   els.edgeTrim.value = String(DEFAULTS.edgeTrim);
   els.defringe.value = String(DEFAULTS.defringe);

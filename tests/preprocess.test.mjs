@@ -31,6 +31,7 @@ import {
   srgbToOklab,
   straightenPaths,
   removeBackground,
+  removeSpecks,
   resolveSettings,
   sampleRasterColor,
   sanitizeSettings,
@@ -941,6 +942,96 @@ test("knockOutEdges handles a broad background with bounded storage", async () =
   }
   assert.deepEqual(knockOutEdges({ data, width, height }, 0), [240, 240, 240]);
   for (let i = 3; i < data.length; i += 4) assert.equal(data[i], 0);
+});
+
+/** White canvas with a black square ring (outer 2..17, wall 2 px). */
+function ringImage() {
+  const img = makeImage(20, 20, [255, 255, 255, 255]);
+  for (let y = 2; y < 18; y++) {
+    for (let x = 2; x < 18; x++) {
+      if (x < 4 || x >= 16 || y < 4 || y >= 16) setPixel(img, x, y, [0, 0, 0, 255]);
+    }
+  }
+  return img;
+}
+
+test("removeBackground contiguous pick keeps same color inside the subject", () => {
+  const img = ringImage();
+  const removed = removeBackground(img, [255, 255, 255], 16, false, { contiguous: true });
+  assert.deepEqual(removed, [255, 255, 255]);
+  assert.equal(getPixel(img, 0, 0)[3], 0); // border-connected background removed
+  assert.equal(getPixel(img, 10, 10)[3], 255); // enclosed white kept
+  assert.equal(getPixel(img, 2, 2)[3], 255); // subject kept
+});
+
+test("removeBackground contiguous pick snaps to the palette when quantized", () => {
+  const img = ringImage();
+  const removed = removeBackground(img, [250, 250, 250], 0, true, { contiguous: true });
+  assert.deepEqual(removed, [255, 255, 255]);
+  assert.equal(getPixel(img, 0, 0)[3], 0);
+  assert.equal(getPixel(img, 10, 10)[3], 255);
+});
+
+test("knockOutEdges also removes enclosed background at or above the minimum area", async () => {
+  const { knockOutEdges } = await import("../js/preprocess.js");
+  const img = ringImage(); // enclosed hole is 12x12 = 144 px
+  // Black 3x3 block inside the hole with a 1 px white center.
+  for (let y = 8; y < 11; y++) for (let x = 8; x < 11; x++) setPixel(img, x, y, [0, 0, 0, 255]);
+  setPixel(img, 9, 9, [255, 255, 255, 255]);
+  knockOutEdges(img, 16, 100);
+  assert.equal(getPixel(img, 0, 0)[3], 0);
+  assert.equal(getPixel(img, 5, 5)[3], 0); // large enclosed hole removed
+  assert.equal(getPixel(img, 9, 9)[3], 255); // small enclosed pixel kept
+  assert.equal(getPixel(img, 3, 3)[3], 255); // subject kept
+});
+
+test("knockOutEdges keeps enclosed background below the minimum area", async () => {
+  const { knockOutEdges } = await import("../js/preprocess.js");
+  const img = ringImage();
+  knockOutEdges(img, 16, 145);
+  assert.equal(getPixel(img, 10, 10)[3], 255);
+});
+
+test("removeBackground enclosed option removes holes in edges and contiguous modes", () => {
+  const edges = ringImage();
+  removeBackground(edges, "edges", 16, false, { enclosed: true });
+  assert.equal(getPixel(edges, 10, 10)[3], 0);
+  assert.equal(getPixel(edges, 3, 3)[3], 255);
+  const picked = ringImage();
+  removeBackground(picked, [255, 255, 255], 16, false, { contiguous: true, enclosed: true });
+  assert.equal(getPixel(picked, 10, 10)[3], 0);
+});
+
+test("removeSpecks drops small opaque islands and fills small enclosed pinholes", () => {
+  const img = makeImage(20, 20, [0, 0, 0, 0]);
+  for (let y = 5; y < 15; y++) for (let x = 5; x < 15; x++) setPixel(img, x, y, [200, 0, 0, 255]);
+  setPixel(img, 9, 9, [0, 0, 0, 0]); // pinhole inside the subject
+  setPixel(img, 1, 1, [0, 0, 255, 255]); // stray opaque speck
+  removeSpecks(img, 2); // areas below 2 * 2 = 4 px
+  assert.equal(getPixel(img, 1, 1)[3], 0); // speck removed
+  assert.deepEqual(getPixel(img, 9, 9), [200, 0, 0, 255]); // pinhole filled with surrounding color
+  assert.equal(getPixel(img, 7, 7)[3], 255); // subject kept
+  assert.equal(getPixel(img, 0, 0)[3], 0); // background stays transparent
+});
+
+test("removeSpecks keeps regions at the size limit and border-touching gaps", () => {
+  const img = makeImage(10, 10, [0, 0, 0, 0]);
+  for (let y = 1; y < 3; y++) for (let x = 1; x < 3; x++) setPixel(img, x, y, [9, 9, 9, 255]);
+  const before = [...img.data];
+  removeSpecks(img, 2); // 2x2 island is exactly 4 px: kept
+  assert.deepEqual([...img.data], before);
+  const solid = makeImage(4, 4, [9, 9, 9, 255]);
+  setPixel(solid, 0, 1, [0, 0, 0, 0]); // 1 px gap on the border: not a hole
+  removeSpecks(solid, 2);
+  assert.equal(getPixel(solid, 0, 1)[3], 0);
+});
+
+test("removeSpecks with size 0 is a no-op", () => {
+  const img = makeImage(3, 3, [0, 0, 0, 0]);
+  setPixel(img, 1, 1, [9, 9, 9, 255]);
+  const before = [...img.data];
+  removeSpecks(img, 0);
+  assert.deepEqual([...img.data], before);
 });
 
 test("analyzeFlatness flags flat image with anti-aliased fringe", () => {

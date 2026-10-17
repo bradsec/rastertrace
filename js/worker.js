@@ -11,10 +11,11 @@ import {
   modeFilter,
   quantize,
   removeBackground,
+  removeSpecks,
   straightenPaths,
   thresholdImage,
   toGrayscale,
-} from "./preprocess.js?v=48";
+} from "./preprocess.js?v=49";
 
 // Explicit versioned URL: the glue's own wasm fetch drops the ?v= query,
 // so a rebuilt binary would otherwise be served from stale browser cache
@@ -66,7 +67,15 @@ self.onmessage = async (event) => {
     let knockedOut = null;
     if (settings.transparent) {
       stage("Removing background…");
-      knockedOut = removeBackground(img, settings.transparent, settings.fuzz, quantized);
+      knockedOut = removeBackground(img, settings.transparent, settings.fuzz, quantized, {
+        contiguous: settings.contiguous,
+        enclosed: settings.enclosed,
+      });
+      // Before the trim: trimming would widen pinholes past the size limit.
+      if (knockedOut && settings.specks > 0) {
+        stage("Cleaning specks…");
+        removeSpecks(img, settings.specks);
+      }
       // Choke the matte: the knockout leaves a fringe of background-blend
       // colors along the boundary that no color tolerance can catch.
       if (knockedOut && settings.edgeTrim > 0) {

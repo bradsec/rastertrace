@@ -58,6 +58,9 @@ export const DEFAULTS = Object.freeze({
   crisp: false,
   transparent: "",
   fuzz: 16,
+  contiguous: false,
+  enclosed: false,
+  specks: 0,
   edgeTrim: 0,
   defringe: 0,
   stencil: false,
@@ -521,6 +524,9 @@ const SETTING_CHECKS = {
   transparent: (v) => ["", "edges", "auto", "custom"].includes(v),
   knockoutColor: (v) => typeof v === "string" && /^#[0-9a-fA-F]{6}$/.test(v),
   fuzz: (v) => Number.isFinite(v) && v >= 0 && v <= 255,
+  contiguous: (v) => typeof v === "boolean",
+  enclosed: (v) => typeof v === "boolean",
+  specks: (v) => Number.isFinite(v) && v >= 0 && v <= 16,
   edgeTrim: (v) => Number.isFinite(v) && v >= 0 && v <= 16,
   defringe: (v) => Number.isFinite(v) && v >= 0 && v <= 8,
   pathPrecision: (v) => Number.isFinite(v) && v >= 1 && v <= 4,
@@ -722,19 +728,25 @@ export function knockOutColor(img, color, fuzz) {
 }
 
 /**
- * Flood-fill background removal: zero the alpha of every pixel CONNECTED
- * to the image border whose color matches the border seed within fuzz
- * (perceptual distance). Pixels of the same color inside the
- * subject stay opaque because they are not connected to the edge.
- * Seed color comes from the most common opaque corner; every border
- * pixel matching it seeds the fill. Returns the seed color, or null when
- * the corners are already transparent. Mutates img in place.
+ * Smallest enclosed background region the "enclosed" option removes, as
+ * a fraction of the image area. Keeps small same-color details inside the
+ * subject (eye highlights, specular glints) while letter counters and
+ * gaps between shapes go.
  */
-export function knockOutEdges(img, fuzz) {
+export const ENCLOSED_MIN_FRACTION = 0.0005;
+
+/**
+ * Flood-fill knockout: zero the alpha of every pixel CONNECTED to the
+ * image border whose color matches `color` within fuzz (perceptual
+ * distance). Pixels of the same color inside the subject stay opaque
+ * because they are not connected to the edge, unless `enclosedMinArea` is
+ * positive: then enclosed matching regions of at least that many pixels
+ * (letter counters, gaps between shapes) are removed too. Mutates img in
+ * place.
+ */
+export function knockOutConnected(img, color, fuzz, enclosedMinArea = 0) {
   const { data, width, height } = img;
-  const seed = detectBackgroundColor(img);
-  if (!seed) return null;
-  const fuzzMatch = makeFuzzMatch(seed, fuzz);
+  const fuzzMatch = makeFuzzMatch(color, fuzz);
   const matches = (i) =>
     data[i + 3] >= ALPHA_THRESHOLD && fuzzMatch(data[i], data[i + 1], data[i + 2]);
 
@@ -765,6 +777,49 @@ export function knockOutEdges(img, fuzz) {
     if (y > 0) push(x, y - 1);
     if (y < height - 1) push(x, y + 1);
   }
+  if (enclosedMinArea <= 0) return img;
+
+  // Everything still matching is enclosed. Label each region; the BFS
+  // queue doubles as the member list, so a region's pixels sit in
+  // stack[0..size) when its search ends.
+  const seen = new Uint8Array(width * height);
+  for (let start = 0; start < width * height; start++) {
+    if (seen[start] || !matches(start * 4)) continue;
+    seen[start] = 1;
+    stack[0] = start;
+    let size = 1;
+    for (let head = 0; head < size; head++) {
+      const p = stack[head];
+      const x = p % width;
+      const y = (p / width) | 0;
+      for (const q of [
+        x > 0 ? p - 1 : -1,
+        x < width - 1 ? p + 1 : -1,
+        y > 0 ? p - width : -1,
+        y < height - 1 ? p + width : -1,
+      ]) {
+        if (q >= 0 && !seen[q] && matches(q * 4)) {
+          seen[q] = 1;
+          stack[size++] = q;
+        }
+      }
+    }
+    if (size >= enclosedMinArea) {
+      for (let k = 0; k < size; k++) data[stack[k] * 4 + 3] = 0;
+    }
+  }
+  return img;
+}
+
+/**
+ * Edge knockout seeded by the detected border color (see
+ * detectBackgroundColor and knockOutConnected). Returns the seed color,
+ * or null when the border is already transparent. Mutates img in place.
+ */
+export function knockOutEdges(img, fuzz, enclosedMinArea = 0) {
+  const seed = detectBackgroundColor(img);
+  if (!seed) return null;
+  knockOutConnected(img, seed, fuzz, enclosedMinArea);
   return seed;
 }
 
@@ -800,10 +855,22 @@ export function snapToImageColor(img, [r, g, b], maxDistance) {
  * cluster goes; fuzz still applies around the snapped color, because an
  * anti-aliased boundary quantizes into several near-background shades
  * that would otherwise survive as a halo outline around the subject.
+ * `contiguous` limits a picked color to regions connected to the border,
+ * like edges mode; `enclosed` then also removes enclosed regions of at
+ * least ENCLOSED_MIN_FRACTION of the image (edges and contiguous only).
  * Returns the removed color, or null when nothing was removed.
  */
-export function removeBackground(img, transparent, fuzz, quantized) {
-  if (transparent === "edges") return knockOutEdges(img, fuzz);
+export function removeBackground(
+  img,
+  transparent,
+  fuzz,
+  quantized,
+  { contiguous = false, enclosed = false } = {},
+) {
+  const enclosedMinArea = enclosed
+    ? Math.max(1, Math.round(img.width * img.height * ENCLOSED_MIN_FRACTION))
+    : 0;
+  if (transparent === "edges") return knockOutEdges(img, fuzz, enclosedMinArea);
   let target = null;
   if (transparent === "auto") target = detectBackgroundColor(img);
   else if (Array.isArray(transparent)) target = transparent;
@@ -813,8 +880,87 @@ export function removeBackground(img, transparent, fuzz, quantized) {
     const snapped = snapToImageColor(img, target, Math.max(fuzz, 48));
     if (snapped) color = snapped;
   }
-  knockOutColor(img, color, fuzz);
+  if (contiguous && Array.isArray(transparent)) {
+    knockOutConnected(img, color, fuzz, enclosedMinArea);
+  } else {
+    knockOutColor(img, color, fuzz);
+  }
   return color;
+}
+
+/**
+ * Speck cleanup after a knockout: clear opaque islands and fill enclosed
+ * transparent pinholes smaller than `size` x `size` pixels (the same area
+ * rule as the tracer's speckle filter). A pinhole takes the most common
+ * opaque color around it, so quantized images keep their palette.
+ * Transparent regions touching the border are background, never holes.
+ * 4-connected. Mutates img in place.
+ */
+export function removeSpecks(img, size) {
+  const maxArea = size * size;
+  if (maxArea <= 1) return img;
+  const { data, width, height } = img;
+  const n = width * height;
+  const opaque = (p) => data[p * 4 + 3] >= ALPHA_THRESHOLD;
+  const seen = new Uint8Array(n);
+  const queue = new Uint32Array(n);
+  for (let start = 0; start < n; start++) {
+    if (seen[start]) continue;
+    const isOpaque = opaque(start);
+    seen[start] = 1;
+    queue[0] = start;
+    let count = 1;
+    let touchesBorder = false;
+    // Neighbor colors across the region boundary, for pinhole fill.
+    const around = new Map();
+    for (let head = 0; head < count; head++) {
+      const p = queue[head];
+      const x = p % width;
+      const y = (p / width) | 0;
+      if (x === 0 || y === 0 || x === width - 1 || y === height - 1) touchesBorder = true;
+      for (const q of [
+        x > 0 ? p - 1 : -1,
+        x < width - 1 ? p + 1 : -1,
+        y > 0 ? p - width : -1,
+        y < height - 1 ? p + width : -1,
+      ]) {
+        if (q < 0) continue;
+        if (opaque(q) !== isOpaque) {
+          if (!isOpaque && count < maxArea) {
+            const j = q * 4;
+            const key = (data[j] << 16) | (data[j + 1] << 8) | data[j + 2];
+            around.set(key, (around.get(key) || 0) + 1);
+          }
+          continue;
+        }
+        if (!seen[q]) {
+          seen[q] = 1;
+          queue[count++] = q;
+        }
+      }
+    }
+    if (count >= maxArea) continue;
+    if (isOpaque) {
+      for (let k = 0; k < count; k++) data[queue[k] * 4 + 3] = 0;
+    } else if (!touchesBorder && around.size) {
+      let fill = 0;
+      let best = -1;
+      for (const [key, c] of around) {
+        if (c > best) {
+          best = c;
+          fill = key;
+        }
+      }
+      for (let k = 0; k < count; k++) {
+        const i = queue[k] * 4;
+        data[i] = (fill >> 16) & 0xff;
+        data[i + 1] = (fill >> 8) & 0xff;
+        data[i + 2] = fill & 0xff;
+        data[i + 3] = 255;
+      }
+    }
+  }
+  return img;
 }
 
 /**

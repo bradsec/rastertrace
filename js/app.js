@@ -10,7 +10,7 @@ import {
   rotateBitmap,
   sniffImageSize,
   Tracer,
-} from "./pipeline.js?v=48";
+} from "./pipeline.js?v=49";
 import {
   analyzeFlatness,
   fitTraceScale,
@@ -20,16 +20,16 @@ import {
   parseHexColor,
   PRESETS,
   toHexColor,
-} from "./preprocess.js?v=48";
-import { $, els, hooks, preferences, showError, state } from "./context.js?v=8";
-import { refreshExport, setResultActions } from "./exporters.js?v=13";
+} from "./preprocess.js?v=49";
+import { $, els, hooks, preferences, showError, state } from "./context.js?v=9";
+import { refreshExport, setResultActions } from "./exporters.js?v=14";
 import {
   clearSelection,
   setBlobFill,
   setEraser,
   setSelectionTool,
   setView,
-} from "./cleanup-tools.js?v=17";
+} from "./cleanup-tools.js?v=18";
 import {
   applyExportProfile,
   applyMeasurementUnit,
@@ -45,12 +45,12 @@ import {
   updateOutputs,
   updateStencilFields,
   updateTransparencyFields,
-} from "./settings.js?v=16";
-import { actualSizeView, resetView } from "./view.js?v=16";
+} from "./settings.js?v=17";
+import { actualSizeView, resetView } from "./view.js?v=17";
 
 const EMPTY_IMAGE_SRC = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==";
 
-const tracer = new Tracer(new URL("./worker.js?v=51", import.meta.url));
+const tracer = new Tracer(new URL("./worker.js?v=52", import.meta.url));
 
 let elapsedTimer = 0;
 
@@ -552,7 +552,7 @@ for (const input of [els.colors, els.speckle, els.layerDiff]) {
   });
 }
 
-for (const input of [els.fuzz, els.edgeTrim, els.defringe]) {
+for (const input of [els.fuzz, els.specks, els.edgeTrim, els.defringe]) {
   input.addEventListener("input", () => {
     updateOutputs();
     scheduleRetrace();
@@ -565,6 +565,13 @@ els.transparent.addEventListener("change", () => {
 });
 
 els.knockoutColor.addEventListener("input", scheduleRetrace);
+
+els.contiguous.addEventListener("change", () => {
+  updateTransparencyFields();
+  scheduleRetrace();
+});
+
+els.enclosed.addEventListener("change", scheduleRetrace);
 
 /**
  * The bitmap is decoded at the 2048 cap. Ultra re-decodes the kept file

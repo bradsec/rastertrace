@@ -612,6 +612,24 @@
                     </button>
                   </div>
                 </div>
+                <div class="subfield" id="contiguous-field" hidden>
+                  <label class="choice"
+                    ><input type="checkbox" id="contiguous" />
+                    <span
+                      title="Removes the color only where it connects to the image border, so the same color inside the subject stays"
+                      >Only where connected to edges</span
+                    ></label
+                  >
+                </div>
+                <div class="subfield" id="enclosed-field" hidden>
+                  <label class="choice"
+                    ><input type="checkbox" id="enclosed" />
+                    <span
+                      title="Also removes enclosed background, such as the inside of an O or gaps between shapes. Tiny enclosed areas stay"
+                      >Also remove enclosed background</span
+                    ></label
+                  >
+                </div>
                 <div class="subfield" id="fuzz-field" hidden>
                   <div class="label-row">
                     <label
@@ -622,6 +640,17 @@
                     <output id="fuzz-out" for="fuzz">16</output>
                   </div>
                   <input type="range" id="fuzz" min="0" max="255" step="1" value="16" />
+                </div>
+                <div class="subfield" id="specks-field" hidden>
+                  <div class="label-row">
+                    <label
+                      for="specks"
+                      title="Removes leftover opaque specks and fills pinholes in the subject smaller than this many pixels across. 0 is off"
+                      >Clean specks</label
+                    >
+                    <output id="specks-out" for="specks">0</output>
+                  </div>
+                  <input type="range" id="specks" min="0" max="16" step="1" value="0" />
                 </div>
                 <div class="subfield" id="edge-trim-field" hidden>
                   <div class="label-row">
@@ -1019,7 +1048,9 @@
               <dt>Background removal</dt>
               <dd>
                 Makes the background transparent: connected-from-edges, auto-detected color, or a
-                picked color. Tolerance widens the match; edge trim and defringe clean the cutout
+                picked color. A picked color can be limited to areas connected to the edges, and
+                edge removal can also clear enclosed background. Tolerance widens the match; clean
+                specks removes stray dots and pinholes; edge trim and defringe clean the cutout
                 boundary.
               </dd>
             </div>
@@ -1301,6 +1332,6 @@
         location.reload();
       };
     </script>
-    <script type="module" src="js/app.js?v=91" onerror="window.recoverRasterTraceBoot()"></script>
+    <script type="module" src="js/app.js?v=92" onerror="window.recoverRasterTraceBoot()"></script>
   </body>
 </html>
