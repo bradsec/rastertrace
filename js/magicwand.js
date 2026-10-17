@@ -107,12 +107,15 @@ export function unionMasks(a, b) {
  * Each boundary edge is used exactly once, so filling the loops with the
  * even-odd rule reproduces the mask, holes included, however the loops are
  * chained at pinch points.
+ * `smooth` (pixels) rounds the pixel staircase into straight diagonals and
+ * curves; 0 keeps the exact pixel outline.
  * @param {Uint8Array} mask
  * @param {number} width
  * @param {number} height
+ * @param {number} [smooth]
  * @returns {{ x: number, y: number }[][]}
  */
-export function maskLoops(mask, width, height) {
+export function maskLoops(mask, width, height, smooth = 0) {
   const stride = width + 1;
   const set = (x, y) => x >= 0 && y >= 0 && x < width && y < height && mask[y * width + x] === 1;
   /** @type {number[]} edge start vertices */
@@ -152,13 +155,95 @@ export function maskLoops(mask, width, height) {
       const next = outgoing.get(to[edge]) ?? [];
       edge = next.find((e) => !used[e]) ?? -1;
     }
-    loops.push(simplify(vertices, stride, width, height));
+    let points = corners(vertices, stride);
+    if (smooth > 0) points = simplifyPath(smoothLoop(points, smooth), 0.35);
+    loops.push(points.map((point) => ({ x: point.x / width, y: point.y / height })));
   }
   return loops;
 }
 
-/** Drop vertices where the outline continues in a straight line. */
-function simplify(vertices, stride, width, height) {
+const SMOOTH_PASSES = 2;
+
+/**
+ * Resample the loop every pixel, then average each point with its
+ * neighbours within `smooth` pixels along the outline. Points on a straight
+ * edge average to that edge, so lines stay straight while stair steps and
+ * bumps up to about `smooth` pixels wide flatten out.
+ */
+function smoothLoop(points, smooth) {
+  /** @type {{ x: number, y: number }[]} */
+  let loop = [];
+  for (let i = 0; i < points.length; i++) {
+    const a = points[i];
+    const b = points[(i + 1) % points.length];
+    const steps = Math.max(1, Math.ceil(Math.hypot(b.x - a.x, b.y - a.y)));
+    for (let k = 0; k < steps; k++) {
+      loop.push({ x: a.x + ((b.x - a.x) * k) / steps, y: a.y + ((b.y - a.y) * k) / steps });
+    }
+  }
+  // A window wider than half the loop would collapse small islands.
+  const half = Math.min(Math.round(smooth), Math.floor((loop.length - 1) / 4));
+  if (half < 1) return loop;
+  const n = loop.length;
+  for (let pass = 0; pass < SMOOTH_PASSES; pass++) {
+    const next = new Array(n);
+    for (let i = 0; i < n; i++) {
+      let x = 0;
+      let y = 0;
+      for (let k = -half; k <= half; k++) {
+        const p = loop[(i + k + n) % n];
+        x += p.x;
+        y += p.y;
+      }
+      next[i] = { x: x / (2 * half + 1), y: y / (2 * half + 1) };
+    }
+    loop = next;
+  }
+  return loop;
+}
+
+/** Ramer-Douglas-Peucker on a closed loop, split at its farthest point. */
+function simplifyPath(points, tolerance) {
+  if (points.length < 4) return points;
+  let far = 0;
+  let best = -1;
+  for (let i = 1; i < points.length; i++) {
+    const d = Math.hypot(points[i].x - points[0].x, points[i].y - points[0].y);
+    if (d > best) {
+      best = d;
+      far = i;
+    }
+  }
+  const first = rdp(points.slice(0, far + 1), tolerance);
+  const second = rdp([...points.slice(far), points[0]], tolerance);
+  return [...first.slice(0, -1), ...second.slice(0, -1)];
+}
+
+function rdp(points, tolerance) {
+  if (points.length < 3) return points;
+  const a = points[0];
+  const b = points.at(-1);
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  const length = Math.hypot(dx, dy) || 1;
+  let index = 0;
+  let max = 0;
+  for (let i = 1; i < points.length - 1; i++) {
+    const d = Math.abs(dy * points[i].x - dx * points[i].y + b.x * a.y - b.y * a.x) / length;
+    if (d > max) {
+      max = d;
+      index = i;
+    }
+  }
+  if (max <= tolerance) return [a, b];
+  return [
+    ...rdp(points.slice(0, index + 1), tolerance).slice(0, -1),
+    ...rdp(points.slice(index), tolerance),
+  ];
+}
+
+/** Pixel-corner vertices where the outline turns, in pixel units. */
+function corners(vertices, stride) {
   const points = [];
   const n = vertices.length;
   for (let i = 0; i < n; i++) {
@@ -170,7 +255,7 @@ function simplify(vertices, stride, width, height) {
     const dx2 = (next % stride) - (cur % stride);
     const dy2 = Math.floor(next / stride) - Math.floor(cur / stride);
     if (dx1 === dx2 && dy1 === dy2) continue;
-    points.push({ x: (cur % stride) / width, y: Math.floor(cur / stride) / height });
+    points.push({ x: cur % stride, y: Math.floor(cur / stride) });
   }
   return points;
 }

@@ -1437,8 +1437,19 @@ details.advanced[open] {
 .wand-option {
   display: none;
 }
+/* Three wand sliders share the toolbar with the tools: keep them compact. */
+.wand-option input {
+  width: 64px;
+}
+.wand-option output {
+  min-width: 28px;
+}
 body:has(#magic-wand[aria-pressed="true"]) .wand-option {
   display: inline-flex;
+}
+/* Brush size does not apply to the wand; its sliders take that room. */
+body:has(#magic-wand[aria-pressed="true"]) .eraser-size {
+  display: none;
 }
 .eraser-size output,
 .wand-option output {
@@ -1952,6 +1963,10 @@ dialog::backdrop {
   .brand > span:last-child {
     display: none;
   }
+  /* The group keeps its aria-label; the room goes to tool options. */
+  .eraser-tool-label {
+    display: none;
+  }
   .topbar-actions {
     gap: 4px;
   }
@@ -2161,6 +2176,36 @@ dialog::backdrop {
   }
 }
 
+/* Between the phone layout and wide desktops the wand's sliders do not fit
+   beside the tools, so they wrap to a second toolbar line while it is armed. */
+@media (min-width: 901px) and (max-width: 1180px) {
+  body:has(#magic-wand[aria-pressed="true"]) .app-header {
+    height: 126px;
+    min-height: 126px;
+    max-height: 126px;
+    flex-basis: 126px;
+  }
+  body:has(#magic-wand[aria-pressed="true"]) .header-canvas-tools {
+    overflow: visible;
+  }
+  body:has(#magic-wand[aria-pressed="true"]) .header-canvas-tools > .eraser-controls {
+    flex: 1 1 100%;
+    flex-wrap: wrap;
+    row-gap: 4px;
+  }
+  body:has(#magic-wand[aria-pressed="true"]) .eraser-controls::after {
+    content: "";
+    order: 1;
+    flex-basis: 100%;
+  }
+  body:has(#magic-wand[aria-pressed="true"]) .wand-option {
+    order: 2;
+  }
+  body:has(#magic-wand[aria-pressed="true"]) .workspace {
+    height: calc(100dvh - 152px);
+  }
+}
+
 /* ---------- Touch devices ---------- */
 /* 44px targets for coarse pointers (Apple HIG; WCAG 2.5.8's floor is
    24px). Width breakpoints alone gave landscape tablets desktop sizes. */
@@ -2272,6 +2317,18 @@ dialog::backdrop {
   }
   .workspace {
     height: auto;
+  }
+}
+
+@media (pointer: coarse) and (min-width: 901px) and (max-width: 1180px) {
+  body:has(#magic-wand[aria-pressed="true"]) .app-header {
+    height: 160px;
+    min-height: 160px;
+    max-height: 160px;
+    flex-basis: 160px;
+  }
+  body:has(#magic-wand[aria-pressed="true"]) .workspace {
+    height: calc(100dvh - 208px);
   }
 }
 

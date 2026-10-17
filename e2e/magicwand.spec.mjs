@@ -116,3 +116,19 @@ test("delete erases the wand selection after a slider was used", async ({ page }
   await expect(page.locator("#eraser-undo")).toBeEnabled();
   await expect.poll(async () => (await resultPixel(page, [30, 40]))[3]).toBe(0);
 });
+
+test("smooth slider reshapes the current selection outline", async ({ page }) => {
+  await loadTwoBlocks(page);
+  await page.locator("#magic-wand").click();
+  await page.locator("#wand-smooth").fill("0");
+  await page.locator("#wand-smooth").dispatchEvent("input");
+  await clickResult(page, [30, 40]);
+  const outline = () =>
+    page.locator("#selection-overlay path.selection-ants-light").getAttribute("d");
+  const sharp = await outline();
+  await page.locator("#wand-smooth").fill("8");
+  await page.locator("#wand-smooth").dispatchEvent("input");
+  await expect(page.locator("#wand-smooth-out")).toHaveText("8");
+  await expect.poll(outline).not.toBe(sharp);
+  await expect(page.locator("#selection-erase")).toBeVisible();
+});

@@ -147,6 +147,8 @@ export const els = {
   wandToleranceOut: /** @type {HTMLOutputElement} */ ($("wand-tolerance-out")),
   wandExpand: /** @type {HTMLInputElement} */ ($("wand-expand")),
   wandExpandOut: /** @type {HTMLOutputElement} */ ($("wand-expand-out")),
+  wandSmooth: /** @type {HTMLInputElement} */ ($("wand-smooth")),
+  wandSmoothOut: /** @type {HTMLOutputElement} */ ($("wand-smooth-out")),
   selectionOverlay: $("selection-overlay"),
   selectionActions: /** @type {HTMLElement} */ ($("selection-actions")),
   selectionClose: /** @type {HTMLButtonElement} */ ($("selection-close")),

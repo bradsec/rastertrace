@@ -53,7 +53,7 @@
       }
     </script>
 
-    <link rel="stylesheet" href="css/styles.css?v=86" />
+    <link rel="stylesheet" href="css/styles.css?v=90" />
   </head>
   <body>
     <header class="app-header">
@@ -284,6 +284,15 @@
             <span>Expand</span>
             <input type="range" id="wand-expand" min="0" max="8" step="1" value="2" />
             <output id="wand-expand-out" for="wand-expand">2 px</output>
+          </label>
+          <label
+            class="wand-option"
+            for="wand-smooth"
+            title="Round off the pixel staircase along the selection edge"
+          >
+            <span>Smooth</span>
+            <input type="range" id="wand-smooth" min="0" max="8" step="1" value="2" />
+            <output id="wand-smooth-out" for="wand-smooth">2</output>
           </label>
           <button
             type="button"
@@ -1318,9 +1327,9 @@
               <dd>
                 Press W or select the wand icon, then click a color in the result to select that
                 connected area only; the same color elsewhere stays unselected. Shift+click adds
-                more areas. Tolerance also takes similar shades, and Expand grows the selection to
-                cover leftover edges; both update the current selection. Erase makes the area
-                transparent, or Fill paints it with the brush color.
+                more areas. Tolerance also takes similar shades, Expand grows the selection to cover
+                leftover edges, and Smooth rounds off jagged pixel steps; each updates the current
+                selection. Erase makes the area transparent, or Fill paints it with the brush color.
               </dd>
             </div>
             <div>
@@ -1558,6 +1567,6 @@
         location.reload();
       };
     </script>
-    <script type="module" src="js/app.js?v=110" onerror="window.recoverRasterTraceBoot()"></script>
+    <script type="module" src="js/app.js?v=112" onerror="window.recoverRasterTraceBoot()"></script>
   </body>
 </html>

@@ -5,9 +5,9 @@
 // module first.
 import { brushSizeForShortcut, snapPointToAngle, svgViewBox } from "./eraser.js?v=10";
 import { parseHexColor, sampleRasterColor, toHexColor } from "./preprocess.js?v=53";
-import { els, hooks, state } from "./context.js?v=19";
-import { floodRegion, growMask, maskLoops, unionMasks } from "./magicwand.js?v=2";
-import { refreshExport } from "./exporters.js?v=26";
+import { els, hooks, state } from "./context.js?v=20";
+import { floodRegion, growMask, maskLoops, unionMasks } from "./magicwand.js?v=4";
+import { refreshExport } from "./exporters.js?v=27";
 
 export function setView(view) {
   const showResult = view === "result";
@@ -610,7 +610,7 @@ const wandTolerance = () => Number(els.wandTolerance.value) / 250;
 
 /**
  * Rebuild the wand selection from its clicked points, so changing
- * Tolerance or Expand updates the current selection in place.
+ * Tolerance, Expand or Smooth updates the current selection in place.
  */
 function wandSelection(seeds) {
   let mask = null;
@@ -624,13 +624,15 @@ function wandSelection(seeds) {
   }
   if (!mask) return null;
   const grown = growMask(mask, width, height, Number(els.wandExpand.value));
-  return { type: "region", seeds, loops: maskLoops(grown, width, height), finalized: true };
+  const loops = maskLoops(grown, width, height, Number(els.wandSmooth.value));
+  return { type: "region", seeds, loops, finalized: true };
 }
 
-for (const input of [els.wandTolerance, els.wandExpand]) {
+for (const input of [els.wandTolerance, els.wandExpand, els.wandSmooth]) {
   input.addEventListener("input", () => {
     els.wandToleranceOut.textContent = els.wandTolerance.value;
     els.wandExpandOut.textContent = `${els.wandExpand.value} px`;
+    els.wandSmoothOut.textContent = els.wandSmooth.value;
     if (state.selection?.type !== "region") return;
     state.selection = wandSelection(state.selection.seeds);
     renderSelection();
