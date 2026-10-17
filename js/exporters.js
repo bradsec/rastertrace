@@ -3,7 +3,7 @@
 // SVG/PNG/PDF/DXF through the File System Access API or a download.
 import { applyCleanupActions } from "./eraser.js?v=9";
 import { applyExportOptions, countPaths, physicalWidthValue } from "./preprocess.js?v=52";
-import { recolorSvg } from "./palette.js?v=1";
+import { recolorSvg } from "./palette.js?v=2";
 import { parseSvgPaths, toDxf, toPdf } from "./vectorexport.js?v=42";
 import { els, preferences, showError, state } from "./context.js?v=13";
 

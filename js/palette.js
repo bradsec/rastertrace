@@ -89,6 +89,22 @@ export function pickColor(imageData, nx, ny) {
 }
 
 /**
+ * Fill under a stencil raster sample. The worker's stencil raster is
+ * black ink on white whatever the ink; white ink only swaps fills in the
+ * SVG (shapes #FFFFFF over a #000000 backing rect), so nearestFill on the
+ * raw sample would open the inverse color. Black ink has no background
+ * fill, so white samples pick nothing.
+ * @param {[number, number, number]} rgb
+ * @param {string} ink "black" or "white"
+ * @returns {string | null}
+ */
+export function stencilFill([r], ink) {
+  const dark = r < 128;
+  if (ink === "white") return dark ? "#FFFFFF" : "#000000";
+  return dark ? "#000000" : null;
+}
+
+/**
  * Drop edits whose original color no longer appears in the trace. Exact
  * match only: a regenerated palette has no reliable correspondence.
  * @param {Map<string, string>} edits mutated in place

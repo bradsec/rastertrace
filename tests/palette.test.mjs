@@ -6,6 +6,7 @@ import {
   pickColor,
   pruneEdits,
   recolorSvg,
+  stencilFill,
   svgPalette,
 } from "../js/palette.js";
 
@@ -65,4 +66,13 @@ test("pruneEdits drops only edits whose color left the palette", () => {
 
 test("grid threshold is 16 colors", () => {
   assert.equal(PALETTE_GRID_MAX, 16);
+});
+
+test("stencilFill maps stencil raster samples through the ink", () => {
+  // The worker's stencil raster is always black ink on white; white ink
+  // only swaps fills in the SVG, so raster black is the #FFFFFF shape.
+  assert.equal(stencilFill([0, 0, 0], "white"), "#FFFFFF");
+  assert.equal(stencilFill([255, 255, 255], "white"), "#000000");
+  assert.equal(stencilFill([0, 0, 0], "black"), "#000000");
+  assert.equal(stencilFill([255, 255, 255], "black"), null);
 });

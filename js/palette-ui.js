@@ -4,7 +4,14 @@
 import { els, hooks, state } from "./context.js?v=13";
 import { deactivateCleanupTools, setView } from "./cleanup-tools.js?v=22";
 import { refreshExport } from "./exporters.js?v=18";
-import { nearestFill, PALETTE_GRID_MAX, pickColor, pruneEdits, svgPalette } from "./palette.js?v=1";
+import {
+  nearestFill,
+  PALETTE_GRID_MAX,
+  pickColor,
+  pruneEdits,
+  stencilFill,
+  svgPalette,
+} from "./palette.js?v=2";
 import { parseHexColor, toHexColor } from "./preprocess.js?v=52";
 
 /** Original fill the editor is open on, or null when closed. */
@@ -220,9 +227,16 @@ els.preview.addEventListener("pointerdown", (event) => {
   const y = (event.clientY - rect.top) / rect.height;
   if (x < 0 || x > 1 || y < 0 || y > 1) return;
   const rgb = pickColor(state.processedRaster, x, y);
-  const fill = rgb && nearestFill(rgb, currentPalette());
+  const ink = /** @type {HTMLInputElement | null} */ (
+    document.querySelector('input[name="stencil-ink"]:checked')
+  );
+  const fill =
+    rgb &&
+    (els.stencil.checked
+      ? stencilFill(rgb, ink?.value ?? "black")
+      : nearestFill(rgb, currentPalette()));
   if (!fill) {
-    els.status.textContent = "No color here: that area is transparent.";
+    els.status.textContent = "No traced color here: that area is transparent or empty background.";
     return;
   }
   setPalettePick(false);
