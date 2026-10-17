@@ -1565,6 +1565,8 @@ export function quantize(img, colors) {
   // adjacent palette entries and trace into thousands of ragged paths.
   const assign = new Int32Array(n).fill(-1);
   const sums = new Float64Array(k * 4);
+  const errors = new Float64Array(n);
+  const minPopulation = count.reduce((total, w) => total + w, 0) * 0.001;
   for (let iter = 0; iter < 10; iter++) {
     let changed = false;
     for (let e = 0; e < n; e++) {
@@ -1583,12 +1585,12 @@ export function quantize(img, colors) {
           best = p;
         }
       }
+      errors[e] = bestDist * count[e];
       if (assign[e] !== best) {
         assign[e] = best;
         changed = true;
       }
     }
-    if (!changed) break;
     sums.fill(0);
     for (let e = 0; e < n; e++) {
       const p = assign[e] * 4;
@@ -1605,6 +1607,26 @@ export function quantize(img, colors) {
         palette[p * 3 + 2] = sums[p * 4 + 2] / w;
       }
     }
+    // Reclaim slots below 0.1% coverage for the largest weighted error.
+    // Leave a final assignment pass after reseeding before emitting pixels.
+    if (iter < 9) {
+      for (let p = 0; p < k; p++) {
+        if (sums[p * 4 + 3] >= minPopulation) continue;
+        let worst = -1;
+        let worstError = 1e-12;
+        for (let e = 0; e < n; e++) {
+          if (sums[assign[e] * 4 + 3] >= minPopulation && errors[e] > worstError) {
+            worst = e;
+            worstError = errors[e];
+          }
+        }
+        if (worst === -1) continue;
+        for (let c = 0; c < 3; c++) palette[p * 3 + c] = lab[c][worst];
+        errors[worst] = 0;
+        changed = true;
+      }
+    }
+    if (!changed) break;
   }
 
   // Every pixel maps through its bin to the (now converged) palette entry.
