@@ -54,6 +54,25 @@ test("green screen toggle looks different when on", async ({ page }) => {
   await expect.poll(async () => (await readStyle()).boxShadow).not.toBe(before.boxShadow);
 });
 
+test("backdrop toggles show one background at a time", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.locator("#file-input").setInputFiles(path.resolve("android-chrome-192x192.png"));
+  await expect(page.locator("#status")).toContainText(/Traced \d/, { timeout: 60_000 });
+  const preview = page.locator("#preview");
+  const background = () => preview.evaluate((el) => getComputedStyle(el).backgroundColor);
+  await page.locator("#white-screen").click();
+  await expect.poll(background).toBe("rgb(255, 255, 255)");
+  await page.locator("#black-screen").click();
+  await expect.poll(background).toBe("rgb(0, 0, 0)");
+  await expect(page.locator("#white-screen")).toHaveAttribute("aria-pressed", "false");
+  await page.locator("#green-screen").click();
+  await expect.poll(background).toBe("rgb(0, 177, 64)");
+  await expect(page.locator("#black-screen")).toHaveAttribute("aria-pressed", "false");
+  await page.locator("#green-screen").click();
+  await expect(preview).toHaveClass(/checkerboard/);
+  await expect(preview).not.toHaveClass(/green-screen|white-screen|black-screen/);
+});
+
 test.describe("forced colors", () => {
   test.use({ colorScheme: "dark" });
 

@@ -107,6 +107,8 @@ export const els = {
   showResult: /** @type {HTMLButtonElement} */ ($("show-result")),
   showSource: /** @type {HTMLButtonElement} */ ($("show-source")),
   greenScreen: /** @type {HTMLButtonElement} */ ($("green-screen")),
+  whiteScreen: /** @type {HTMLButtonElement} */ ($("white-screen")),
+  blackScreen: /** @type {HTMLButtonElement} */ ($("black-screen")),
   status: $("status"),
   preview: $("preview"),
   resultView: /** @type {HTMLImageElement} */ ($("result-view")),

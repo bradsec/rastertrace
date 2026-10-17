@@ -596,11 +596,30 @@ body:has(#empty-state:not([hidden])) .eraser-controls {
   width: 100%;
   min-height: var(--control-h);
 }
+.backdrop-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+.backdrop-row .button {
+  padding-inline: 8px;
+  white-space: nowrap;
+}
 /* The dot previews the backdrop color; the pressed border shows the toggle is on. */
-#green-screen {
+.backdrop-toggle {
+  --backdrop: #00b140;
+  --backdrop-ring: #00b140;
   gap: 8px;
 }
-#green-screen::before {
+#white-screen {
+  --backdrop: #fff;
+  --backdrop-ring: var(--text);
+}
+#black-screen {
+  --backdrop: #000;
+  --backdrop-ring: var(--text);
+}
+.backdrop-toggle::before {
   content: "";
   width: 10px;
   height: 10px;
@@ -609,14 +628,16 @@ body:has(#empty-state:not([hidden])) .eraser-controls {
   border: 1px solid var(--border-strong);
   background: transparent;
 }
-#green-screen[aria-pressed="true"] {
+.backdrop-toggle[aria-pressed="true"] {
   background: var(--surface-hover);
   color: var(--text);
-  border-color: #00b140;
-  box-shadow: inset 0 0 0 1px #00b140;
+  border-color: var(--backdrop-ring);
+  box-shadow: inset 0 0 0 1px var(--backdrop-ring);
+}
+.backdrop-toggle[aria-pressed="true"]::before {
+  background: var(--backdrop);
 }
 #green-screen[aria-pressed="true"]::before {
-  background: #00b140;
   border-color: #00b140;
 }
 .view-toggle.toolbar-view-toggle {
@@ -1639,6 +1660,12 @@ body:has(#magic-wand[aria-pressed="true"]) .eraser-size {
 .green-screen {
   background: #00b140;
 }
+.white-screen {
+  background: #fff;
+}
+.black-screen {
+  background: #000;
+}
 
 .preview img {
   min-width: 0;
@@ -2444,7 +2471,7 @@ dialog::backdrop {
     color: HighlightText !important;
     border-color: Highlight !important;
   }
-  #green-screen::before {
+  .backdrop-toggle::before {
     forced-color-adjust: none;
   }
   /* Swatches show traced colors, which forced colors would otherwise erase. */

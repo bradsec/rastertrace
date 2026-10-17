@@ -53,7 +53,7 @@
       }
     </script>
 
-    <link rel="stylesheet" href="css/styles.css?v=94" />
+    <link rel="stylesheet" href="css/styles.css?v=95" />
   </head>
   <body>
     <header class="app-header">
@@ -561,12 +561,32 @@
             <button
               type="button"
               id="green-screen"
-              class="button button-secondary toolbar-wide-action"
+              class="button button-secondary toolbar-wide-action backdrop-toggle"
               aria-pressed="false"
               title="Preview transparency over green"
             >
               Green screen
             </button>
+            <div class="backdrop-row" role="group" aria-label="Preview background">
+              <button
+                type="button"
+                id="white-screen"
+                class="button button-secondary backdrop-toggle"
+                aria-pressed="false"
+                title="Preview transparency over white"
+              >
+                White screen
+              </button>
+              <button
+                type="button"
+                id="black-screen"
+                class="button button-secondary backdrop-toggle"
+                aria-pressed="false"
+                title="Preview transparency over black"
+              >
+                Black screen
+              </button>
+            </div>
           </div>
 
           <section class="trace-summary" aria-labelledby="trace-summary-title">
@@ -1658,6 +1678,6 @@
         location.reload();
       };
     </script>
-    <script type="module" src="js/app.js?v=115" onerror="window.recoverRasterTraceBoot()"></script>
+    <script type="module" src="js/app.js?v=116" onerror="window.recoverRasterTraceBoot()"></script>
   </body>
 </html>
