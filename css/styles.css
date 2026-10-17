@@ -676,7 +676,7 @@ body:has(#empty-state:not([hidden])) .eraser-controls {
 }
 .palette-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(28px, 1fr));
+  grid-template-columns: repeat(8, minmax(0, 1fr));
   gap: 6px;
   margin-top: 8px;
 }
@@ -688,7 +688,7 @@ body:has(#empty-state:not([hidden])) .eraser-controls {
 .palette-grid .swatch {
   position: relative;
   aspect-ratio: 1;
-  min-height: 28px;
+  min-height: 0;
   padding: 0;
   cursor: pointer;
 }
@@ -712,10 +712,36 @@ body:has(#empty-state:not([hidden])) .eraser-controls {
   border-radius: 50%;
   background: var(--accent);
 }
+.swatch.hidden-color,
+.palette-chip.hidden-color {
+  position: relative;
+  opacity: 0.55;
+}
+.swatch.hidden-color::before,
+.palette-chip.hidden-color::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 5%;
+  width: 90%;
+  height: 2px;
+  background: var(--text);
+  box-shadow: 0 0 0 1px #000;
+  transform: translateY(-50%) rotate(-45deg);
+  pointer-events: none;
+}
 .palette-hint {
   margin: 8px 0 0;
   font-size: var(--fs-sm);
   color: var(--text-dim);
+}
+.palette-layering-note {
+  margin-top: 10px;
+  font-size: var(--fs-sm);
+  color: var(--text-dim);
+}
+.palette-layering-note p {
+  margin: 0 0 8px;
 }
 .palette-editor {
   display: grid;
@@ -2204,6 +2230,12 @@ dialog::backdrop {
 /* Box shadows are removed in forced colors, so focus and pressed states
    that rely on them need an outline or system colors instead. */
 @media (forced-colors: active) {
+  .swatch.hidden-color::before,
+  .palette-chip.hidden-color::before {
+    forced-color-adjust: none;
+    background: CanvasText;
+    box-shadow: 0 0 0 1px Canvas;
+  }
   .material-icon {
     background: ButtonText;
   }

@@ -6,7 +6,7 @@
 import { brushSizeForShortcut, snapPointToAngle, svgViewBox } from "./eraser.js?v=9";
 import { parseHexColor, sampleRasterColor, toHexColor } from "./preprocess.js?v=53";
 import { els, hooks, state } from "./context.js?v=17";
-import { refreshExport } from "./exporters.js?v=22";
+import { refreshExport } from "./exporters.js?v=24";
 
 export function setView(view) {
   const showResult = view === "result";

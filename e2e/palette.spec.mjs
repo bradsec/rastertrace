@@ -176,12 +176,47 @@ test("edits survive a palette-stable retrace and clear on new file", async ({ pa
   await expect(page.locator("#palette-edits li")).toHaveCount(0);
 });
 
-test("grid hidden above 16 colors", async ({ page }) => {
-  const photo = await makePng(page, "photo.png", 120, 120, "noise");
+test("grid shows palettes between 17 and 32 colors", async ({ page }) => {
+  const shapes = Array.from({ length: 20 }, (_, i) => [
+    `rgb(${(i % 5) * 60}, ${Math.floor(i / 5) * 80}, 128)`,
+    (i % 5) * 40,
+    Math.floor(i / 5) * 40,
+    40,
+    40,
+  ]);
+  const file = await makePng(page, "20-colors.png", 200, 160, "#000000", shapes);
+  await traced(page, () => page.locator("#file-input").setInputFiles(file));
+  await page.evaluate(() => {
+    for (const details of document.querySelectorAll("details")) details.open = true;
+  });
+  await traced(page, async () => {
+    await page.locator("#colors").fill("32");
+    await page.locator("#colors").dispatchEvent("input");
+  });
+  const paletteSize = parseInt(await page.locator("#palette-summary").textContent(), 10);
+  expect(paletteSize).toBeGreaterThan(16);
+  expect(paletteSize).toBeLessThanOrEqual(32);
+  await expect(page.locator("#palette-grid")).toBeVisible();
+  await expect(page.locator("#palette-grid .swatch")).toHaveCount(paletteSize);
+  await expect(page.locator("#palette-hint")).toBeHidden();
+});
+
+test("grid hidden above 32 colors", async ({ page }) => {
+  const photo = await makePng(page, "photo.png", 200, 200, "noise");
   await traced(page, () => page.locator("#file-input").setInputFiles(photo));
   await page.evaluate(() => {
     for (const details of document.querySelectorAll("details")) details.open = true;
   });
+  await traced(page, async () => {
+    await page.locator("#speckle").fill("0");
+    await page.locator("#speckle").dispatchEvent("input");
+  });
+  await traced(page, async () => {
+    await page.locator("#colors").fill("128");
+    await page.locator("#colors").dispatchEvent("input");
+  });
+  const paletteSize = parseInt(await page.locator("#palette-summary").textContent(), 10);
+  expect(paletteSize).toBeGreaterThan(32);
   await expect(page.locator("#palette-grid")).toBeHidden();
   await expect(page.locator("#palette-hint")).toBeVisible();
 });
@@ -215,4 +250,57 @@ test("RGB fields are wide enough to show their values", async ({ page }) => {
   for (const id of ["#palette-r", "#palette-g", "#palette-b"]) {
     expect((await page.locator(id).boundingBox()).width).toBeGreaterThanOrEqual(44);
   }
+});
+
+test("hide color toggles transparency and restores the original fill", async ({ page }) => {
+  await loadShapes(page);
+  const swatch = page.locator("#palette-grid .swatch").first();
+  const original = await swatch.getAttribute("data-fill");
+  await swatch.click();
+  await page.locator("#palette-hide").click();
+  await expect(page.locator("#palette-hide")).toHaveAttribute("aria-pressed", "true");
+  await expect.poll(() => resultSvg(page)).toContain('fill="none"');
+  await expect(swatch).toHaveClass(/hidden-color/);
+  await expect(swatch).toHaveAttribute("aria-label", `Color ${original} hidden`);
+  for (const id of ["color", "hex", "r", "g", "b"]) {
+    await expect(page.locator(`#palette-${id}`)).toBeDisabled();
+  }
+  await expect(page.locator("#palette-edits")).toContainText(`${original} hidden`);
+  await page.locator("#palette-hide").click();
+  await expect(page.locator("#palette-hide")).toHaveAttribute("aria-pressed", "false");
+  await expect
+    .poll(async () => (await resultSvg(page)).toUpperCase())
+    .toContain(`FILL="${original}"`);
+  await expect(swatch).not.toHaveClass(/hidden-color/);
+  await expect(page.locator("#palette-edits li")).toHaveCount(0);
+});
+
+test("unhiding restores a custom color after closing the editor", async ({ page }) => {
+  await loadShapes(page);
+  await editFirstSwatch(page, "#00FF00");
+  await page.locator("#palette-hide").click();
+  await expect.poll(() => resultSvg(page)).toContain('fill="none"');
+  await page.locator("#palette-close").click();
+  await page.locator("#palette-grid .swatch").first().click();
+  await page.locator("#palette-hide").click();
+  await expect.poll(() => resultSvg(page)).toContain('fill="#00FF00"');
+  await expect(page.locator("#palette-hex")).toBeEnabled();
+  await expect(page.locator("#palette-hex")).toHaveValue("#00FF00");
+});
+
+test("hidden colors offer cutout layering and survive its retrace", async ({ page }) => {
+  await loadShapes(page);
+  const note = page.locator("#palette-layering-note");
+  await expect(note).toBeHidden();
+  await page.locator("#palette-grid .swatch").first().click();
+  await page.locator("#palette-hide").click();
+  await expect(note).toBeVisible();
+  await traced(page, () => page.locator("#palette-use-cutout").click());
+  await expect(page.locator("#hierarchical")).toHaveValue("cutout");
+  await expect(note).toBeHidden();
+  expect(await resultSvg(page)).toContain('fill="none"');
+  await traced(page, () => page.locator("#hierarchical").selectOption("stacked"));
+  await expect(note).toBeVisible();
+  await page.locator("#palette-reset-all").click();
+  await expect(note).toBeHidden();
 });

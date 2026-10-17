@@ -53,7 +53,7 @@
       }
     </script>
 
-    <link rel="stylesheet" href="css/styles.css?v=80" />
+    <link rel="stylesheet" href="css/styles.css?v=83" />
   </head>
   <body>
     <header class="app-header">
@@ -598,7 +598,7 @@
               </div>
               <div id="palette-grid" class="palette-grid" role="list" hidden></div>
               <p id="palette-hint" class="palette-hint">
-                Pick a color from the result to edit it. The full palette shows at 16 colors or
+                Pick a color from the result to edit it. The full palette shows at 32 colors or
                 fewer.
               </p>
               <div
@@ -673,6 +673,20 @@
                 <p id="palette-error" class="palette-error" hidden></p>
                 <button type="button" id="palette-reset" class="button button-secondary">
                   Reset color
+                </button>
+                <button
+                  type="button"
+                  id="palette-hide"
+                  class="button button-secondary"
+                  aria-pressed="false"
+                >
+                  Hide color
+                </button>
+              </div>
+              <div id="palette-layering-note" class="palette-layering-note" hidden>
+                <p>Hidden colors reveal the shape beneath in stacked layering.</p>
+                <button type="button" id="palette-use-cutout" class="button button-secondary">
+                  Use cutout layering
                 </button>
               </div>
               <ul id="palette-edits" class="palette-edits" aria-label="Edited colors"></ul>
@@ -1222,9 +1236,12 @@
               <dd>
                 Changes a traced color to a new HEX or RGB value without retracing; shapes stay the
                 same. Use Pick from result and click a color in the result, or click a swatch when
-                the trace has 16 colors or fewer. Edits apply to the preview and every export, are
+                the trace has 32 colors or fewer. Edits apply to the preview and every export, are
                 kept when a retrace still has that color, and clear when you open a new image. With
-                Colors set to All, edits match exact traced colors only.
+                Colors set to All, edits match exact traced colors only. Hide color makes a color
+                transparent, exact in Cutout layering. In Stacked layering, hiding a color reveals
+                the shape beneath it; hiding the background color makes it transparent. Click Use
+                cutout layering in the palette panel to switch with one click.
               </dd>
             </div>
           </dl>
@@ -1507,6 +1524,6 @@
         location.reload();
       };
     </script>
-    <script type="module" src="js/app.js?v=102" onerror="window.recoverRasterTraceBoot()"></script>
+    <script type="module" src="js/app.js?v=105" onerror="window.recoverRasterTraceBoot()"></script>
   </body>
 </html>

@@ -3,7 +3,7 @@
 import { ALPHA_THRESHOLD, parseHexColor, srgbToOklab, toHexColor } from "./preprocess.js?v=53";
 
 /** Largest palette the swatch grid lists; above this, pick from the result. */
-export const PALETTE_GRID_MAX = 16;
+export const PALETTE_GRID_MAX = 32;
 
 const FILL_ATTR = /\sfill="([^"]*)"/g;
 
@@ -76,7 +76,7 @@ export function paletteMapping(svgText, palette) {
 }
 
 /**
- * Rewrite fills through `edits` (palette "#RRGGBB" to new). `mapping`
+ * Rewrite fills through `edits` (palette "#RRGGBB" to new hex or "none"). `mapping`
  * resolves each SVG fill to its palette color first; without it, fills
  * match edits exactly. One pass over the attributes, so swapping two
  * colors cannot chain into one.

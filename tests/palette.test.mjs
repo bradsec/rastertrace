@@ -66,8 +66,8 @@ test("pruneEdits drops only edits whose color left the palette", () => {
   assert.deepEqual([...edits.keys()], ["#FF0000"]);
 });
 
-test("grid threshold is 16 colors", () => {
-  assert.equal(PALETTE_GRID_MAX, 16);
+test("grid threshold is 32 colors", () => {
+  assert.equal(PALETTE_GRID_MAX, 32);
 });
 
 test("stencilFill maps stencil raster samples through the ink", () => {
@@ -122,4 +122,29 @@ test("recolorSvg with a mapping recolors every fill of the edited color", () => 
     recolorSvg(svg, new Map([["#14222D", "#ADD8E6"]]), mapping),
     `<path fill="#ADD8E6"/><path fill="#ADD8E6"/><path fill="#020203"/>`,
   );
+});
+
+test("recolorSvg hides an exact fill with none", () => {
+  assert.equal(
+    recolorSvg('<path fill="#ff0000"/><path fill="#00FF00"/>', new Map([["#FF0000", "none"]])),
+    '<path fill="none"/><path fill="#00FF00"/>',
+  );
+});
+
+test("recolorSvg hides mapped fills on paths and groups", () => {
+  const edits = new Map([["#FF0000", "none"]]);
+  const mapping = new Map([
+    ["#FE0000", "#FF0000"],
+    ["#FD0000", "#FF0000"],
+  ]);
+  assert.equal(
+    recolorSvg('<g fill="#fe0000"><path/></g><path fill="#FD0000"/>', edits, mapping),
+    '<g fill="none"><path/></g><path fill="none"/>',
+  );
+});
+
+test("pruneEdits keeps hidden edits when the palette is unchanged", () => {
+  const edits = new Map([["#FF0000", "none"]]);
+  assert.equal(pruneEdits(edits, [{ fill: "#FF0000" }]), 0);
+  assert.equal(edits.get("#FF0000"), "none");
 });

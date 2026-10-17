@@ -1,9 +1,9 @@
 // Palette panel: swatch grid, color editor, and the result eyedropper
 // that picks a traced color to edit. Edits recolor fills only; they
-// never retrace.
+// only retrace when switching layering.
 import { els, hooks, state } from "./context.js?v=17";
-import { deactivateCleanupTools, setView } from "./cleanup-tools.js?v=26";
-import { refreshExport } from "./exporters.js?v=22";
+import { deactivateCleanupTools, setView } from "./cleanup-tools.js?v=28";
+import { refreshExport } from "./exporters.js?v=24";
 import {
   nearestFill,
   paletteMapping,
@@ -13,7 +13,7 @@ import {
   rasterPalette,
   stencilFill,
   svgPalette,
-} from "./palette.js?v=4";
+} from "./palette.js?v=6";
 import { parseHexColor, toHexColor } from "./preprocess.js?v=53";
 
 // Local lookup: adding it to els would bump context.js at every importer.
@@ -22,6 +22,42 @@ const paletteError = /** @type {HTMLElement} */ (document.getElementById("palett
 /** Original fill the editor is open on, or null when closed. */
 let editing = null;
 let refreshFrame = 0;
+const hiddenColors = new Map();
+const paletteHide = /** @type {HTMLButtonElement} */ (document.getElementById("palette-hide"));
+
+const paletteLayeringNote = /** @type {HTMLElement} */ (
+  document.getElementById("palette-layering-note")
+);
+const paletteUseCutout = /** @type {HTMLButtonElement} */ (
+  document.getElementById("palette-use-cutout")
+);
+
+function syncLayeringNote() {
+  paletteLayeringNote.hidden =
+    els.hierarchical.value === "cutout" || ![...state.colorEdits.values()].includes("none");
+}
+
+els.hierarchical.addEventListener("change", syncLayeringNote);
+paletteUseCutout.addEventListener("click", () => {
+  els.hierarchical.value = "cutout";
+  els.hierarchical.dispatchEvent(new Event("change", { bubbles: true }));
+});
+
+function syncEditor() {
+  if (!editing) return;
+  const hidden = editedFill(editing) === "none";
+  paletteHide.setAttribute("aria-pressed", String(hidden));
+  for (const input of [
+    els.paletteColor,
+    els.paletteHex,
+    els.paletteR,
+    els.paletteG,
+    els.paletteB,
+  ]) {
+    input.disabled = hidden;
+  }
+  syncFields(hidden ? (hiddenColors.get(editing) ?? editing) : editedFill(editing));
+}
 
 // The native color input fires `input` continuously while dragging, and
 // each refresh is a full string pass over the trace: one per frame.
@@ -61,12 +97,13 @@ function swatchButton(fill, className) {
   button.type = "button";
   button.className = className;
   button.dataset.fill = fill;
-  button.style.background = editedFill(fill);
+  button.style.background = editedFill(fill) === "none" ? fill : editedFill(fill);
   button.addEventListener("click", () => openEditor(fill));
   return button;
 }
 
 export function renderPalette() {
+  syncLayeringNote();
   const palette = currentPalette();
   const edited = state.colorEdits.size;
   els.paletteSummary.textContent = palette.length
@@ -82,10 +119,14 @@ export function renderPalette() {
       ? palette.map(({ fill }) => {
           const button = swatchButton(fill, "swatch");
           button.setAttribute("role", "listitem");
-          button.setAttribute("aria-label", `Edit color ${fill}`);
-          button.title = state.colorEdits.has(fill)
-            ? `${fill} changed to ${editedFill(fill)}`
-            : fill;
+          const hidden = editedFill(fill) === "none";
+          button.classList.toggle("hidden-color", hidden);
+          button.setAttribute("aria-label", hidden ? `Color ${fill} hidden` : `Edit color ${fill}`);
+          button.title = hidden
+            ? `Color ${fill} hidden`
+            : state.colorEdits.has(fill)
+              ? `${fill} changed to ${editedFill(fill)}`
+              : fill;
           button.classList.toggle("edited", state.colorEdits.has(fill));
           button.setAttribute("aria-pressed", String(fill === editing));
           return button;
@@ -99,15 +140,19 @@ export function renderPalette() {
       const button = document.createElement("button");
       button.type = "button";
       button.className = "palette-edit-row";
-      button.setAttribute("aria-label", `Edit color ${fill}, now ${value}`);
+      const hidden = value === "none";
+      button.setAttribute(
+        "aria-label",
+        hidden ? `Color ${fill} hidden` : `Edit color ${fill}, now ${value}`,
+      );
       const from = document.createElement("span");
       from.className = "palette-chip";
       from.style.background = fill;
       const to = document.createElement("span");
-      to.className = "palette-chip";
-      to.style.background = value;
+      to.className = hidden ? "palette-chip hidden-color" : "palette-chip";
+      to.style.background = hidden ? fill : value;
       const label = document.createElement("code");
-      label.textContent = `${fill} to ${value}`;
+      label.textContent = hidden ? `${fill} hidden` : `${fill} to ${value}`;
       button.append(from, to, label);
       button.addEventListener("click", () => openEditor(fill));
       item.append(button);
@@ -149,7 +194,7 @@ function openEditor(fill) {
   els.paletteEditor.hidden = false;
   els.paletteOriginalSwatch.style.background = fill;
   els.paletteOriginalHex.textContent = fill;
-  syncFields(editedFill(fill));
+  syncEditor();
   renderPalette();
 }
 
@@ -216,13 +261,26 @@ for (const input of [els.paletteR, els.paletteG, els.paletteB]) {
 }
 els.paletteReset.addEventListener("click", () => {
   if (!editing) return;
-  syncFields(editing);
+  hiddenColors.delete(editing);
   applyEdit(editing);
+  syncEditor();
+});
+paletteHide.addEventListener("click", () => {
+  if (!editing) return;
+  if (editedFill(editing) === "none") {
+    applyEdit(hiddenColors.get(editing) ?? editing);
+    hiddenColors.delete(editing);
+  } else {
+    hiddenColors.set(editing, editedFill(editing));
+    applyEdit("none");
+  }
+  syncEditor();
 });
 els.paletteClose.addEventListener("click", closeEditor);
 els.paletteResetAll.addEventListener("click", () => {
   state.colorEdits.clear();
-  if (editing) syncFields(editing);
+  hiddenColors.clear();
+  syncEditor();
   renderPalette();
   scheduleRefresh();
   els.status.textContent = "All color edits reset.";
@@ -292,6 +350,7 @@ export function afterTrace() {
   state.paletteColors = colors;
   state.paletteMapping = mapping;
   const removed = pruneEdits(state.colorEdits, colors);
+  pruneEdits(hiddenColors, colors);
   if (editing && !colors.some((p) => p.fill === editing)) {
     closeEditor();
   } else {
@@ -305,6 +364,7 @@ export function afterTrace() {
 /** Drop every edit and close the editor, for a newly loaded image. */
 export function resetPalette() {
   state.colorEdits.clear();
+  hiddenColors.clear();
   state.paletteColors = [];
   state.paletteMapping = null;
   setPalettePick(false);

@@ -139,3 +139,38 @@ test("toDxf leaves the stencil backing out of the cut geometry", () => {
   const dxf = toDxf(parseSvgPaths(svg));
   assert.equal((dxf.match(/\nPOLYLINE\n/g) || []).length, 1);
 });
+
+for (const [name, hidden] of [
+  ["explicit path", '<path fill="none" d="M1 1 L2 1 L2 2 Z"/>'],
+  ["inherited group", '<g fill="none"><g><path d="M1 1 L2 1 L2 2 Z"/></g></g>'],
+]) {
+  const visible = '<path fill="#FF0000" d="M5 5 L6 5 L6 6 Z"/>';
+  const svg = (body) => '<svg width="10" height="10">' + body + "</svg>";
+  for (const writer of [toDxf, toPdf]) {
+    test(writer.name + " skips hidden " + name + " without paint or layers", () => {
+      assert.equal(
+        writer(parseSvgPaths(svg(hidden + visible))),
+        writer(parseSvgPaths(svg(visible))),
+      );
+    });
+  }
+}
+
+test("writers preserve explicit fill overrides inside hidden groups", () => {
+  const path = '<path fill="#FF0000" d="M5 5 L6 5 L6 6 Z"/>';
+  for (const writer of [toDxf, toPdf]) {
+    assert.equal(
+      writer(parseSvgPaths('<svg width="10" height="10"><g fill="none">' + path + "</g></svg>")),
+      writer(parseSvgPaths('<svg width="10" height="10">' + path + "</svg>")),
+    );
+  }
+});
+
+test("toPdf skips a transparent backing rect", () => {
+  assert.equal(
+    toPdf(
+      parseSvgPaths('<svg width="10" height="10"><rect fill="none" width="10" height="10"/></svg>'),
+    ),
+    toPdf(parseSvgPaths('<svg width="10" height="10"></svg>')),
+  );
+});

@@ -174,7 +174,8 @@ const FLATTEN_TOL = 0.2;
  * @param {{ scale?: number }} [options]
  */
 export function toDxf(parsed, { scale = 1 } = {}) {
-  const { height, paths } = parsed;
+  const { height } = parsed;
+  const paths = parsed.paths.filter((path) => path.fill !== "none");
   const g = (code, value) => `${code}\n${value}\n`;
   const layers = new Map();
   for (const path of paths) {
@@ -240,8 +241,10 @@ export function toPdf(parsed, { pageWidth, pageHeight } = {}) {
     const n = parseInt(hex.slice(1), 16);
     return `${[(n >> 16) & 255, (n >> 8) & 255, n & 255].map((v) => fmt(v / 255)).join(" ")} rg\n`;
   };
-  if (background) content += `${fillColor(background)}0 0 ${fmt(width)} ${fmt(height)} re f\n`;
+  if (background && background !== "none")
+    content += `${fillColor(background)}0 0 ${fmt(width)} ${fmt(height)} re f\n`;
   for (const path of paths) {
+    if (path.fill === "none") continue;
     content += fillColor(path.fill);
     for (const sub of path.subpaths) {
       content += `${fmt(sub.start.x)} ${fmt(sub.start.y)} m\n`;
