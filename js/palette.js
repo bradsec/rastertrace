@@ -32,16 +32,64 @@ export function svgPalette(svgText) {
 }
 
 /**
- * Rewrite fills through `edits` (original "#RRGGBB" to new). One pass
- * over the attributes, so swapping two colors cannot chain into one.
+ * Distinct opaque colors of the reduced raster, most used first, or null
+ * when there are more than `maxColors` (color reduction off). This is the
+ * real palette: vtracer averages each region's pixels, so one reduced
+ * color reaches the SVG as many near-identical fills.
+ * @param {{ width: number, height: number, data: Uint8ClampedArray } | null} imageData
+ * @param {number} [maxColors]
+ * @returns {{ fill: string, count: number }[] | null}
+ */
+export function rasterPalette(imageData, maxColors = 256) {
+  if (!imageData?.data) return null;
+  const { data } = imageData;
+  /** @type {Map<number, number>} */
+  const counts = new Map();
+  for (let i = 0; i < data.length; i += 4) {
+    if (data[i + 3] < ALPHA_THRESHOLD) continue;
+    const key = (data[i] << 16) | (data[i + 1] << 8) | data[i + 2];
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+    if (counts.size > maxColors) return null;
+  }
+  return [...counts]
+    .map(([key, count]) => ({
+      fill: toHexColor([(key >> 16) & 0xff, (key >> 8) & 0xff, key & 0xff]),
+      count,
+    }))
+    .sort((a, b) => b.count - a.count || (a.fill < b.fill ? -1 : a.fill > b.fill ? 1 : 0));
+}
+
+/**
+ * Each distinct SVG fill to its nearest palette color in Oklab.
+ * @param {string} svgText
+ * @param {{ fill: string }[]} palette
+ * @returns {Map<string, string>}
+ */
+export function paletteMapping(svgText, palette) {
+  /** @type {Map<string, string>} */
+  const mapping = new Map();
+  for (const { fill } of svgPalette(svgText)) {
+    const rgb = /** @type {[number, number, number]} */ (parseHexColor(fill));
+    mapping.set(fill, nearestFill(rgb, palette) ?? fill);
+  }
+  return mapping;
+}
+
+/**
+ * Rewrite fills through `edits` (palette "#RRGGBB" to new). `mapping`
+ * resolves each SVG fill to its palette color first; without it, fills
+ * match edits exactly. One pass over the attributes, so swapping two
+ * colors cannot chain into one.
  * @param {string} svgText
  * @param {Map<string, string>} edits
+ * @param {Map<string, string> | null} [mapping]
  */
-export function recolorSvg(svgText, edits) {
+export function recolorSvg(svgText, edits, mapping = null) {
   if (edits.size === 0) return svgText;
   return svgText.replace(FILL_ATTR, (attr, value) => {
     const fill = normalizeFill(value);
-    const edited = fill && edits.get(fill);
+    const key = fill && (mapping?.get(fill) ?? fill);
+    const edited = key && edits.get(key);
     return edited ? ` fill="${edited}"` : attr;
   });
 }

@@ -165,7 +165,9 @@ export const state = {
   processedRaster: null, // worker pixels after current trace preprocessing
   picking: false,
   palettePicking: false,
-  colorEdits: /** @type {Map<string, string>} */ (new Map()), // original "#RRGGBB" to edited fill
+  colorEdits: /** @type {Map<string, string>} */ (new Map()), // palette "#RRGGBB" to edited fill
+  paletteColors: /** @type {{ fill: string, count: number }[]} */ ([]),
+  paletteMapping: /** @type {Map<string, string> | null} */ (null), // SVG fill to palette color
   loadToken: 0, // guards against overlapping loads (drop while decoding)
   flatNote: null, // status prefix when load-time detection fired
   erasing: false,

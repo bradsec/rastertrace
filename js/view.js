@@ -3,8 +3,8 @@
 // register after the selection and eraser handlers in cleanup-tools.js
 // (which stop propagation while a tool is active), so app.js imports
 // this module last.
-import { els, state } from "./context.js?v=13";
-import { renderSelection } from "./cleanup-tools.js?v=22";
+import { els, state } from "./context.js?v=14";
+import { renderSelection } from "./cleanup-tools.js?v=23";
 
 const view = { scale: 1, tx: 0, ty: 0 };
 const ZOOM_MIN = 0.001;

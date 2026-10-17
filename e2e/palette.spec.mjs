@@ -168,3 +168,34 @@ test("grid hidden above 16 colors", async ({ page }) => {
   await expect(page.locator("#palette-grid")).toBeHidden();
   await expect(page.locator("#palette-hint")).toBeVisible();
 });
+
+test("reduced palette groups near-duplicate traced fills", async ({ page }) => {
+  // Noise reduced to 8 colors traces into many regions whose averaged
+  // fills differ slightly; each must follow its palette color.
+  const photo = await makePng(page, "photo.png", 120, 120, "noise");
+  await traced(page, () => page.locator("#file-input").setInputFiles(photo));
+  await page.evaluate(() => {
+    for (const details of document.querySelectorAll("details")) details.open = true;
+  });
+  await traced(page, async () => {
+    await page.locator("#colors").fill("8");
+    await page.locator("#colors").dispatchEvent("input");
+  });
+  await expect(page.locator("#palette-grid")).toBeVisible();
+  const swatches = await page.locator("#palette-grid .swatch").count();
+  expect(swatches).toBeGreaterThan(1);
+  expect(swatches).toBeLessThanOrEqual(8);
+
+  await editFirstSwatch(page, "#00FF00");
+  await expect
+    .poll(async () => (await resultSvg(page)).match(/fill="#00FF00"/g)?.length ?? 0)
+    .toBeGreaterThan(1);
+});
+
+test("RGB fields are wide enough to show their values", async ({ page }) => {
+  await loadShapes(page);
+  await page.locator("#palette-grid .swatch").first().click();
+  for (const id of ["#palette-r", "#palette-g", "#palette-b"]) {
+    expect((await page.locator(id).boundingBox()).width).toBeGreaterThanOrEqual(44);
+  }
+});

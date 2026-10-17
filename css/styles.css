@@ -661,14 +661,31 @@ main {
   width: 18px;
   height: 18px;
 }
+/* Six tracks: color + HEX on the first row, R/G/B on the second, so the
+   number fields keep room for three digits in the narrow sidebar. */
 .palette-editor-fields {
   display: grid;
-  grid-template-columns: 44px minmax(0, 2fr) repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 6px;
   align-items: end;
 }
 .palette-editor-fields input[type="color"] {
+  grid-column: span 2;
   padding: 2px;
+}
+.palette-editor-fields .palette-field {
+  grid-column: span 2;
+}
+.palette-editor-fields .palette-field:has(#palette-hex) {
+  grid-column: span 4;
+}
+.palette-field input[type="number"] {
+  appearance: textfield;
+}
+.palette-field input[type="number"]::-webkit-inner-spin-button,
+.palette-field input[type="number"]::-webkit-outer-spin-button {
+  appearance: none;
+  margin: 0;
 }
 .palette-field {
   display: grid;

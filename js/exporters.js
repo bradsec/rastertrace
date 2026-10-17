@@ -3,9 +3,9 @@
 // SVG/PNG/PDF/DXF through the File System Access API or a download.
 import { applyCleanupActions } from "./eraser.js?v=9";
 import { applyExportOptions, countPaths, physicalWidthValue } from "./preprocess.js?v=52";
-import { recolorSvg } from "./palette.js?v=2";
+import { recolorSvg } from "./palette.js?v=3";
 import { parseSvgPaths, toDxf, toPdf } from "./vectorexport.js?v=42";
-import { els, preferences, showError, state } from "./context.js?v=13";
+import { els, preferences, showError, state } from "./context.js?v=14";
 
 const DISPLAY_UNITS_PER_INCH = { px: 96, in: 1, cm: 2.54, mm: 25.4 };
 
@@ -84,7 +84,7 @@ export function updatePhysicalHeightOut() {
 // 0.7 s on a 6 MB trace), and eraser drags refresh once per frame with
 // only the cleanup strokes changing.
 let exportCache = { raw: "", key: "", svg: "" };
-let paletteCache = { raw: "", key: "", svg: "" };
+let paletteCache = { raw: "", key: "", mapping: null, svg: "" };
 
 /**
  * The trace with palette edits applied: the shared source for preview,
@@ -92,8 +92,18 @@ let paletteCache = { raw: "", key: "", svg: "" };
  */
 export function paletteSvg() {
   const key = JSON.stringify([...state.colorEdits]);
-  if (paletteCache.raw !== state.svgRaw || paletteCache.key !== key) {
-    paletteCache = { raw: state.svgRaw, key, svg: recolorSvg(state.svgRaw, state.colorEdits) };
+  const mapping = state.paletteMapping;
+  if (
+    paletteCache.raw !== state.svgRaw ||
+    paletteCache.key !== key ||
+    paletteCache.mapping !== mapping
+  ) {
+    paletteCache = {
+      raw: state.svgRaw,
+      key,
+      mapping,
+      svg: recolorSvg(state.svgRaw, state.colorEdits, mapping),
+    };
   }
   return paletteCache.svg;
 }

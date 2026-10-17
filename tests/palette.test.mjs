@@ -2,9 +2,11 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   nearestFill,
+  paletteMapping,
   PALETTE_GRID_MAX,
   pickColor,
   pruneEdits,
+  rasterPalette,
   recolorSvg,
   stencilFill,
   svgPalette,
@@ -75,4 +77,49 @@ test("stencilFill maps stencil raster samples through the ink", () => {
   assert.equal(stencilFill([255, 255, 255], "white"), "#000000");
   assert.equal(stencilFill([0, 0, 0], "black"), "#000000");
   assert.equal(stencilFill([255, 255, 255], "black"), null);
+});
+
+test("rasterPalette counts opaque colors, most used first", () => {
+  const img = {
+    width: 4,
+    height: 1,
+    data: new Uint8ClampedArray([255, 0, 0, 255, 0, 0, 255, 255, 255, 0, 0, 255, 9, 9, 9, 0]),
+  };
+  assert.deepEqual(rasterPalette(img), [
+    { fill: "#FF0000", count: 2 },
+    { fill: "#0000FF", count: 1 },
+  ]);
+});
+
+test("rasterPalette returns null above the color cap", () => {
+  const img = {
+    width: 3,
+    height: 1,
+    data: new Uint8ClampedArray([1, 0, 0, 255, 2, 0, 0, 255, 3, 0, 0, 255]),
+  };
+  assert.equal(rasterPalette(img, 2), null);
+  assert.equal(rasterPalette(null), null);
+});
+
+test("paletteMapping sends near-duplicate fills to their palette color", () => {
+  // vtracer averages each region's pixels, so one quantized color comes
+  // back as several slightly different fills.
+  const svg = `<path fill="#14222D"/><path fill="#15232e"/><path fill="#020203"/><path fill="#050505"/>`;
+  const mapping = paletteMapping(svg, [{ fill: "#14222D" }, { fill: "#020203" }]);
+  assert.equal(mapping.get("#15232E"), "#14222D");
+  assert.equal(mapping.get("#050505"), "#020203");
+  assert.equal(mapping.get("#14222D"), "#14222D");
+});
+
+test("recolorSvg with a mapping recolors every fill of the edited color", () => {
+  const svg = `<path fill="#14222D"/><path fill="#15232E"/><path fill="#020203"/>`;
+  const mapping = new Map([
+    ["#14222D", "#14222D"],
+    ["#15232E", "#14222D"],
+    ["#020203", "#020203"],
+  ]);
+  assert.equal(
+    recolorSvg(svg, new Map([["#14222D", "#ADD8E6"]]), mapping),
+    `<path fill="#ADD8E6"/><path fill="#ADD8E6"/><path fill="#020203"/>`,
+  );
 });

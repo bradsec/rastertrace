@@ -1,17 +1,19 @@
 // Palette panel: swatch grid, color editor, and the result eyedropper
 // that picks a traced color to edit. Edits recolor fills only; they
 // never retrace.
-import { els, hooks, state } from "./context.js?v=13";
-import { deactivateCleanupTools, setView } from "./cleanup-tools.js?v=22";
-import { refreshExport } from "./exporters.js?v=18";
+import { els, hooks, state } from "./context.js?v=14";
+import { deactivateCleanupTools, setView } from "./cleanup-tools.js?v=23";
+import { refreshExport } from "./exporters.js?v=19";
 import {
   nearestFill,
+  paletteMapping,
   PALETTE_GRID_MAX,
   pickColor,
   pruneEdits,
+  rasterPalette,
   stencilFill,
   svgPalette,
-} from "./palette.js?v=2";
+} from "./palette.js?v=3";
 import { parseHexColor, toHexColor } from "./preprocess.js?v=52";
 
 /** Original fill the editor is open on, or null when closed. */
@@ -29,7 +31,22 @@ function scheduleRefresh() {
 }
 
 function currentPalette() {
-  return state.svgRaw ? svgPalette(state.svgRaw) : [];
+  return state.paletteColors;
+}
+
+/**
+ * Palette for the current trace, and how SVG fills resolve to it. Stencil
+ * traces and unreduced rasters (over 256 colors) fall back to exact SVG
+ * fills: the stencil raster is always black on white whatever the ink.
+ */
+function computePalette() {
+  if (!state.svgRaw) return { colors: [], mapping: null };
+  const raster = els.stencil.checked ? null : rasterPalette(state.processedRaster);
+  if (!raster) return { colors: svgPalette(state.svgRaw), mapping: null };
+  const mapping = paletteMapping(state.svgRaw, raster);
+  // Colors whose every region the speckle filter dropped have no fill.
+  const traced = new Set(mapping.values());
+  return { colors: raster.filter((entry) => traced.has(entry.fill)), mapping };
 }
 
 function editedFill(fill) {
@@ -250,12 +267,11 @@ els.preview.addEventListener("pointerdown", (event) => {
  * @returns {string | null}
  */
 export function afterTrace() {
-  const removed = pruneEdits(state.colorEdits, currentPalette());
-  if (
-    editing &&
-    !state.colorEdits.has(editing) &&
-    !currentPalette().some((p) => p.fill === editing)
-  ) {
+  const { colors, mapping } = computePalette();
+  state.paletteColors = colors;
+  state.paletteMapping = mapping;
+  const removed = pruneEdits(state.colorEdits, colors);
+  if (editing && !colors.some((p) => p.fill === editing)) {
     closeEditor();
   } else {
     renderPalette();
@@ -268,6 +284,8 @@ export function afterTrace() {
 /** Drop every edit and close the editor, for a newly loaded image. */
 export function resetPalette() {
   state.colorEdits.clear();
+  state.paletteColors = [];
+  state.paletteMapping = null;
   setPalettePick(false);
   closeEditor();
 }
