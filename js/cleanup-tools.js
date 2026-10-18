@@ -175,7 +175,7 @@ document.addEventListener("keydown", (event) => {
     setEraser(false);
     setBlobFill(false);
   } else if (
-    event.key === "Escape" &&
+    (event.key === "Escape" || (event.key === "Backspace" && !event.ctrlKey && !event.metaKey)) &&
     state.selection?.type === "polygon" &&
     !state.selection.finalized
   ) {

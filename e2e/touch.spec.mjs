@@ -87,6 +87,21 @@ test.describe("selection actions", () => {
     await page.locator("#selection-close").click();
     await expect(page.locator("#selection-erase")).toBeVisible();
   });
+
+  test("Backspace removes the last lasso point and keeps drawing", async ({ page }) => {
+    await page.locator("#polygon-lasso").click();
+    await clickResult(page, [0.2, 0.2]);
+    await clickResult(page, [0.7, 0.25]);
+    await clickResult(page, [0.5, 0.7]);
+    await expect(page.locator("#selection-close")).toBeVisible();
+    await page.keyboard.press("Backspace");
+    await expect(page.locator("#status")).toContainText("Last polygon point removed");
+    await expect(page.locator("#selection-close")).toBeHidden();
+    await expect(page.locator("#selection-overlay")).toBeVisible();
+    await expect(page.locator("#eraser-undo")).toBeDisabled();
+    await clickResult(page, [0.4, 0.8]);
+    await expect(page.locator("#selection-close")).toBeVisible();
+  });
 });
 
 test.describe("touch gestures", () => {
