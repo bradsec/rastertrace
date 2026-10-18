@@ -237,11 +237,59 @@ test("reduced palette groups near-duplicate traced fills", async ({ page }) => {
   const swatches = await page.locator("#palette-grid .swatch").count();
   expect(swatches).toBeGreaterThan(1);
   expect(swatches).toBeLessThanOrEqual(8);
+  // The trace itself is snapped back to the reduced palette.
+  const fills = new Set((await resultSvg(page)).match(/fill="#[0-9A-Fa-f]{6}"/g));
+  expect(fills.size).toBeGreaterThan(1);
+  expect(fills.size).toBeLessThanOrEqual(8);
 
   await editFirstSwatch(page, "#00FF00");
   await expect
     .poll(async () => (await resultSvg(page)).match(/fill="#00FF00"/g)?.length ?? 0)
     .toBeGreaterThan(1);
+});
+
+test("defringe keeps a reduced cutout to its color count", async ({ page }) => {
+  // Thin red and blue stripes meet the cutout edge: averaging them for
+  // the defringe paints purple bands the palette never had.
+  const stripes = Array.from({ length: 16 }, (_, i) => [
+    i % 2 ? "#2040c0" : "#d02020",
+    20 + i * 5,
+    20,
+    5,
+    50,
+  ]);
+  const file = await makePng(page, "stripes.png", 120, 90, CREAM, stripes);
+  await traced(page, () => page.locator("#file-input").setInputFiles(file));
+  await page.evaluate(() => {
+    for (const details of document.querySelectorAll("details")) details.open = true;
+  });
+  await page.locator("#auto-detect").uncheck();
+  await traced(page, async () => {
+    await page.locator("#colors").fill("4");
+    await page.locator("#colors").dispatchEvent("input");
+  });
+  await traced(page, () => page.locator("#transparent").selectOption("edges"));
+  await traced(page, async () => {
+    await page.locator("#defringe").fill("3");
+    await page.locator("#defringe").dispatchEvent("input");
+  });
+  // The palette is read from the processed raster: count its colors.
+  const rasterColors = await page.evaluate(async () => {
+    const url = performance
+      .getEntriesByType("resource")
+      .find((entry) => entry.name.includes("/js/context.js")).name;
+    const { state } = await import(url);
+    const { data } = state.processedRaster;
+    const colors = new Set();
+    for (let i = 0; i < data.length; i += 4) {
+      if (data[i + 3] >= 128) colors.add((data[i] << 16) | (data[i + 1] << 8) | data[i + 2]);
+    }
+    return colors.size;
+  });
+  expect(rasterColors).toBeLessThanOrEqual(4);
+  expect(await page.locator("#palette-grid .swatch").count()).toBeLessThanOrEqual(4);
+  const fills = new Set((await resultSvg(page)).match(/fill="#[0-9A-Fa-f]{6}"/g));
+  expect(fills.size).toBeLessThanOrEqual(4);
 });
 
 test("RGB fields are wide enough to show their values", async ({ page }) => {

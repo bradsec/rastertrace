@@ -14,7 +14,8 @@ import {
   straightenPaths,
   thresholdImage,
   toGrayscale,
-} from "./preprocess.js?v=54";
+} from "./preprocess.js?v=55";
+import { rasterPalette, snapFills } from "./palette.js?v=8";
 
 // Explicit versioned URL: the glue's own wasm fetch drops the ?v= query,
 // so a rebuilt binary would otherwise be served from stale browser cache
@@ -53,6 +54,9 @@ self.onmessage = async (event) => {
     }
     // Binary mode ignores the palette entirely; skip the quantize cost.
     // The helper orders quantize and knockout per background mode.
+    // The image holds at most `colors` colors from here on; matte repairs
+    // and the trace's fills must not add more.
+    const reduced = !settings.stencil && settings.colors < 256;
     const knockedOut = reduceAndRemoveBackground(
       img,
       settings.stencil ? 256 : settings.colors,
@@ -82,7 +86,7 @@ self.onmessage = async (event) => {
       // this keeps thin features at full size.
       if (knockedOut && settings.defringe > 0) {
         stage("Defringing…");
-        defringeAlpha(img, settings.defringe);
+        defringeAlpha(img, settings.defringe, { keepPalette: reduced });
       }
     }
 
@@ -112,10 +116,15 @@ self.onmessage = async (event) => {
       settings.pathPrecision ?? 3,
     );
 
+    // Each traced shape is filled with its pixels' average: snap fills back
+    // to the reduced palette so the SVG has only the colors asked for.
+    const palette = reduced ? rasterPalette(img) : null;
+    const traced = palette ? snapFills(svg, palette) : svg;
+
     // Straighten after finalize so the tolerance applies to the same
     // path data every export format consumes.
     const straightened = straightenPaths(
-      finalizeSvg(svg, sourceWidth, sourceHeight),
+      finalizeSvg(traced, sourceWidth, sourceHeight),
       settings.straighten ?? 0,
     );
     // White stencil ink is a pure recolor of the finished trace, applied

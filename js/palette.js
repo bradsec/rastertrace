@@ -1,6 +1,6 @@
 // Palette editing: read the traced colors out of the SVG and swap fill
 // values. Edits recolor existing shapes only; geometry never changes.
-import { ALPHA_THRESHOLD, parseHexColor, srgbToOklab, toHexColor } from "./preprocess.js?v=54";
+import { ALPHA_THRESHOLD, parseHexColor, srgbToOklab, toHexColor } from "./preprocess.js?v=55";
 
 /** Largest palette the swatch grid lists; above this, pick from the result. */
 export const PALETTE_GRID_MAX = 32;
@@ -73,6 +73,22 @@ export function paletteMapping(svgText, palette) {
     mapping.set(fill, nearestFill(rgb, palette) ?? fill);
   }
   return mapping;
+}
+
+/**
+ * Snap every hex fill to its nearest palette color. vtracer fills each
+ * shape with its pixels' average, so a trace of an 8-color raster can
+ * carry dozens of near-duplicate fills; this leaves only the 8.
+ * @param {string} svgText
+ * @param {{ fill: string }[]} palette
+ */
+export function snapFills(svgText, palette) {
+  const mapping = paletteMapping(svgText, palette);
+  return svgText.replace(FILL_ATTR, (attr, value) => {
+    const fill = normalizeFill(value);
+    const snapped = fill && mapping.get(fill);
+    return snapped ? ` fill="${snapped}"` : attr;
+  });
 }
 
 /**

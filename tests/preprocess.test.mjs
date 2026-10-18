@@ -885,6 +885,29 @@ test("defringeAlpha keeps thin features instead of erasing them", () => {
   for (let x = 0; x < 5; x++) assert.deepEqual(getPixel(img, x, 1), [90, 30, 30, 255]);
 });
 
+test("defringeAlpha with keepPalette repaints only with colors already present", () => {
+  // Interior split into two colors: averaging them would invent a third.
+  const img = makeImage(8, 6, [0, 0, 0, 0]);
+  for (let y = 1; y < 5; y++) {
+    for (let x = 1; x < 7; x++) setPixel(img, x, y, [240, 240, 240, 255]);
+  }
+  for (let y = 2; y < 4; y++) {
+    setPixel(img, 2, y, [200, 20, 20, 255]);
+    setPixel(img, 3, y, [200, 20, 20, 255]);
+    setPixel(img, 4, y, [20, 20, 200, 255]);
+    setPixel(img, 5, y, [20, 20, 200, 255]);
+  }
+  defringeAlpha(img, 1, { keepPalette: true });
+  const colors = new Set();
+  for (let y = 0; y < 6; y++) {
+    for (let x = 0; x < 8; x++) {
+      const [r, g, b, a] = getPixel(img, x, y);
+      if (a) colors.add(`${r},${g},${b}`);
+    }
+  }
+  assert.deepEqual([...colors].sort(), ["20,20,200", "200,20,20"]);
+});
+
 test("defringeAlpha zero depth is a no-op", () => {
   const img = makeImage(3, 3, [10, 10, 10, 255]);
   setPixel(img, 0, 0, [0, 0, 0, 0]);

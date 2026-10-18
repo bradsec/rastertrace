@@ -10,7 +10,7 @@ import {
   rotateBitmap,
   sniffImageSize,
   Tracer,
-} from "./pipeline.js?v=54";
+} from "./pipeline.js?v=55";
 import {
   analyzeFlatness,
   detectedColorSettings,
@@ -20,17 +20,17 @@ import {
   MAX_TRACE_SIDE_ULTRA,
   parseHexColor,
   toHexColor,
-} from "./preprocess.js?v=54";
-import { $, els, hooks, preferences, showError, state } from "./context.js?v=23";
-import { refreshExport, setResultActions } from "./exporters.js?v=30";
+} from "./preprocess.js?v=55";
+import { $, els, hooks, preferences, showError, state } from "./context.js?v=24";
+import { refreshExport, setResultActions } from "./exporters.js?v=31";
 import {
   clearSelection,
   setBlobFill,
   setEraser,
   setSelectionTool,
   setView,
-} from "./cleanup-tools.js?v=38";
-import { afterTrace, resetPalette } from "./palette-ui.js?v=22";
+} from "./cleanup-tools.js?v=39";
+import { afterTrace, resetPalette } from "./palette-ui.js?v=23";
 import {
   applyExportProfile,
   applyMeasurementUnit,
@@ -46,12 +46,12 @@ import {
   updateOutputs,
   updateStencilFields,
   updateTransparencyFields,
-} from "./settings.js?v=36";
-import { actualSizeView, resetView } from "./view.js?v=37";
+} from "./settings.js?v=37";
+import { actualSizeView, resetView } from "./view.js?v=38";
 
 const EMPTY_IMAGE_SRC = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==";
 
-const tracer = new Tracer(new URL("./worker.js?v=57", import.meta.url));
+const tracer = new Tracer(new URL("./worker.js?v=58", import.meta.url));
 
 let elapsedTimer = 0;
 

@@ -8,6 +8,7 @@ import {
   pruneEdits,
   rasterPalette,
   recolorSvg,
+  snapFills,
   stencilFill,
   svgPalette,
 } from "../js/palette.js";
@@ -109,6 +110,14 @@ test("paletteMapping sends near-duplicate fills to their palette color", () => {
   assert.equal(mapping.get("#15232E"), "#14222D");
   assert.equal(mapping.get("#050505"), "#020203");
   assert.equal(mapping.get("#14222D"), "#14222D");
+});
+
+test("snapFills leaves only palette colors in the SVG", () => {
+  const svg = `<svg><path fill="#14222D"/><path fill="#15232e"/><g fill="#050505"><path fill="none"/></g></svg>`;
+  assert.equal(
+    snapFills(svg, [{ fill: "#14222D" }, { fill: "#020203" }]),
+    `<svg><path fill="#14222D"/><path fill="#14222D"/><g fill="#020203"><path fill="none"/></g></svg>`,
+  );
 });
 
 test("recolorSvg with a mapping recolors every fill of the edited color", () => {

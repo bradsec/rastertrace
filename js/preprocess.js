@@ -1295,9 +1295,11 @@ export function smoothAlpha(img, radius) {
  * boundary pixels (thin features shrink), defringe repaints them. Rings
  * are processed from the innermost fringe ring outward so interior colors
  * propagate to the edge; pixels with no deeper neighbor (features thinner
- * than 2*depth) keep their original color. Mutates img in place.
+ * than 2*depth) keep their original color. With `keepPalette` a fringe
+ * pixel takes the most common deeper color instead of their average, so a
+ * color-reduced image gains no new colors. Mutates img in place.
  */
-export function defringeAlpha(img, depth) {
+export function defringeAlpha(img, depth, { keepPalette = false } = {}) {
   if (depth <= 0) return img;
   const { data, width, height } = img;
   const n = width * height;
@@ -1341,6 +1343,9 @@ export function defringeAlpha(img, depth) {
       let g = 0;
       let b = 0;
       let count = 0;
+      /** @type {Map<number, number>} deeper colors by vote, for keepPalette */
+      const votes = new Map();
+      let winner = -1;
       for (let dy = -1; dy <= 1; dy++) {
         const ny = y + dy;
         if (ny < 0 || ny >= height) continue;
@@ -1355,13 +1360,25 @@ export function defringeAlpha(img, depth) {
           g += data[j + 1];
           b += data[j + 2];
           count += 1;
+          if (keepPalette) {
+            const key = (data[j] << 16) | (data[j + 1] << 8) | data[j + 2];
+            const tally = (votes.get(key) ?? 0) + 1;
+            votes.set(key, tally);
+            if (winner < 0 || tally > (votes.get(winner) ?? 0)) winner = key;
+          }
         }
       }
       if (count > 0) {
         const j = p * 4;
-        data[j] = r / count;
-        data[j + 1] = g / count;
-        data[j + 2] = b / count;
+        if (keepPalette) {
+          data[j] = (winner >> 16) & 0xff;
+          data[j + 1] = (winner >> 8) & 0xff;
+          data[j + 2] = winner & 0xff;
+        } else {
+          data[j] = r / count;
+          data[j + 1] = g / count;
+          data[j + 2] = b / count;
+        }
       }
     }
   }
