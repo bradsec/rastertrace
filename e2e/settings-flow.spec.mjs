@@ -142,6 +142,42 @@ test("auto-detect sets colors per image; manual changes carry over", async ({ pa
   await expect(colors).toHaveValue("2");
 });
 
+test("reset settings keeps the preferred measurement unit", async ({ page }) => {
+  const flat = await makePng(page, "flat.png", 120, 120, CREAM, [["#3c281e", 30, 30, 60, 60]]);
+  await traced(page, () => page.locator("#file-input").setInputFiles(flat));
+  // Settings panels only: openPanels also opens the File menu over them.
+  await page.evaluate(() => {
+    for (const details of document.querySelectorAll("aside details")) details.open = true;
+  });
+  await page.locator("#export-size").selectOption("physical");
+  await page.locator("#physical-unit").selectOption("in");
+  await page.locator("#reset-settings").click();
+  await expect(page.locator("#status")).toContainText("Settings reset");
+  await expect(page.locator("#physical-unit")).toHaveValue("in");
+});
+
+test("controls the trace ignores are disabled", async ({ page }) => {
+  const flat = await makePng(page, "flat.png", 120, 120, CREAM, [["#3c281e", 30, 30, 60, 60]]);
+  await traced(page, () => page.locator("#file-input").setInputFiles(flat));
+  await page.evaluate(() => {
+    for (const details of document.querySelectorAll("aside details")) details.open = true;
+  });
+  const curves = ["#corner-threshold", "#length-threshold", "#splice-threshold"];
+  for (const id of [...curves, "#colors", "#layer-diff", "#grayscale"]) {
+    await expect(page.locator(id)).toBeEnabled();
+  }
+  await traced(page, () => page.locator('input[name="mode"][value="polygon"]').check());
+  for (const id of curves) await expect(page.locator(id)).toBeDisabled();
+  await traced(page, () => page.locator("#stencil").check());
+  for (const id of ["#colors", "#layer-diff", "#grayscale"]) {
+    await expect(page.locator(id)).toBeDisabled();
+  }
+  await page.locator("#reset-settings").click();
+  for (const id of [...curves, "#colors", "#layer-diff", "#grayscale"]) {
+    await expect(page.locator(id)).toBeEnabled();
+  }
+});
+
 test("replacing an inverted image restores the knockout color", async ({ page }) => {
   const flat = await makePng(page, "flat.png", 120, 120, CREAM, [["#3c281e", 30, 30, 60, 60]]);
   await traced(page, () => page.locator("#file-input").setInputFiles(flat));

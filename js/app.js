@@ -10,7 +10,7 @@ import {
   rotateBitmap,
   sniffImageSize,
   Tracer,
-} from "./pipeline.js?v=55";
+} from "./pipeline.js?v=56";
 import {
   analyzeFlatness,
   detectedColorSettings,
@@ -20,17 +20,17 @@ import {
   MAX_TRACE_SIDE_ULTRA,
   parseHexColor,
   toHexColor,
-} from "./preprocess.js?v=55";
-import { $, els, hooks, preferences, showError, state } from "./context.js?v=24";
-import { refreshExport, setResultActions } from "./exporters.js?v=31";
+} from "./preprocess.js?v=56";
+import { $, els, hooks, preferences, showError, state } from "./context.js?v=25";
+import { refreshExport, setResultActions } from "./exporters.js?v=32";
 import {
   clearSelection,
   setBlobFill,
   setEraser,
   setSelectionTool,
   setView,
-} from "./cleanup-tools.js?v=39";
-import { afterTrace, resetPalette } from "./palette-ui.js?v=23";
+} from "./cleanup-tools.js?v=40";
+import { afterTrace, resetPalette } from "./palette-ui.js?v=24";
 import {
   applyExportProfile,
   applyMeasurementUnit,
@@ -45,13 +45,14 @@ import {
   updateExportFields,
   updateOutputs,
   updateStencilFields,
+  updateTraceFields,
   updateTransparencyFields,
-} from "./settings.js?v=37";
-import { actualSizeView, resetView } from "./view.js?v=38";
+} from "./settings.js?v=38";
+import { actualSizeView, resetView } from "./view.js?v=39";
 
 const EMPTY_IMAGE_SRC = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==";
 
-const tracer = new Tracer(new URL("./worker.js?v=58", import.meta.url));
+const tracer = new Tracer(new URL("./worker.js?v=59", import.meta.url));
 
 let elapsedTimer = 0;
 
@@ -94,8 +95,8 @@ async function retrace() {
         ? Math.max(1, maxSide / Math.max(state.bitmap.width, state.bitmap.height))
         : Number(settings.upscale);
     const scale = fitTraceScale(state.bitmap.width, state.bitmap.height, upscale, maxSide);
-    // Nearest-neighbor pairs with pixel-exact tracing only; crisp mode is
-    // corner sharpness, not resampling (NN jaggies anti-aliased sources).
+    // Nearest-neighbor pairs with pixel-exact tracing only: it would
+    // leave jaggies on anti-aliased sources.
     const nearest = settings.mode === "none";
     if (!state.raster || state.raster.scale !== scale || state.raster.nearest !== nearest) {
       state.raster = { scale, nearest, imageData: rasterize(state.bitmap, scale, nearest) };
@@ -720,6 +721,7 @@ els.denoise.addEventListener("change", scheduleRetrace);
 els.stencil.addEventListener("change", () => {
   clearProfile();
   updateStencilFields();
+  updateTraceFields();
   scheduleRetrace();
 });
 els.stencilThreshold.addEventListener("input", () => {
@@ -776,17 +778,11 @@ els.physicalUnit.addEventListener("change", () => {
   savePreferences();
 });
 els.minify.addEventListener("change", refreshExport);
-// Crisp nudges corner rounding in the open (like presets); the slider
-// stays fully user-editable afterwards.
-els.crisp.addEventListener("change", () => {
-  els.cornerThreshold.value = els.crisp.checked ? "30" : "60";
-  updateOutputs();
-  scheduleRetrace();
-});
 
 for (const radio of document.querySelectorAll('input[name="mode"]')) {
   radio.addEventListener("change", () => {
     clearProfile();
+    updateTraceFields();
     scheduleRetrace();
   });
 }

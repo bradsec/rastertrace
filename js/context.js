@@ -1,7 +1,7 @@
 // Shared DOM references and mutable app state, imported by every UI
 // module. Keeps no logic beyond tiny helpers so it can never participate
 // in an import cycle.
-import { MAX_TRACE_SIDE } from "./preprocess.js?v=55";
+import { MAX_TRACE_SIDE } from "./preprocess.js?v=56";
 
 /**
  * @template {Element} [T=HTMLElement]
@@ -47,7 +47,6 @@ export const els = {
   stencilThresholdOut: $("stencil-threshold-out"),
   stencilInkField: $("stencil-ink-field"),
   grayscale: /** @type {HTMLInputElement} */ ($("grayscale")),
-  crisp: /** @type {HTMLInputElement} */ ($("crisp")),
   transparent: /** @type {HTMLSelectElement} */ ($("transparent")),
   backgroundSummary: $("background-summary"),
   knockoutColorField: $("knockout-color-field"),

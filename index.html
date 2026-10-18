@@ -1151,13 +1151,6 @@
                     >Denoise (photos; softens pixel art)</span
                   ></label
                 >
-                <label class="choice"
-                  ><input type="checkbox" id="crisp" />
-                  <span
-                    title="Sharper corner rounding for hard-edged sources. Best for text and logos"
-                    >Crisp edges (text &amp; logos)</span
-                  ></label
-                >
               </div>
             </div>
           </details>
@@ -1322,7 +1315,7 @@
               <dt>Corner rounding</dt>
               <dd>
                 Angles smoother than this trace as curves. Lower keeps text and logo corners sharp;
-                higher flows.
+                higher flows. Spline mode only.
               </dd>
             </div>
             <div>
@@ -1337,7 +1330,7 @@
               <dd>
                 Path precision: decimal places in coordinates (1-2 small web files, 3-4
                 fabrication). Segment length and spline splitting trade curve fidelity for
-                simplicity.
+                simplicity; they apply to Spline mode only.
               </dd>
             </div>
             <div>
@@ -1345,14 +1338,15 @@
               <dd>
                 Black &amp; white trace: pixels darker than the threshold become shapes, everything
                 else drops out. Ink chooses black shapes on a transparent background, or white
-                shapes on a black backing. Best for laser cutting, stamps, silhouettes.
+                shapes on a black backing. Best for laser cutting, stamps, silhouettes. Colors,
+                Layer difference and Grayscale do not apply while it is on.
               </dd>
             </div>
             <div>
-              <dt>Grayscale, Denoise, Crisp</dt>
+              <dt>Grayscale &amp; Denoise</dt>
               <dd>
                 Grayscale converts to gray tones before tracing. Denoise smooths photo noise
-                (softens pixel art). Crisp edges sharpens corner tracing for text and logos.
+                (softens pixel art).
               </dd>
             </div>
             <div>
@@ -1678,6 +1672,6 @@
         location.reload();
       };
     </script>
-    <script type="module" src="js/app.js?v=118" onerror="window.recoverRasterTraceBoot()"></script>
+    <script type="module" src="js/app.js?v=119" onerror="window.recoverRasterTraceBoot()"></script>
   </body>
 </html>

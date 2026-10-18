@@ -8,10 +8,10 @@ import {
   PRESETS,
   sanitizeSettings,
   toGrayscaleColor,
-} from "./preprocess.js?v=55";
-import { els, preferences } from "./context.js?v=24";
-import { refreshExport, updatePhysicalHeightOut } from "./exporters.js?v=31";
-import { setEyedropper } from "./cleanup-tools.js?v=39";
+} from "./preprocess.js?v=56";
+import { els, preferences } from "./context.js?v=25";
+import { refreshExport, updatePhysicalHeightOut } from "./exporters.js?v=32";
+import { setEyedropper } from "./cleanup-tools.js?v=40";
 
 /** @returns {HTMLInputElement} */
 const radioEl = (selector) => /** @type {HTMLInputElement} */ (document.querySelector(selector));
@@ -88,7 +88,6 @@ export function currentSettings() {
     mode: radioEl('input[name="mode"]:checked').value,
     grayscale: els.grayscale.checked,
     denoise: els.denoise.checked,
-    crisp: els.crisp.checked,
     stencil: els.stencil.checked,
     stencilThreshold: Number(els.stencilThreshold.value),
     stencilInk: radioEl('input[name="stencil-ink"]:checked').value,
@@ -130,6 +129,22 @@ export function updateOutputs() {
   els.lengthThresholdOut.textContent = els.lengthThreshold.value;
   els.spliceThresholdOut.textContent = els.spliceThreshold.value;
   els.stencilThresholdOut.textContent = els.stencilThreshold.value;
+}
+
+/**
+ * Disable controls the current trace ignores, so they never look broken:
+ * stencil traces brightness in black and white, and only spline fitting
+ * uses the curve settings.
+ */
+export function updateTraceFields() {
+  const stencil = els.stencil.checked;
+  els.colors.disabled = stencil;
+  els.layerDiff.disabled = stencil;
+  els.grayscale.disabled = stencil;
+  const spline = radioEl('input[name="mode"]:checked').value === "spline";
+  for (const input of [els.cornerThreshold, els.lengthThreshold, els.spliceThreshold]) {
+    input.disabled = !spline;
+  }
 }
 
 export function updateStencilFields() {
@@ -178,6 +193,7 @@ export function applyExportProfile(name) {
   els.autoDetect.checked = false;
   els.exportProfile.value = name; // resetSettings cleared the select
   updateStencilFields(); // after the select: Laser moves the threshold up top
+  updateTraceFields();
   updateOutputs();
 }
 
@@ -208,7 +224,6 @@ function snapshotSettings() {
     mode: radioEl('input[name="mode"]:checked').value,
     grayscale: els.grayscale.checked,
     denoise: els.denoise.checked,
-    crisp: els.crisp.checked,
     stencil: els.stencil.checked,
     stencilThreshold: Number(els.stencilThreshold.value),
     stencilInk: radioEl('input[name="stencil-ink"]:checked').value,
@@ -279,7 +294,6 @@ export function restoreSettings() {
   }
   check(els.grayscale, "grayscale");
   check(els.denoise, "denoise");
-  check(els.crisp, "crisp");
   check(els.stencil, "stencil");
   set(els.stencilThreshold, "stencilThreshold");
   if (saved.stencilInk) {
@@ -307,6 +321,7 @@ export function restoreSettings() {
   updateTransparencyFields();
   updateExportFields();
   updateStencilFields();
+  updateTraceFields();
   updateOutputs();
   // Tell the user their previous session's settings are in effect, so a
   // surprising result (e.g. an old stencil threshold) is explainable.
@@ -360,7 +375,6 @@ export function resetSettings() {
   radioEl(`input[name="mode"][value="${DEFAULTS.mode}"]`).checked = true;
   els.grayscale.checked = DEFAULTS.grayscale;
   els.denoise.checked = DEFAULTS.denoise;
-  els.crisp.checked = DEFAULTS.crisp;
   els.transparent.value = DEFAULTS.transparent;
   els.knockoutColor.value = "#ffffff";
   els.contiguous.checked = DEFAULTS.contiguous;
@@ -373,19 +387,21 @@ export function resetSettings() {
   els.edgeTrim.value = String(DEFAULTS.edgeTrim);
   els.defringe.value = String(DEFAULTS.defringe);
   els.edgeSmooth.value = String(DEFAULTS.edgeSmooth);
-  els.stencil.checked = false;
-  els.stencilThreshold.value = "128";
-  radioEl('input[name="stencil-ink"][value="black"]').checked = true;
-  els.pathPrecision.value = "3";
-  els.lengthThreshold.value = "4";
-  els.spliceThreshold.value = "45";
+  els.stencil.checked = DEFAULTS.stencil;
+  els.stencilThreshold.value = String(DEFAULTS.stencilThreshold);
+  radioEl(`input[name="stencil-ink"][value="${DEFAULTS.stencilInk}"]`).checked = true;
+  els.pathPrecision.value = String(DEFAULTS.pathPrecision);
+  els.lengthThreshold.value = String(DEFAULTS.lengthThreshold);
+  els.spliceThreshold.value = String(DEFAULTS.spliceThreshold);
   els.exportSize.value = "px";
   els.physicalWidth.value = "100";
-  els.physicalUnit.value = "mm";
+  // The unit is a preference (Preferences dialog), not a per-trace setting.
+  els.physicalUnit.value = preferences.measurementUnit;
   els.minify.checked = false;
   setEyedropper(false);
   updateTransparencyFields();
   updateExportFields();
   updateStencilFields();
+  updateTraceFields();
   updateOutputs();
 }
