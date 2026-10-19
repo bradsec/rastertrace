@@ -457,8 +457,11 @@ body:has(#empty-state:not([hidden])) .eraser-controls {
 
 /* ---------- Workspace ---------- */
 .workspace {
+  --left-w: 264px;
+  --right-w: 304px;
+  --rail-w: 44px;
   display: grid;
-  grid-template-columns: 296px minmax(0, 1fr) 296px;
+  grid-template-columns: var(--left-w) minmax(0, 1fr) var(--right-w);
   grid-template-areas: "left canvas right";
   height: calc(100dvh - 76px);
   min-height: 0;
@@ -478,6 +481,15 @@ body:has(#empty-state:not([hidden])) .eraser-controls {
   box-shadow: inset -1px 0 rgb(255 255 255 / 2%);
 }
 
+@media (min-width: 901px) {
+  .workspace.left-folded {
+    --left-w: var(--rail-w);
+  }
+  .workspace.right-folded {
+    --right-w: var(--rail-w);
+  }
+}
+
 .controls-right {
   grid-area: right;
   border-right: 0;
@@ -490,25 +502,124 @@ body:has(#empty-state:not([hidden])) .eraser-controls {
   font-size: var(--fs-xs);
   line-height: 1.4;
 }
-.controls-toolbar {
-  display: grid;
-  gap: 8px;
-  padding: 14px var(--rail-pad) 12px;
+/* ---------- Side panel rails ---------- */
+.rail-head {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 44px;
+  padding: 0 8px 0 var(--rail-pad);
+  background: var(--surface-1);
   border-bottom: 1px solid var(--border);
 }
-.utility-actions {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 6px;
+.rail-title {
+  flex: 1 1 auto;
+  margin: 0;
+  color: var(--text-dim);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  line-height: 16px;
+  text-transform: uppercase;
 }
-.utility-actions .button {
-  padding-inline: 6px;
+.rail-action {
+  min-height: var(--control-h-sm);
+  padding-inline: 8px;
   font-size: var(--fs-sm);
-  white-space: nowrap;
 }
-.field.rail-intro {
+.rail-fold {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: var(--control-h-sm);
+  height: var(--control-h-sm);
+  padding: 0;
+  border: 0;
+  border-radius: var(--r-sm);
+  color: var(--text-dim);
+  background: transparent;
+  cursor: pointer;
+}
+.rail-fold:hover {
+  color: var(--text);
+  background: var(--surface-hover);
+}
+.rail-fold:focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
+}
+.fold-icon {
+  width: 16px;
+  height: 16px;
+}
+.rail-body {
+  display: grid;
+  align-content: start;
+  min-width: 0;
+}
+@media (min-width: 901px) {
+  /* A folded panel keeps only its fold button, with the title running down
+     the rail so it still says what is there. */
+  .workspace.left-folded .controls-left,
+  .workspace.right-folded .controls-right {
+    overflow: hidden;
+  }
+  .workspace.left-folded .controls-left .rail-head,
+  .workspace.right-folded .controls-right .rail-head {
+    flex-direction: column;
+    gap: 10px;
+    padding: 8px 0;
+    border-bottom: 0;
+  }
+  .workspace.left-folded .controls-left .rail-fold,
+  .workspace.right-folded .controls-right .rail-fold {
+    order: -1;
+    transform: scaleX(-1);
+  }
+  .workspace.left-folded .controls-left .rail-title,
+  .workspace.right-folded .controls-right .rail-title {
+    writing-mode: vertical-rl;
+    flex: none;
+  }
+  .workspace.left-folded .controls-left .rail-body,
+  .workspace.right-folded .controls-right .rail-body,
+  .workspace.right-folded .controls-right .rail-action {
+    display: none;
+  }
+}
+
+.field.profile-field {
   padding: 12px var(--rail-pad) 16px;
   border-bottom: 1px solid var(--border);
+}
+/* The profile list is a listbox: every profile shows at once, like a
+   presets panel, and My presets join it as an option group. */
+#export-profile {
+  height: auto;
+  max-height: 340px;
+  padding: 4px;
+  overflow-y: auto;
+  border-radius: var(--r-sm);
+  background: var(--surface-2);
+}
+#export-profile option,
+#export-profile optgroup {
+  padding: 6px 8px;
+  border-radius: var(--r-xs);
+  color: var(--text);
+}
+#export-profile optgroup {
+  color: var(--text-faint);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+}
+#export-profile option:checked {
+  color: var(--text);
+  background: var(--accent-soft) linear-gradient(var(--accent-soft), var(--accent-soft));
 }
 #save-preset {
   justify-self: start;
@@ -579,78 +690,128 @@ body:has(#empty-state:not([hidden])) .eraser-controls {
   color: var(--text);
 }
 /* View toggle and the rotate and invert actions share one row. */
-.view-row {
+.sheet-tabs {
+  display: none;
+}
+
+/* ---------- Strip above the preview ---------- */
+.canvas-strip {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
   align-items: center;
+  gap: 6px 14px;
+  min-height: 44px;
+  padding: 6px 12px;
+  background: var(--surface-1);
+  border-bottom: 1px solid var(--border);
 }
-/* Wide enough for both labels; with 44px touch icons the icons wrap. */
-.view-row .view-toggle {
-  flex: 1 1 150px;
+.canvas-strip .view-toggle .toggle {
+  padding-inline: 12px;
 }
-.view-row .toggle {
-  padding-inline: 8px;
-}
-.view-row .button-row {
+.canvas-strip .button-row {
   gap: 2px;
 }
-.toolbar-wide-action {
-  width: 100%;
-  min-height: var(--control-h);
-}
 .backdrop-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 6px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
-.backdrop-row .button {
-  padding-inline: 8px;
-  white-space: nowrap;
+.backdrop-label {
+  margin-right: 4px;
+  color: var(--text-faint);
+  font-size: var(--fs-sm);
 }
-/* The dot previews the backdrop color; the pressed border shows the toggle is on. */
+/* Each swatch is the backdrop color; the pressed ring shows it is on. */
 .backdrop-toggle {
   --backdrop: #00b140;
-  --backdrop-ring: #00b140;
-  gap: 8px;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-sm);
+  background: var(--backdrop);
+  cursor: pointer;
 }
 #white-screen {
   --backdrop: #fff;
-  --backdrop-ring: var(--text);
 }
 #black-screen {
   --backdrop: #000;
-  --backdrop-ring: var(--text);
 }
-.backdrop-toggle::before {
-  content: "";
-  width: 10px;
-  height: 10px;
-  flex: none;
-  border-radius: 50%;
-  border: 1px solid var(--border-strong);
-  background: transparent;
+.backdrop-toggle:hover {
+  border-color: var(--text-dim);
 }
 .backdrop-toggle[aria-pressed="true"] {
-  background: var(--surface-hover);
+  border-color: var(--bg);
+  box-shadow: 0 0 0 2px var(--accent);
+}
+.backdrop-toggle:focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
+}
+
+/* Path mode reads as one segmented control; the radios stay the inputs. */
+.segmented {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0;
+}
+.segmented legend {
+  margin-bottom: 6px;
+}
+.segmented .choice {
+  position: relative;
+  justify-content: center !important;
+  min-height: var(--control-h);
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  background: var(--surface-2);
+  cursor: pointer;
+}
+.segmented .choice + .choice {
+  border-left: 0;
+}
+.segmented .choice:first-of-type {
+  border-radius: var(--r-sm) 0 0 var(--r-sm);
+}
+.segmented .choice:last-of-type {
+  border-radius: 0 var(--r-sm) var(--r-sm) 0;
+}
+/* The invisible radio covers its segment, so clicks and taps land on it. */
+.segmented .choice input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.segmented .choice:has(input:checked) {
   color: var(--text);
-  border-color: var(--backdrop-ring);
-  box-shadow: inset 0 0 0 1px var(--backdrop-ring);
+  background: var(--surface-3);
+  box-shadow: inset 0 -2px 0 var(--accent);
 }
-.backdrop-toggle[aria-pressed="true"]::before {
-  background: var(--backdrop);
+.segmented .choice:has(input:focus-visible) {
+  z-index: 1;
+  box-shadow: var(--ring);
 }
-#green-screen[aria-pressed="true"]::before {
-  border-color: #00b140;
+.segmented .choice:has(input:disabled) {
+  opacity: var(--disabled-opacity);
+  cursor: default;
 }
-.view-toggle.toolbar-view-toggle {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  width: 100%;
-}
-.view-toggle.toolbar-view-toggle .toggle {
-  min-width: 0;
-  width: 100%;
+
+.panel-step {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border: 1px solid var(--border-strong);
+  border-radius: 50%;
+  color: var(--text-faint);
+  font-size: 10px;
+  letter-spacing: 0;
 }
 
 .subfield {
@@ -1173,7 +1334,7 @@ details.advanced[open] {
   grid-area: canvas;
   position: relative;
   display: grid;
-  grid-template-rows: minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr);
   min-width: 0;
   min-height: 0;
   overflow: hidden;
@@ -1827,47 +1988,6 @@ body:has(#magic-wand[aria-pressed="true"]) .eraser-size {
   flex: 0 0 auto;
 }
 
-.trace-summary {
-  padding: 12px var(--rail-pad);
-  border-bottom: 1px solid var(--border);
-  background: var(--surface-1);
-}
-
-.trace-summary h2 {
-  margin: 0 0 8px;
-  color: var(--text-dim);
-  font-size: var(--fs-xs);
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  line-height: 16px;
-}
-
-.trace-summary-stats {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
-  margin: 0;
-}
-
-.trace-summary-stats div {
-  min-width: 0;
-}
-.trace-summary-stats dt {
-  color: var(--text-faint);
-  font-size: var(--fs-xs);
-}
-.trace-summary-stats dd {
-  margin: 2px 0 0;
-  overflow: hidden;
-  color: var(--text);
-  font-size: var(--fs-sm);
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 /* ---------- Statusbar footer ---------- */
 .statusbar {
   display: flex;
@@ -1898,6 +2018,12 @@ body:has(#magic-wand[aria-pressed="true"]) .eraser-size {
 }
 .statusbar .status-zoom .zoom-level {
   min-width: 44px;
+}
+.trace-stats {
+  flex: none;
+  color: var(--text-faint);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 .statusbar #status {
   min-width: 0;
@@ -2201,7 +2327,11 @@ dialog::backdrop {
   .eraser-size input {
     width: 120px;
   }
-  .trace-summary {
+  .trace-stats {
+    display: none;
+  }
+  /* Panels stack under the preview here, so there is nothing to fold. */
+  .rail-fold {
     display: none;
   }
   /* Status and zoom stay on screen while the settings scroll (WCAG 4.1.3:
@@ -2290,6 +2420,68 @@ dialog::backdrop {
 }
 
 @media (max-width: 680px) {
+  /* One settings section at a time, picked from tabs under the preview. */
+  .sheet-tabs {
+    position: sticky;
+    top: 0;
+    z-index: 4;
+    order: 2;
+    display: flex;
+    gap: 2px;
+    margin-inline: -12px;
+    padding: 4px 12px;
+    overflow-x: auto;
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+    scrollbar-width: none;
+  }
+  .sheet-tabs::-webkit-scrollbar {
+    display: none;
+  }
+  .sheet-tabs button {
+    flex: none;
+    min-height: 44px;
+    padding: 0 12px;
+    border: 0;
+    border-radius: var(--r-sm);
+    color: var(--text-faint);
+    background: transparent;
+    font: inherit;
+    font-size: var(--fs-md);
+    cursor: pointer;
+  }
+  .sheet-tabs button[aria-pressed="true"] {
+    color: var(--text);
+    font-weight: 600;
+    box-shadow: inset 0 -2px 0 var(--accent);
+  }
+  .sheet-tabs button:focus-visible {
+    outline: none;
+    box-shadow: var(--ring);
+  }
+  .controls {
+    order: 3;
+  }
+  .controls-right {
+    order: 4;
+  }
+  .rail-head,
+  [data-sheet] > summary {
+    display: none;
+  }
+  .workspace:not([data-sheet="presets"]) [data-sheet="presets"],
+  .workspace:not([data-sheet="palette"]) [data-sheet="palette"],
+  .workspace:not([data-sheet="background"]) [data-sheet="background"],
+  .workspace:not([data-sheet="colors"]) [data-sheet="colors"],
+  .workspace:not([data-sheet="tracing"]) [data-sheet="tracing"],
+  .workspace:not([data-sheet="export"]) [data-sheet="export"] {
+    display: none;
+  }
+  .workspace:not([data-sheet="presets"], [data-sheet="palette"]) .controls-left,
+  .workspace[data-sheet="presets"] .controls-right,
+  .workspace[data-sheet="palette"] .controls-right {
+    display: none;
+  }
   .topbar-actions > .header-action,
   .action-divider,
   #download-pdf,

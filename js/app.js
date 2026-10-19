@@ -29,16 +29,16 @@ import {
   USER_PRESET_PREFIX,
   userPresetName,
 } from "./preprocess.js?v=58";
-import { $, els, hooks, preferences, showError, state } from "./context.js?v=27";
-import { refreshExport, setResultActions } from "./exporters.js?v=35";
+import { $, els, hooks, preferences, showError, state } from "./context.js?v=28";
+import { refreshExport, setResultActions } from "./exporters.js?v=36";
 import {
   clearSelection,
   setBlobFill,
   setEraser,
   setSelectionTool,
   setView,
-} from "./cleanup-tools.js?v=43";
-import { afterTrace, resetPalette } from "./palette-ui.js?v=27";
+} from "./cleanup-tools.js?v=44";
+import { afterTrace, resetPalette } from "./palette-ui.js?v=28";
 import {
   applyExportProfile,
   applyMeasurementUnit,
@@ -63,12 +63,13 @@ import {
   updateColorSourceFields,
   updateExportFields,
   updateOutputs,
+  updatePanelSummaries,
   updateStencilFields,
   updateTraceFields,
   updateTransparencyFields,
   userPresets,
-} from "./settings.js?v=43";
-import { actualSizeView, resetView } from "./view.js?v=43";
+} from "./settings.js?v=44";
+import { actualSizeView, resetView } from "./view.js?v=44";
 
 const EMPTY_IMAGE_SRC = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==";
 
@@ -374,7 +375,6 @@ els.dropzone.addEventListener("click", (event) => {
   if (event.target instanceof Element && event.target.closest("button, input")) return;
   els.fileInput.click();
 });
-els.replaceImage.addEventListener("click", () => els.fileInput.click());
 
 for (const button of document.querySelectorAll('[data-action="open-image"]')) {
   button.addEventListener("click", () => els.fileInput.click());
@@ -405,6 +405,7 @@ for (const [action, target] of Object.entries(menuActionTargets)) {
     .addEventListener("click", () => target.click());
 }
 
+const phoneSheet = window.matchMedia("(max-width: 680px)");
 const panels = /** @type {NodeListOf<HTMLDetailsElement>} */ (
   document.querySelectorAll("details.panel[data-panel-key]")
 );
@@ -417,6 +418,8 @@ for (const panel of panels) {
     // Disclosure state remains available for this session when storage is unavailable.
   }
   panel.addEventListener("toggle", () => {
+    // Phone tabs open sections themselves; keep the desktop choice.
+    if (phoneSheet.matches) return;
     try {
       localStorage.setItem(storageKey, String(panel.open));
     } catch {
@@ -515,6 +518,10 @@ window.addEventListener("keydown", (event) => {
   if (event.key === "0" && state.bitmap) {
     event.preventDefault();
     resetView();
+  }
+  if (event.key === "\\") {
+    event.preventDefault();
+    toggleBothPanels();
   }
 });
 
@@ -1039,6 +1046,86 @@ for (const radio of document.querySelectorAll('input[name="mode"]')) {
   });
 }
 
+// Phone section tabs: one settings section shows at a time.
+const sheetTabs = /** @type {NodeListOf<HTMLButtonElement>} */ (
+  document.querySelectorAll("[data-sheet-tab]")
+);
+for (const tab of sheetTabs) {
+  tab.addEventListener("click", () => {
+    const sheet = tab.dataset.sheetTab;
+    els.workspace.dataset.sheet = sheet;
+    for (const other of sheetTabs) other.setAttribute("aria-pressed", String(other === tab));
+    const section = els.workspace.querySelector(`[data-sheet="${sheet}"]`);
+    if (section instanceof HTMLDetailsElement) section.open = true;
+  });
+}
+if (phoneSheet.matches) {
+  const section = els.workspace.querySelector(`[data-sheet="${els.workspace.dataset.sheet}"]`);
+  if (section instanceof HTMLDetailsElement) section.open = true;
+}
+
+// Each side panel folds to a narrow rail, like Illustrator's or
+// Lightroom's panel toggles, so the preview can take the room.
+const FOLD_KEY = "rastertrace:folded";
+const foldButtons = { left: els.foldLeft, right: els.foldRight };
+const foldLabels = { left: "presets and palette", right: "settings" };
+
+function isFolded(side) {
+  return els.workspace.classList.contains(`${side}-folded`);
+}
+
+function setFolded(side, folded) {
+  els.workspace.classList.toggle(`${side}-folded`, folded);
+  const action = folded ? "Show" : "Hide";
+  foldButtons[side].setAttribute("aria-expanded", String(!folded));
+  foldButtons[side].setAttribute("aria-label", `${action} ${foldLabels[side]}`);
+  foldButtons[side].title = `${action} panel (Ctrl+\\ for both)`;
+}
+
+function saveFolds() {
+  try {
+    localStorage.setItem(
+      FOLD_KEY,
+      JSON.stringify({ left: isFolded("left"), right: isFolded("right") }),
+    );
+  } catch {
+    // Folding still works for this session when storage is unavailable.
+  }
+}
+
+/** Fold both panels while either is open; otherwise show both. */
+function toggleBothPanels() {
+  const fold = !isFolded("left") || !isFolded("right");
+  setFolded("left", fold);
+  setFolded("right", fold);
+  saveFolds();
+}
+
+{
+  let stored = null;
+  try {
+    stored = JSON.parse(localStorage.getItem(FOLD_KEY) ?? "null");
+  } catch {
+    // Unreadable or blocked storage: use the defaults below.
+  }
+  // Without a saved choice, narrow desktops start with the presets folded.
+  setFolded("left", stored ? stored.left === true : window.innerWidth <= 1180);
+  setFolded("right", stored?.right === true);
+}
+for (const side of /** @type {const} */ (["left", "right"])) {
+  foldButtons[side].addEventListener("click", () => {
+    setFolded(side, !isFolded(side));
+    saveFolds();
+  });
+}
+document
+  .querySelector('[data-action="toggle-left-panel"]')
+  .addEventListener("click", () => els.foldLeft.click());
+document
+  .querySelector('[data-action="toggle-right-panel"]')
+  .addEventListener("click", () => els.foldRight.click());
+document.querySelector('[data-action="toggle-panels"]').addEventListener("click", toggleBothPanels);
+
 els.showResult.addEventListener("click", () => setView("result"));
 els.showSource.addEventListener("click", () => setView("source"));
 // One backdrop at a time; each button's id is also the preview's class for it.
@@ -1076,6 +1163,8 @@ els.resetSettingsBtn.addEventListener("click", () => {
   for (const controlsRoot of document.querySelectorAll(".controls")) {
     controlsRoot.addEventListener("input", saveSettings);
     controlsRoot.addEventListener("change", saveSettings);
+    controlsRoot.addEventListener("input", updatePanelSummaries);
+    controlsRoot.addEventListener("change", updatePanelSummaries);
   }
 }
 // pagehide covers reload and navigation; iOS can discard a backgrounded

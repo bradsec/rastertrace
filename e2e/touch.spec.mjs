@@ -152,8 +152,28 @@ test.describe("touch gestures", () => {
 test.describe("small screens", () => {
   test.use({ viewport: { width: 390, height: 844 } });
 
+  test("section tabs show one settings section at a time", async ({ page }) => {
+    await loadImage(page);
+    const tab = (name) => page.locator(`[data-sheet-tab="${name}"]`);
+    await expect(tab("colors")).toHaveAttribute("aria-pressed", "true");
+    await expect(page.locator("#colors")).toBeVisible();
+    await expect(page.locator("#export-profile")).toBeHidden();
+
+    await tab("presets").click();
+    await expect(tab("presets")).toHaveAttribute("aria-pressed", "true");
+    await expect(tab("colors")).toHaveAttribute("aria-pressed", "false");
+    await expect(page.locator("#export-profile")).toBeVisible();
+    await expect(page.locator("#colors")).toBeHidden();
+
+    // A section folded on desktop still opens when its tab is chosen.
+    await page.evaluate(() => (document.querySelector('[data-sheet="export"]').open = false));
+    await tab("export").click();
+    await expect(page.locator("#export-size")).toBeVisible();
+  });
+
   test("status and zoom stay on screen while settings scroll", async ({ page }) => {
     await loadImage(page);
+    await page.locator('[data-sheet-tab="tracing"]').click();
     await page.locator("#corner-threshold").scrollIntoViewIfNeeded();
     await expect(page.locator("#status")).toBeInViewport({ ratio: 1 });
     await expect(page.locator("#zoom-reset")).toBeInViewport({ ratio: 1 });

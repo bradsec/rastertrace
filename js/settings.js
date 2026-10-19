@@ -15,9 +15,9 @@ import {
   USER_PRESET_PREFIX,
   userPresetName,
 } from "./preprocess.js?v=58";
-import { els, preferences } from "./context.js?v=27";
-import { refreshExport, updatePhysicalHeightOut } from "./exporters.js?v=35";
-import { setEyedropper } from "./cleanup-tools.js?v=43";
+import { els, preferences } from "./context.js?v=28";
+import { refreshExport, updatePhysicalHeightOut } from "./exporters.js?v=36";
+import { setEyedropper } from "./cleanup-tools.js?v=44";
 
 /** @returns {HTMLInputElement} */
 const radioEl = (selector) => /** @type {HTMLInputElement} */ (document.querySelector(selector));
@@ -168,6 +168,26 @@ export function updateOutputs() {
   els.spliceThresholdOut.textContent = els.spliceThreshold.value;
   updateSimplify();
   els.stencilThresholdOut.textContent = els.stencilThreshold.value;
+  updatePanelSummaries();
+}
+
+/** The current value each settings section shows while it is folded. */
+export function updatePanelSummaries() {
+  const colors = Number(els.colors.value);
+  const swatches = currentSwatches().length;
+  els.colorsSummary.textContent = els.stencil.checked
+    ? "Stencil"
+    : els.colorSource.value === "custom" && swatches > 0
+      ? `${swatches} of my colors`
+      : colors >= 256
+        ? "All colors"
+        : `${colors} colors`;
+  els.tracingSummary.textContent =
+    radioEl('input[name="mode"]:checked').closest("label")?.textContent?.trim() ?? "";
+  els.exportSummary.textContent =
+    els.exportSize.value === "physical"
+      ? `${els.physicalWidth.value} ${els.physicalUnit.value}`
+      : "Source size";
 }
 
 /**

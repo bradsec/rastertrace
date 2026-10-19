@@ -198,3 +198,45 @@ test.describe("Illustrator habits", () => {
     expect(await transform(page)).toContain("translate(60px, 40px)");
   });
 });
+
+test.describe("side panels", () => {
+  test.use({ viewport: { width: 1440, height: 900 } });
+
+  test("each panel folds to a rail and remembers it across reloads", async ({ page }) => {
+    await traced(page, () => page.locator("#file-input").setInputFiles(IMAGE));
+    const preview = page.locator(".preview-pane");
+    const wide = (await preview.boundingBox()).width;
+
+    await page.locator("#fold-left").click();
+    await expect(page.locator("#fold-left")).toHaveAttribute("aria-expanded", "false");
+    await expect(page.locator("#fold-left")).toHaveAccessibleName("Show presets and palette");
+    await expect(page.locator("#export-profile")).toBeHidden();
+    expect((await preview.boundingBox()).width).toBeGreaterThan(wide + 150);
+
+    await page.reload();
+    await traced(page, () => page.locator("#file-input").setInputFiles(IMAGE));
+    await expect(page.locator("#export-profile")).toBeHidden();
+    await expect(page.locator("#colors")).toBeVisible();
+    await page.locator("#fold-left").click();
+    await expect(page.locator("#export-profile")).toBeVisible();
+  });
+
+  test("Ctrl+backslash hides both panels, then shows both", async ({ page }) => {
+    await traced(page, () => page.locator("#file-input").setInputFiles(IMAGE));
+    await page.keyboard.press("Control+\\");
+    await expect(page.locator("#export-profile")).toBeHidden();
+    await expect(page.locator("#colors")).toBeHidden();
+    await expect(page.locator("#fold-right")).toBeVisible();
+    await page.keyboard.press("Control+\\");
+    await expect(page.locator("#export-profile")).toBeVisible();
+    await expect(page.locator("#colors")).toBeVisible();
+  });
+
+  test("narrow desktops start with the presets folded", async ({ page }) => {
+    await page.setViewportSize({ width: 1100, height: 800 });
+    await page.reload();
+    await traced(page, () => page.locator("#file-input").setInputFiles(IMAGE));
+    await expect(page.locator("#export-profile")).toBeHidden();
+    await expect(page.locator("#colors")).toBeVisible();
+  });
+});

@@ -53,7 +53,7 @@
       }
     </script>
 
-    <link rel="stylesheet" href="css/styles.css?v=96" />
+    <link rel="stylesheet" href="css/styles.css?v=100" />
   </head>
   <body>
     <header class="app-header">
@@ -92,6 +92,12 @@
           <div class="menu-popover">
             <button type="button" data-action="show-result">Show result</button>
             <button type="button" data-action="show-source">Show source</button>
+            <hr />
+            <button type="button" data-action="toggle-left-panel">Presets panel</button>
+            <button type="button" data-action="toggle-right-panel">Settings panel</button>
+            <button type="button" data-action="toggle-panels">
+              Hide or show both<span>Ctrl+\</span>
+            </button>
             <hr />
             <button type="button" data-action="zoom-fit">Fit preview<span>Ctrl+0</span></button>
             <button type="button" data-action="zoom-actual">
@@ -488,803 +494,873 @@
       </section>
 
       <!-- Workspace: hidden until an image loads -->
-      <section id="workspace" class="workspace" hidden>
-        <aside class="controls" aria-label="Conversion settings">
-          <div class="controls-toolbar">
-            <div class="utility-actions">
-              <button type="button" id="replace-image" class="button button-secondary">
-                Replace image
-              </button>
+      <section id="workspace" class="workspace" data-sheet="colors" hidden>
+        <!-- Phones show one settings section at a time under the preview. -->
+        <div class="sheet-tabs" role="group" aria-label="Settings section">
+          <button type="button" data-sheet-tab="presets" aria-pressed="false">Presets</button>
+          <button type="button" data-sheet-tab="background" aria-pressed="false">Background</button>
+          <button type="button" data-sheet-tab="colors" aria-pressed="true">Colors</button>
+          <button type="button" data-sheet-tab="tracing" aria-pressed="false">Tracing</button>
+          <button type="button" data-sheet-tab="palette" aria-pressed="false">Palette</button>
+          <button type="button" data-sheet-tab="export" aria-pressed="false">Export</button>
+        </div>
+        <aside id="left-panel" class="controls controls-left" aria-labelledby="left-panel-title">
+          <div class="rail-head">
+            <h2 id="left-panel-title" class="rail-title">Presets</h2>
+            <button
+              type="button"
+              id="fold-left"
+              class="rail-fold"
+              aria-expanded="true"
+              aria-controls="left-panel-body"
+              aria-label="Hide presets and palette"
+              title="Hide panel (Ctrl+\ for both)"
+            >
+              <svg
+                class="fold-icon"
+                viewBox="0 0 16 16"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+                focusable="false"
+              >
+                <rect x="1.5" y="2.5" width="13" height="11" rx="2" />
+                <path d="M6 2.5v11" />
+                <path d="M10.5 6 8.5 8l2 2" />
+              </svg>
+            </button>
+          </div>
+          <div id="left-panel-body" class="rail-body">
+            <div class="field profile-field" data-sheet="presets">
+              <label
+                for="export-profile"
+                title="Purpose-based starting point: sets colors, cleanup, path detail, and output options together. Every control stays editable"
+                >Export profile</label
+              >
+              <select id="export-profile" size="10">
+                <option value="">Custom</option>
+                <option value="web">Web optimized (smallest)</option>
+                <option value="balanced">Balanced</option>
+                <option value="detail">High detail</option>
+                <option value="maxDetail">Max detail (smooth)</option>
+                <option value="pixelExact">Pixel exact</option>
+                <option value="print">Print &amp; cutting</option>
+                <option value="monoBlack">Mono stencil (black)</option>
+                <option value="monoWhite">Mono stencil (white)</option>
+                <option value="laser">Laser stencil (B/W)</option>
+              </select>
               <button
                 type="button"
-                id="reset-settings"
+                id="save-preset"
                 class="button button-secondary"
-                title="Restore every control to its default value"
+                title="Save every current setting under a name of your own"
               >
-                Reset settings
+                Save preset
               </button>
             </div>
-            <p id="restored-note" class="restored-note" hidden>
-              Using your previous settings. Press <strong>Reset settings</strong> for defaults.
-            </p>
-            <div class="view-row">
-              <div class="view-toggle toolbar-view-toggle" role="group" aria-label="Preview view">
-                <button
-                  type="button"
-                  id="show-result"
-                  class="toggle"
-                  aria-pressed="true"
-                  title="Show the traced SVG output"
-                >
-                  Result
-                </button>
-                <button
-                  type="button"
-                  id="show-source"
-                  class="toggle"
-                  aria-pressed="false"
-                  title="Show the original image"
-                >
-                  Source
-                </button>
-              </div>
-              <div class="button-row" role="group" aria-label="Rotate and invert image">
-                <button
-                  type="button"
-                  id="rotate-left"
-                  class="button button-ghost icon-button"
-                  title="Rotate 90 degrees counter-clockwise"
-                  aria-label="Rotate 90 degrees counter-clockwise"
-                >
-                  <span class="material-icon icon-rotate_left" aria-hidden="true"></span>
-                </button>
-                <button
-                  type="button"
-                  id="rotate-right"
-                  class="button button-ghost icon-button"
-                  title="Rotate 90 degrees clockwise"
-                  aria-label="Rotate 90 degrees clockwise"
-                >
-                  <span class="material-icon icon-rotate_right" aria-hidden="true"></span>
-                </button>
-                <button
-                  type="button"
-                  id="invert-image"
-                  class="button button-ghost icon-button"
-                  aria-pressed="false"
-                  title="Invert colors (negative), useful for stencils"
-                  aria-label="Invert image colors"
-                >
-                  <span class="material-icon icon-invert_colors" aria-hidden="true"></span>
-                </button>
-              </div>
-            </div>
-            <button
-              type="button"
-              id="green-screen"
-              class="button button-secondary toolbar-wide-action backdrop-toggle"
-              aria-pressed="false"
-              title="Preview transparency over green"
-            >
-              Green screen
-            </button>
-            <div class="backdrop-row" role="group" aria-label="Preview background">
-              <button
-                type="button"
-                id="white-screen"
-                class="button button-secondary backdrop-toggle"
-                aria-pressed="false"
-                title="Preview transparency over white"
-              >
-                White screen
-              </button>
-              <button
-                type="button"
-                id="black-screen"
-                class="button button-secondary backdrop-toggle"
-                aria-pressed="false"
-                title="Preview transparency over black"
-              >
-                Black screen
-              </button>
-            </div>
-          </div>
 
-          <section class="trace-summary" aria-labelledby="trace-summary-title">
-            <h2 id="trace-summary-title">Trace result</h2>
-            <dl class="trace-summary-stats">
-              <div>
-                <dt>Paths</dt>
-                <dd id="stat-paths">-</dd>
-              </div>
-              <div>
-                <dt>Size</dt>
-                <dd id="stat-size">-</dd>
-              </div>
-              <div>
-                <dt>Time</dt>
-                <dd id="stat-time">-</dd>
-              </div>
-            </dl>
-          </section>
-
-          <div class="field rail-intro">
-            <label
-              for="export-profile"
-              title="Purpose-based starting point: sets colors, cleanup, path detail, and output options together. Every control stays editable"
-              >Export profile</label
-            >
-            <select id="export-profile">
-              <option value="">Custom</option>
-              <option value="web">Web optimized (smallest)</option>
-              <option value="balanced">Balanced</option>
-              <option value="detail">High detail</option>
-              <option value="maxDetail">Max detail (smooth)</option>
-              <option value="pixelExact">Pixel exact</option>
-              <option value="print">Print &amp; cutting</option>
-              <option value="monoBlack">Mono stencil (black)</option>
-              <option value="monoWhite">Mono stencil (white)</option>
-              <option value="laser">Laser stencil (B/W)</option>
-            </select>
-            <button
-              type="button"
-              id="save-preset"
-              class="button button-secondary"
-              title="Save every current setting under a name of your own"
-            >
-              Save preset
-            </button>
-          </div>
-
-          <!-- The stencil threshold field moves here while the Laser
-             profile is active: it is that profile's main dial. -->
-          <div id="stencil-threshold-slot" hidden></div>
-
-          <details class="panel" data-panel-key="colors" open>
-            <summary>Colors &amp; cleanup</summary>
-            <div class="panel-body">
-              <div class="field">
-                <label
-                  for="preset"
-                  title="Quick color count. Sets Colors only; speckle and layer settings stay as they are"
-                  >Preset</label
+            <details class="panel" data-panel-key="palette" data-sheet="palette" open>
+              <summary title="Change any traced color to a HEX or RGB value. Shapes stay the same">
+                <span class="panel-heading"
+                  ><span>Palette</span
+                  ><span id="palette-summary" class="panel-summary">No trace</span></span
                 >
-                <select id="preset">
-                  <option value="">Custom</option>
-                  <option value="2">2 colors</option>
-                  <option value="3">3 colors</option>
-                  <option value="4">4 colors</option>
-                  <option value="6">6 colors</option>
-                  <option value="8">8 colors</option>
-                  <option value="16">16 colors</option>
-                  <option value="32">32 colors</option>
-                  <option value="64">64 colors</option>
-                  <option value="128">128 colors</option>
-                  <option value="256">256 colors (all)</option>
-                </select>
-                <label class="choice"
-                  ><input type="checkbox" id="auto-detect" checked />
-                  <span
-                    title="On: colors, speckle filter and layer difference are set from each image you open. Changing them yourself, or picking a preset or profile, turns this off so your values carry over to the next image"
-                    >Auto-detect colors for each image</span
-                  ></label
-                >
-              </div>
-
-              <div class="field">
-                <label
-                  for="color-source"
-                  title="Trace with the image's own colors, or snap every shape to colors you choose, such as brand colors or stocked inks"
-                  >Colors from</label
-                >
-                <select id="color-source">
-                  <option value="auto">This image (automatic)</option>
-                  <option value="custom">My colors</option>
-                </select>
-                <div id="swatch-field" class="swatch-field" hidden>
-                  <div
-                    id="swatch-list"
-                    class="palette-grid"
-                    role="group"
-                    aria-label="My colors"
-                  ></div>
-                  <p id="swatch-empty" class="palette-hint">
-                    Add colors to trace with. Until then the image's own colors are used.
-                  </p>
-                  <div class="color-row">
-                    <input
-                      type="text"
-                      id="swatch-input"
-                      class="swatch-input"
-                      placeholder="#1f2a3b, #ffffff"
-                      aria-label="Colors to add, as hex codes"
-                      spellcheck="false"
-                      autocomplete="off"
-                    />
-                    <button type="button" id="swatch-add" class="button button-secondary">
-                      Add
-                    </button>
-                  </div>
-                  <div class="color-row">
-                    <button
-                      type="button"
-                      id="swatch-import"
-                      class="button button-secondary"
-                      title="Adobe .ase (Illustrator Swatches panel), GIMP or Inkscape .gpl, or a text list of hex codes"
-                    >
-                      Import file
-                    </button>
-                    <button type="button" id="swatch-clear" class="button button-secondary">
-                      Clear
-                    </button>
-                  </div>
-                  <input type="file" id="swatch-file" accept=".ase,.gpl,.txt,.hex,.css" hidden />
-                  <input type="hidden" id="swatches" value="" />
-                  <p id="swatch-note" class="palette-hint" role="status"></p>
-                </div>
-              </div>
-
-              <div class="field">
-                <div class="label-row">
-                  <label
-                    for="colors"
-                    title="Maximum colors in the output. Fewer colors gives simpler, cleaner, smaller SVGs"
-                    >Colors</label
-                  >
-                  <output id="colors-out" for="colors">All</output>
-                </div>
-                <input type="range" id="colors" min="2" max="256" step="1" value="256" />
-              </div>
-
-              <div class="field">
-                <div class="label-row">
-                  <label
-                    for="speckle"
-                    title="Drops traced specks smaller than this many pixels. Raise to remove noise and dust"
-                    >Speckle filter</label
-                  >
-                  <output id="speckle-out" for="speckle">8</output>
-                </div>
-                <input type="range" id="speckle" min="0" max="32" step="1" value="8" />
-              </div>
-
-              <div class="field">
-                <div class="label-row">
-                  <label
-                    for="layer-diff"
-                    title="Minimum color difference between stacked layers. Raise to merge similar shades into one shape"
-                    >Layer difference</label
-                  >
-                  <output id="layer-diff-out" for="layer-diff">16</output>
-                </div>
-                <input type="range" id="layer-diff" min="0" max="128" step="1" value="16" />
-              </div>
-            </div>
-          </details>
-
-          <details class="panel" data-panel-key="palette">
-            <summary title="Change any traced color to a HEX or RGB value. Shapes stay the same">
-              <span class="panel-heading"
-                ><span>Palette</span
-                ><span id="palette-summary" class="panel-summary">No trace</span></span
-              >
-            </summary>
-            <div class="panel-body">
-              <div class="color-row">
-                <button
-                  type="button"
-                  id="palette-pick"
-                  class="button button-secondary"
-                  aria-pressed="false"
-                  title="Click the result to choose a traced color to edit (Esc cancels)"
-                  disabled
-                >
-                  Pick from result
-                </button>
-              </div>
-              <p id="palette-hidden-note" hidden>
-                <span class="material-icon icon-visibility_off" aria-hidden="true"></span>
-                <span id="palette-hidden-count"></span>
-              </p>
-              <div id="palette-grid" class="palette-grid" role="list" hidden></div>
-              <p id="palette-hint" class="palette-hint">
-                Pick a color from the result to edit it. The full palette shows at 32 colors or
-                fewer.
-              </p>
-              <div
-                id="palette-editor"
-                class="palette-editor"
-                role="group"
-                aria-label="Edit color"
-                hidden
-              >
-                <div class="palette-editor-head">
-                  <span id="palette-original-swatch" class="palette-chip" aria-hidden="true"></span>
-                  <span
-                    >Original <code id="palette-original-hex" title="Traced color">#000000</code
-                    ><span id="palette-original-hidden" hidden>, hidden</span></span
-                  >
+              </summary>
+              <div class="panel-body">
+                <div class="color-row">
                   <button
                     type="button"
-                    id="palette-close"
-                    class="button button-secondary palette-close"
-                    aria-label="Close color editor"
+                    id="palette-pick"
+                    class="button button-secondary"
+                    aria-pressed="false"
+                    title="Click the result to choose a traced color to edit (Esc cancels)"
+                    disabled
                   >
-                    Close
+                    Pick from result
                   </button>
                 </div>
-                <div class="palette-editor-fields">
-                  <input type="color" id="palette-color" value="#000000" aria-label="New color" />
-                  <label class="palette-field"
-                    ><span>HEX</span
-                    ><input
-                      type="text"
-                      id="palette-hex"
-                      aria-describedby="palette-error"
-                      value="#000000"
-                      maxlength="7"
-                      spellcheck="false"
-                      autocomplete="off"
-                  /></label>
-                  <label class="palette-field"
-                    ><span>R</span
-                    ><input
-                      type="number"
-                      id="palette-r"
-                      aria-describedby="palette-error"
-                      min="0"
-                      max="255"
-                      step="1"
-                      value="0"
-                  /></label>
-                  <label class="palette-field"
-                    ><span>G</span
-                    ><input
-                      type="number"
-                      id="palette-g"
-                      aria-describedby="palette-error"
-                      min="0"
-                      max="255"
-                      step="1"
-                      value="0"
-                  /></label>
-                  <label class="palette-field"
-                    ><span>B</span
-                    ><input
-                      type="number"
-                      id="palette-b"
-                      aria-describedby="palette-error"
-                      min="0"
-                      max="255"
-                      step="1"
-                      value="0"
-                  /></label>
-                </div>
-                <p id="palette-error" class="palette-error" hidden></p>
-                <button type="button" id="palette-reset" class="button button-secondary">
-                  Reset color
-                </button>
-                <button type="button" id="palette-hide" class="button button-secondary">
-                  Hide color
-                </button>
-              </div>
-              <div id="palette-layering-note" class="palette-layering-note" hidden>
-                <p>Hidden colors reveal the shape beneath in stacked layering.</p>
-                <button type="button" id="palette-use-cutout" class="button button-secondary">
-                  Use cutout layering
-                </button>
-              </div>
-              <ul id="palette-edits" class="palette-edits" aria-label="Edited colors"></ul>
-              <button type="button" id="palette-reset-all" class="button button-secondary" disabled>
-                Reset all colors
-              </button>
-            </div>
-          </details>
-
-          <details class="panel" data-panel-key="background">
-            <summary title="Choose how the source background is handled">
-              <span class="panel-heading"
-                ><span>Background</span
-                ><span id="background-summary" class="panel-summary">Keep background</span></span
-              >
-            </summary>
-            <div class="panel-body">
-              <div class="field background-mode-field">
-                <label
-                  for="transparent"
-                  title="Edges: remove everything connected to the image border. Color: remove a color everywhere it appears"
-                  >Background mode</label
+                <p id="palette-hidden-note" hidden>
+                  <span class="material-icon icon-visibility_off" aria-hidden="true"></span>
+                  <span id="palette-hidden-count"></span>
+                </p>
+                <div id="palette-grid" class="palette-grid" role="list" hidden></div>
+                <p id="palette-hint" class="palette-hint">
+                  Pick a color from the result to edit it. The full palette shows at 32 colors or
+                  fewer.
+                </p>
+                <div
+                  id="palette-editor"
+                  class="palette-editor"
+                  role="group"
+                  aria-label="Edit color"
+                  hidden
                 >
-                <select id="transparent">
-                  <option value="">Keep background</option>
-                  <option value="edges">Remove connected from edges</option>
-                  <option value="auto">Remove color (auto-detect)</option>
-                  <option value="custom">Remove color (pick)</option>
-                </select>
-              </div>
-              <div class="conditional-fields">
-                <div class="subfield" id="knockout-color-field" hidden>
-                  <label for="knockout-color" title="Pixels matching this color become transparent"
-                    >Color to remove</label
-                  >
-                  <div class="color-row">
-                    <input type="color" id="knockout-color" value="#ffffff" />
+                  <div class="palette-editor-head">
+                    <span
+                      id="palette-original-swatch"
+                      class="palette-chip"
+                      aria-hidden="true"
+                    ></span>
+                    <span
+                      >Original <code id="palette-original-hex" title="Traced color">#000000</code
+                      ><span id="palette-original-hidden" hidden>, hidden</span></span
+                    >
                     <button
                       type="button"
-                      id="pick-from-image"
-                      class="button button-secondary"
-                      aria-pressed="false"
-                      title="Click the image to sample the color from the current reduced-color state (Esc cancels)"
+                      id="palette-close"
+                      class="button button-secondary palette-close"
+                      aria-label="Close color editor"
                     >
-                      Pick from image
+                      Close
                     </button>
                   </div>
-                </div>
-                <div class="subfield" id="contiguous-field" hidden>
-                  <label class="choice"
-                    ><input type="checkbox" id="contiguous" />
-                    <span
-                      title="Removes the color only where it connects to the image border, so the same color inside the subject stays"
-                      >Only where connected to edges</span
-                    ></label
-                  >
-                </div>
-                <div class="subfield" id="enclosed-field" hidden>
-                  <label class="choice"
-                    ><input type="checkbox" id="enclosed" />
-                    <span
-                      title="Also removes enclosed background, such as the inside of an O or gaps between shapes. Can also remove subject areas that share the background color"
-                      >Also remove enclosed background</span
-                    ></label
-                  >
-                </div>
-                <div class="subfield" id="enclosed-size-field" hidden>
-                  <div class="label-row">
-                    <label
-                      for="enclosed-size"
-                      title="Enclosed areas smaller than this many source pixels across stay. Lower it to reach small letter counters; raise it to protect same-color details in the subject"
-                      >Smallest enclosed area</label
-                    >
-                    <output id="enclosed-size-out" for="enclosed-size">16 px</output>
+                  <div class="palette-editor-fields">
+                    <input type="color" id="palette-color" value="#000000" aria-label="New color" />
+                    <label class="palette-field"
+                      ><span>HEX</span
+                      ><input
+                        type="text"
+                        id="palette-hex"
+                        aria-describedby="palette-error"
+                        value="#000000"
+                        maxlength="7"
+                        spellcheck="false"
+                        autocomplete="off"
+                    /></label>
+                    <label class="palette-field"
+                      ><span>R</span
+                      ><input
+                        type="number"
+                        id="palette-r"
+                        aria-describedby="palette-error"
+                        min="0"
+                        max="255"
+                        step="1"
+                        value="0"
+                    /></label>
+                    <label class="palette-field"
+                      ><span>G</span
+                      ><input
+                        type="number"
+                        id="palette-g"
+                        aria-describedby="palette-error"
+                        min="0"
+                        max="255"
+                        step="1"
+                        value="0"
+                    /></label>
+                    <label class="palette-field"
+                      ><span>B</span
+                      ><input
+                        type="number"
+                        id="palette-b"
+                        aria-describedby="palette-error"
+                        min="0"
+                        max="255"
+                        step="1"
+                        value="0"
+                    /></label>
                   </div>
-                  <input type="range" id="enclosed-size" min="1" max="64" step="1" value="16" />
+                  <p id="palette-error" class="palette-error" hidden></p>
+                  <button type="button" id="palette-reset" class="button button-secondary">
+                    Reset color
+                  </button>
+                  <button type="button" id="palette-hide" class="button button-secondary">
+                    Hide color
+                  </button>
                 </div>
-                <div class="subfield" id="enclosed-max-size-field" hidden>
-                  <div class="label-row">
-                    <label
-                      for="enclosed-max-size"
-                      title="Enclosed areas larger than this many source pixels across stay, such as a blank screen or a white shirt that shares the background color. Far right is no limit"
-                      >Largest enclosed area</label
-                    >
-                    <output id="enclosed-max-size-out" for="enclosed-max-size">No limit</output>
-                  </div>
-                  <input
-                    type="range"
-                    id="enclosed-max-size"
-                    min="8"
-                    max="512"
-                    step="8"
-                    value="512"
-                  />
+                <div id="palette-layering-note" class="palette-layering-note" hidden>
+                  <p>Hidden colors reveal the shape beneath in stacked layering.</p>
+                  <button type="button" id="palette-use-cutout" class="button button-secondary">
+                    Use cutout layering
+                  </button>
                 </div>
-                <div class="subfield" id="gradient-field" hidden>
-                  <label class="choice"
-                    ><input type="checkbox" id="gradient" />
-                    <span
-                      title="Lets the removal follow a background that fades or changes shade, such as a vignette or lit backdrop. Can creep into low-contrast edges; lower the tolerance if it does"
-                      >Follow gradient background</span
-                    ></label
-                  >
-                </div>
-                <div class="subfield" id="fuzz-field" hidden>
-                  <div class="label-row">
-                    <label
-                      for="fuzz"
-                      title="How closely pixels must match the removed color. 0 is exact; raise for JPEG noise or gradients"
-                      >Match tolerance</label
-                    >
-                    <output id="fuzz-out" for="fuzz">16</output>
-                  </div>
-                  <input type="range" id="fuzz" min="0" max="255" step="1" value="16" />
-                </div>
-                <div class="subfield" id="specks-field" hidden>
-                  <div class="label-row">
-                    <label
-                      for="specks"
-                      title="Removes leftover opaque specks and fills pinholes in the subject smaller than this many pixels across. 0 is off"
-                      >Clean specks</label
-                    >
-                    <output id="specks-out" for="specks">0</output>
-                  </div>
-                  <input type="range" id="specks" min="0" max="16" step="1" value="0" />
-                </div>
-                <div class="subfield" id="edge-smooth-field" hidden>
-                  <div class="label-row">
-                    <label
-                      for="edge-smooth"
-                      title="Rounds off jagged steps and small bumps along the cutout edge. Corners round and details thinner than this many pixels disappear. 0 is off"
-                      >Edge smooth</label
-                    >
-                    <output id="edge-smooth-out" for="edge-smooth">0</output>
-                  </div>
-                  <input type="range" id="edge-smooth" min="0" max="8" step="1" value="0" />
-                </div>
-                <div class="subfield" id="edge-trim-field" hidden>
-                  <div class="label-row">
-                    <label
-                      for="edge-trim"
-                      title="Peels this many pixels off the cutout boundary to remove leftover fringe. Thin details shrink by the same amount"
-                      >Edge trim</label
-                    >
-                    <output id="edge-trim-out" for="edge-trim">0</output>
-                  </div>
-                  <input type="range" id="edge-trim" min="0" max="16" step="1" value="0" />
-                </div>
-                <div class="subfield" id="defringe-field" hidden>
-                  <div class="label-row">
-                    <label
-                      for="defringe"
-                      title="Repaints this many pixels of the cutout boundary with interior colors to hide leftover fringe. Keeps thin details at full size"
-                      >Defringe</label
-                    >
-                    <output id="defringe-out" for="defringe">0</output>
-                  </div>
-                  <input type="range" id="defringe" min="0" max="8" step="1" value="0" />
-                </div>
+                <ul id="palette-edits" class="palette-edits" aria-label="Edited colors"></ul>
+                <button
+                  type="button"
+                  id="palette-reset-all"
+                  class="button button-secondary"
+                  disabled
+                >
+                  Reset all colors
+                </button>
               </div>
-            </div>
-          </details>
+            </details>
+          </div>
         </aside>
 
-        <aside class="controls controls-right" aria-label="Tracing and export settings">
-          <details class="panel" data-panel-key="tracing" open>
-            <summary>Tracing</summary>
-            <div class="panel-body">
-              <div class="field">
-                <label
-                  for="upscale"
-                  title="Enlarges the image before tracing for smoother curves. Longest side is capped at 2048 px (4096 with Ultra); larger images are reduced to fit. Ultra is slower and uses much more memory"
-                  >Upscale before tracing</label
-                >
-                <select id="upscale">
-                  <option value="1">1× (off)</option>
-                  <option value="2" selected>2× (default)</option>
-                  <option value="3">3×</option>
-                  <option value="4">4×</option>
-                  <option value="auto">Auto (fit 2048)</option>
-                  <option value="ultra">Ultra (fit 4096, slow)</option>
-                </select>
-              </div>
-
-              <fieldset class="field">
-                <legend title="How traced outlines are drawn">Path mode</legend>
-                <label class="choice"
-                  ><input type="radio" name="mode" value="spline" checked />
-                  <span title="Smooth flowing curves; best for most artwork"
-                    >Spline (smooth)</span
-                  ></label
-                >
-                <label class="choice"
-                  ><input type="radio" name="mode" value="polygon" />
-                  <span title="Straight line segments; best for hard-edged geometric art"
-                    >Polygon</span
-                  ></label
-                >
-                <label class="choice"
-                  ><input type="radio" name="mode" value="none" />
-                  <span
-                    title="Exact pixel outlines with nearest-neighbor upscaling; best for pixel art"
-                    >Pixel (exact)</span
-                  ></label
-                >
-              </fieldset>
-
-              <div class="field">
-                <div class="label-row">
-                  <label
-                    for="simplify"
-                    title="How closely paths follow the image. Lower keeps more detail and anchor points; higher gives simpler, smoother paths with fewer points. Sets Segment length and Spline splitting under Advanced tracing"
-                    >Simplify</label
-                  >
-                  <output id="simplify-out" for="simplify">3</output>
-                </div>
-                <input type="range" id="simplify" min="0" max="6" step="1" value="3" />
-              </div>
-
-              <div class="field">
-                <div class="label-row">
-                  <label
-                    for="corner-threshold"
-                    title="Angles smoother than this many degrees trace as curves. Lower keeps text and logo corners sharp; raise for flowing curves"
-                    >Corner rounding</label
-                  >
-                  <output id="corner-threshold-out" for="corner-threshold">60</output>
-                </div>
-                <input type="range" id="corner-threshold" min="0" max="120" step="1" value="60" />
-              </div>
-
-              <div class="field">
-                <div class="label-row">
-                  <label
-                    for="straighten"
-                    title="Snap slightly wobbly or bumpy edges to true straight lines. Higher values straighten more aggressively; corners and real curves are kept"
-                    >Straighten lines</label
-                  >
-                  <output id="straighten-out" for="straighten">Off</output>
-                </div>
-                <input type="range" id="straighten" min="0" max="4" step="0.5" value="0" />
-              </div>
-
-              <div class="field">
-                <label
-                  for="hierarchical"
-                  title="Stacked: shapes layer on top of each other (smallest files). Cutout: non-overlapping shapes that tile edge to edge; best for laser cutting, vinyl, and CNC"
-                  >Layering</label
-                >
-                <select id="hierarchical">
-                  <option value="stacked">Stacked (default)</option>
-                  <option value="cutout">Mosaic (seam-free cutout)</option>
-                </select>
-              </div>
-
-              <details class="field advanced">
-                <summary title="Tracer internals: path precision and curve fitting">
-                  Advanced tracing
-                </summary>
-                <div class="subfield">
-                  <div class="label-row">
-                    <label
-                      for="path-precision"
-                      title="Decimal places in path coordinates. 1-2 for small web files; 3-4 for print and fabrication"
-                      >Path precision</label
-                    >
-                    <output id="path-precision-out" for="path-precision">3</output>
-                  </div>
-                  <input type="range" id="path-precision" min="1" max="4" step="1" value="3" />
-                </div>
-                <div class="subfield">
-                  <div class="label-row">
-                    <label
-                      for="length-threshold"
-                      title="Curves subdivide until segments are shorter than this. Lower keeps more detail; higher simplifies"
-                      >Segment length</label
-                    >
-                    <output id="length-threshold-out" for="length-threshold">4</output>
-                  </div>
-                  <input
-                    type="range"
-                    id="length-threshold"
-                    min="3.5"
-                    max="10"
-                    step="0.5"
-                    value="4"
-                  />
-                </div>
-                <div class="subfield">
-                  <div class="label-row">
-                    <label
-                      for="splice-threshold"
-                      title="Angle change needed to split a spline. Lower traces more faithful curves; higher simplifies"
-                      >Spline splitting</label
-                    >
-                    <output id="splice-threshold-out" for="splice-threshold">45</output>
-                  </div>
-                  <input type="range" id="splice-threshold" min="10" max="90" step="5" value="45" />
-                </div>
-              </details>
-
-              <div class="field">
-                <label class="choice"
-                  ><input type="checkbox" id="stencil" />
-                  <span
-                    title="Black and white stencil trace: dark areas become black shapes, everything else drops out. Best for laser cutting, stamps, and silhouettes"
-                    >Stencil (black &amp; white)</span
-                  ></label
-                >
-                <div class="subfield" id="stencil-threshold-field" hidden>
-                  <div class="label-row">
-                    <label
-                      for="stencil-threshold"
-                      title="Brightness cut-off: pixels darker than this become black shapes. Lower keeps only the darkest areas; raise to pick up midtones"
-                      >Stencil threshold</label
-                    >
-                    <output id="stencil-threshold-out" for="stencil-threshold">128</output>
-                  </div>
-                  <input
-                    type="range"
-                    id="stencil-threshold"
-                    min="1"
-                    max="254"
-                    step="1"
-                    value="128"
-                  />
-                </div>
-                <div class="subfield" id="stencil-ink-field" hidden>
-                  <span class="label-row"><label>Stencil ink</label></span>
-                  <label class="choice"
-                    ><input type="radio" name="stencil-ink" value="black" checked />
-                    <span title="Dark areas become black shapes on a transparent background"
-                      >Black on transparent</span
-                    ></label
-                  >
-                  <label class="choice"
-                    ><input type="radio" name="stencil-ink" value="white" />
-                    <span title="Dark areas become white shapes on a solid black background"
-                      >White on black</span
-                    ></label
-                  >
-                </div>
-                <label class="choice"
-                  ><input type="checkbox" id="grayscale" />
-                  <span title="Convert to shades of gray before tracing">Grayscale</span></label
-                >
-                <label class="choice"
-                  ><input type="checkbox" id="denoise" />
-                  <span
-                    title="Smooths photo noise before color reduction. Softens pixel art and fine texture"
-                    >Denoise (photos; softens pixel art)</span
-                  ></label
-                >
-              </div>
-            </div>
-          </details>
-
-          <details class="panel" data-panel-key="svg-export">
-            <summary
-              title="How the downloaded SVG file is written. Changes apply instantly without re-tracing"
+        <aside id="right-panel" class="controls controls-right" aria-labelledby="right-panel-title">
+          <div class="rail-head">
+            <h2 id="right-panel-title" class="rail-title">Settings</h2>
+            <button
+              type="button"
+              id="reset-settings"
+              class="button button-ghost rail-action"
+              title="Restore every control to its default value"
             >
-              SVG export
-            </summary>
-            <div class="panel-body">
-              <div class="subfield">
-                <label
-                  for="export-size"
-                  title="Match source pixels preserves the image dimensions. Custom size lets you set a width in px, mm, cm, or in."
-                  >Size</label
+              Reset
+            </button>
+            <button
+              type="button"
+              id="fold-right"
+              class="rail-fold"
+              aria-expanded="true"
+              aria-controls="right-panel-body"
+              aria-label="Hide settings"
+              title="Hide panel (Ctrl+\ for both)"
+            >
+              <svg
+                class="fold-icon"
+                viewBox="0 0 16 16"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+                focusable="false"
+              >
+                <rect x="1.5" y="2.5" width="13" height="11" rx="2" />
+                <path d="M10 2.5v11" />
+                <path d="M5.5 6l2 2-2 2" />
+              </svg>
+            </button>
+          </div>
+          <div id="right-panel-body" class="rail-body">
+            <p id="restored-note" class="restored-note" hidden>
+              Using your previous settings. Press <strong>Reset</strong> for defaults.
+            </p>
+            <!-- The stencil threshold field moves here while the Laser
+               profile is active: it is that profile's main dial. -->
+            <div id="stencil-threshold-slot" hidden></div>
+            <details class="panel" data-panel-key="background" data-sheet="background">
+              <summary title="Choose how the source background is handled">
+                <span class="panel-heading"
+                  ><span class="panel-step" aria-hidden="true">1</span><span>Background</span
+                  ><span id="background-summary" class="panel-summary">Keep background</span></span
                 >
-                <select id="export-size">
-                  <option value="px">Match source pixels</option>
-                  <option value="physical">Custom size</option>
-                </select>
-              </div>
-              <div class="subfield" id="physical-size-field" hidden>
-                <div class="label-row">
+              </summary>
+              <div class="panel-body">
+                <div class="field background-mode-field">
                   <label
-                    for="physical-width"
-                    title="Exported width; height follows the image aspect ratio"
-                    >Width</label
+                    for="transparent"
+                    title="Edges: remove everything connected to the image border. Color: remove a color everywhere it appears"
+                    >Background mode</label
                   >
-                  <output id="physical-height-out" for="physical-width"></output>
-                </div>
-                <div class="color-row">
-                  <input
-                    type="number"
-                    id="physical-width"
-                    min="1"
-                    step="any"
-                    value="100"
-                    inputmode="decimal"
-                  />
-                  <select id="physical-unit" aria-label="Output unit">
-                    <option value="px">px</option>
-                    <option value="mm">mm</option>
-                    <option value="cm">cm</option>
-                    <option value="in">in</option>
+                  <select id="transparent">
+                    <option value="">Keep background</option>
+                    <option value="edges">Remove connected from edges</option>
+                    <option value="auto">Remove color (auto-detect)</option>
+                    <option value="custom">Remove color (pick)</option>
                   </select>
                 </div>
+                <div class="conditional-fields">
+                  <div class="subfield" id="knockout-color-field" hidden>
+                    <label
+                      for="knockout-color"
+                      title="Pixels matching this color become transparent"
+                      >Color to remove</label
+                    >
+                    <div class="color-row">
+                      <input type="color" id="knockout-color" value="#ffffff" />
+                      <button
+                        type="button"
+                        id="pick-from-image"
+                        class="button button-secondary"
+                        aria-pressed="false"
+                        title="Click the image to sample the color from the current reduced-color state (Esc cancels)"
+                      >
+                        Pick from image
+                      </button>
+                    </div>
+                  </div>
+                  <div class="subfield" id="contiguous-field" hidden>
+                    <label class="choice"
+                      ><input type="checkbox" id="contiguous" />
+                      <span
+                        title="Removes the color only where it connects to the image border, so the same color inside the subject stays"
+                        >Only where connected to edges</span
+                      ></label
+                    >
+                  </div>
+                  <div class="subfield" id="enclosed-field" hidden>
+                    <label class="choice"
+                      ><input type="checkbox" id="enclosed" />
+                      <span
+                        title="Also removes enclosed background, such as the inside of an O or gaps between shapes. Can also remove subject areas that share the background color"
+                        >Also remove enclosed background</span
+                      ></label
+                    >
+                  </div>
+                  <div class="subfield" id="enclosed-size-field" hidden>
+                    <div class="label-row">
+                      <label
+                        for="enclosed-size"
+                        title="Enclosed areas smaller than this many source pixels across stay. Lower it to reach small letter counters; raise it to protect same-color details in the subject"
+                        >Smallest enclosed area</label
+                      >
+                      <output id="enclosed-size-out" for="enclosed-size">16 px</output>
+                    </div>
+                    <input type="range" id="enclosed-size" min="1" max="64" step="1" value="16" />
+                  </div>
+                  <div class="subfield" id="enclosed-max-size-field" hidden>
+                    <div class="label-row">
+                      <label
+                        for="enclosed-max-size"
+                        title="Enclosed areas larger than this many source pixels across stay, such as a blank screen or a white shirt that shares the background color. Far right is no limit"
+                        >Largest enclosed area</label
+                      >
+                      <output id="enclosed-max-size-out" for="enclosed-max-size">No limit</output>
+                    </div>
+                    <input
+                      type="range"
+                      id="enclosed-max-size"
+                      min="8"
+                      max="512"
+                      step="8"
+                      value="512"
+                    />
+                  </div>
+                  <div class="subfield" id="gradient-field" hidden>
+                    <label class="choice"
+                      ><input type="checkbox" id="gradient" />
+                      <span
+                        title="Lets the removal follow a background that fades or changes shade, such as a vignette or lit backdrop. Can creep into low-contrast edges; lower the tolerance if it does"
+                        >Follow gradient background</span
+                      ></label
+                    >
+                  </div>
+                  <div class="subfield" id="fuzz-field" hidden>
+                    <div class="label-row">
+                      <label
+                        for="fuzz"
+                        title="How closely pixels must match the removed color. 0 is exact; raise for JPEG noise or gradients"
+                        >Match tolerance</label
+                      >
+                      <output id="fuzz-out" for="fuzz">16</output>
+                    </div>
+                    <input type="range" id="fuzz" min="0" max="255" step="1" value="16" />
+                  </div>
+                  <div class="subfield" id="specks-field" hidden>
+                    <div class="label-row">
+                      <label
+                        for="specks"
+                        title="Removes leftover opaque specks and fills pinholes in the subject smaller than this many pixels across. 0 is off"
+                        >Clean specks</label
+                      >
+                      <output id="specks-out" for="specks">0</output>
+                    </div>
+                    <input type="range" id="specks" min="0" max="16" step="1" value="0" />
+                  </div>
+                  <div class="subfield" id="edge-smooth-field" hidden>
+                    <div class="label-row">
+                      <label
+                        for="edge-smooth"
+                        title="Rounds off jagged steps and small bumps along the cutout edge. Corners round and details thinner than this many pixels disappear. 0 is off"
+                        >Edge smooth</label
+                      >
+                      <output id="edge-smooth-out" for="edge-smooth">0</output>
+                    </div>
+                    <input type="range" id="edge-smooth" min="0" max="8" step="1" value="0" />
+                  </div>
+                  <div class="subfield" id="edge-trim-field" hidden>
+                    <div class="label-row">
+                      <label
+                        for="edge-trim"
+                        title="Peels this many pixels off the cutout boundary to remove leftover fringe. Thin details shrink by the same amount"
+                        >Edge trim</label
+                      >
+                      <output id="edge-trim-out" for="edge-trim">0</output>
+                    </div>
+                    <input type="range" id="edge-trim" min="0" max="16" step="1" value="0" />
+                  </div>
+                  <div class="subfield" id="defringe-field" hidden>
+                    <div class="label-row">
+                      <label
+                        for="defringe"
+                        title="Repaints this many pixels of the cutout boundary with interior colors to hide leftover fringe. Keeps thin details at full size"
+                        >Defringe</label
+                      >
+                      <output id="defringe-out" for="defringe">0</output>
+                    </div>
+                    <input type="range" id="defringe" min="0" max="8" step="1" value="0" />
+                  </div>
+                </div>
               </div>
-              <label class="choice"
-                ><input type="checkbox" id="minify" />
-                <span
-                  title="Strips the XML declaration, generator comment, and accessibility title for the smallest possible file"
-                  >Minified (smallest file)</span
-                ></label
+            </details>
+
+            <details class="panel" data-panel-key="colors" data-sheet="colors" open>
+              <summary>
+                <span class="panel-heading"
+                  ><span class="panel-step" aria-hidden="true">2</span
+                  ><span>Colors &amp; cleanup</span
+                  ><span id="colors-summary" class="panel-summary">16 colors</span></span
+                >
+              </summary>
+              <div class="panel-body">
+                <div class="field">
+                  <label
+                    for="preset"
+                    title="Quick color count. Sets Colors only; speckle and layer settings stay as they are"
+                    >Preset</label
+                  >
+                  <select id="preset">
+                    <option value="">Custom</option>
+                    <option value="2">2 colors</option>
+                    <option value="3">3 colors</option>
+                    <option value="4">4 colors</option>
+                    <option value="6">6 colors</option>
+                    <option value="8">8 colors</option>
+                    <option value="16">16 colors</option>
+                    <option value="32">32 colors</option>
+                    <option value="64">64 colors</option>
+                    <option value="128">128 colors</option>
+                    <option value="256">256 colors (all)</option>
+                  </select>
+                  <label class="choice"
+                    ><input type="checkbox" id="auto-detect" checked />
+                    <span
+                      title="On: colors, speckle filter and layer difference are set from each image you open. Changing them yourself, or picking a preset or profile, turns this off so your values carry over to the next image"
+                      >Auto-detect colors for each image</span
+                    ></label
+                  >
+                </div>
+
+                <div class="field">
+                  <label
+                    for="color-source"
+                    title="Trace with the image's own colors, or snap every shape to colors you choose, such as brand colors or stocked inks"
+                    >Colors from</label
+                  >
+                  <select id="color-source">
+                    <option value="auto">This image (automatic)</option>
+                    <option value="custom">My colors</option>
+                  </select>
+                  <div id="swatch-field" class="swatch-field" hidden>
+                    <div
+                      id="swatch-list"
+                      class="palette-grid"
+                      role="group"
+                      aria-label="My colors"
+                    ></div>
+                    <p id="swatch-empty" class="palette-hint">
+                      Add colors to trace with. Until then the image's own colors are used.
+                    </p>
+                    <div class="color-row">
+                      <input
+                        type="text"
+                        id="swatch-input"
+                        class="swatch-input"
+                        placeholder="#1f2a3b, #ffffff"
+                        aria-label="Colors to add, as hex codes"
+                        spellcheck="false"
+                        autocomplete="off"
+                      />
+                      <button type="button" id="swatch-add" class="button button-secondary">
+                        Add
+                      </button>
+                    </div>
+                    <div class="color-row">
+                      <button
+                        type="button"
+                        id="swatch-import"
+                        class="button button-secondary"
+                        title="Adobe .ase (Illustrator Swatches panel), GIMP or Inkscape .gpl, or a text list of hex codes"
+                      >
+                        Import file
+                      </button>
+                      <button type="button" id="swatch-clear" class="button button-secondary">
+                        Clear
+                      </button>
+                    </div>
+                    <input type="file" id="swatch-file" accept=".ase,.gpl,.txt,.hex,.css" hidden />
+                    <input type="hidden" id="swatches" value="" />
+                    <p id="swatch-note" class="palette-hint" role="status"></p>
+                  </div>
+                </div>
+
+                <div class="field">
+                  <div class="label-row">
+                    <label
+                      for="colors"
+                      title="Maximum colors in the output. Fewer colors gives simpler, cleaner, smaller SVGs"
+                      >Colors</label
+                    >
+                    <output id="colors-out" for="colors">All</output>
+                  </div>
+                  <input type="range" id="colors" min="2" max="256" step="1" value="256" />
+                </div>
+
+                <div class="field">
+                  <div class="label-row">
+                    <label
+                      for="speckle"
+                      title="Drops traced specks smaller than this many pixels. Raise to remove noise and dust"
+                      >Speckle filter</label
+                    >
+                    <output id="speckle-out" for="speckle">8</output>
+                  </div>
+                  <input type="range" id="speckle" min="0" max="32" step="1" value="8" />
+                </div>
+
+                <div class="field">
+                  <div class="label-row">
+                    <label
+                      for="layer-diff"
+                      title="Minimum color difference between stacked layers. Raise to merge similar shades into one shape"
+                      >Layer difference</label
+                    >
+                    <output id="layer-diff-out" for="layer-diff">16</output>
+                  </div>
+                  <input type="range" id="layer-diff" min="0" max="128" step="1" value="16" />
+                </div>
+
+                <div class="field">
+                  <label class="choice"
+                    ><input type="checkbox" id="stencil" />
+                    <span
+                      title="Black and white stencil trace: dark areas become black shapes, everything else drops out. Best for laser cutting, stamps, and silhouettes"
+                      >Stencil (black &amp; white)</span
+                    ></label
+                  >
+                  <div class="subfield" id="stencil-threshold-field" hidden>
+                    <div class="label-row">
+                      <label
+                        for="stencil-threshold"
+                        title="Brightness cut-off: pixels darker than this become black shapes. Lower keeps only the darkest areas; raise to pick up midtones"
+                        >Stencil threshold</label
+                      >
+                      <output id="stencil-threshold-out" for="stencil-threshold">128</output>
+                    </div>
+                    <input
+                      type="range"
+                      id="stencil-threshold"
+                      min="1"
+                      max="254"
+                      step="1"
+                      value="128"
+                    />
+                  </div>
+                  <div class="subfield" id="stencil-ink-field" hidden>
+                    <span class="label-row"><label>Stencil ink</label></span>
+                    <label class="choice"
+                      ><input type="radio" name="stencil-ink" value="black" checked />
+                      <span title="Dark areas become black shapes on a transparent background"
+                        >Black on transparent</span
+                      ></label
+                    >
+                    <label class="choice"
+                      ><input type="radio" name="stencil-ink" value="white" />
+                      <span title="Dark areas become white shapes on a solid black background"
+                        >White on black</span
+                      ></label
+                    >
+                  </div>
+                  <label class="choice"
+                    ><input type="checkbox" id="grayscale" />
+                    <span title="Convert to shades of gray before tracing">Grayscale</span></label
+                  >
+                  <label class="choice"
+                    ><input type="checkbox" id="denoise" />
+                    <span
+                      title="Smooths photo noise before color reduction. Softens pixel art and fine texture"
+                      >Denoise (photos; softens pixel art)</span
+                    ></label
+                  >
+                </div>
+              </div>
+            </details>
+
+            <details class="panel" data-panel-key="tracing" data-sheet="tracing" open>
+              <summary>
+                <span class="panel-heading"
+                  ><span class="panel-step" aria-hidden="true">3</span><span>Tracing</span
+                  ><span id="tracing-summary" class="panel-summary">Spline</span></span
+                >
+              </summary>
+              <div class="panel-body">
+                <div class="field">
+                  <label
+                    for="upscale"
+                    title="Enlarges the image before tracing for smoother curves. Longest side is capped at 2048 px (4096 with Ultra); larger images are reduced to fit. Ultra is slower and uses much more memory"
+                    >Upscale before tracing</label
+                  >
+                  <select id="upscale">
+                    <option value="1">1× (off)</option>
+                    <option value="2" selected>2× (default)</option>
+                    <option value="3">3×</option>
+                    <option value="4">4×</option>
+                    <option value="auto">Auto (fit 2048)</option>
+                    <option value="ultra">Ultra (fit 4096, slow)</option>
+                  </select>
+                </div>
+
+                <fieldset class="field segmented">
+                  <legend title="How traced outlines are drawn">Path mode</legend>
+                  <label class="choice"
+                    ><input type="radio" name="mode" value="spline" checked />
+                    <span title="Smooth flowing curves; best for most artwork">Spline</span></label
+                  >
+                  <label class="choice"
+                    ><input type="radio" name="mode" value="polygon" />
+                    <span title="Straight line segments; best for hard-edged geometric art"
+                      >Polygon</span
+                    ></label
+                  >
+                  <label class="choice"
+                    ><input type="radio" name="mode" value="none" />
+                    <span
+                      title="Exact pixel outlines with nearest-neighbor upscaling; best for pixel art"
+                      >Pixel</span
+                    ></label
+                  >
+                </fieldset>
+
+                <div class="field">
+                  <div class="label-row">
+                    <label
+                      for="simplify"
+                      title="How closely paths follow the image. Lower keeps more detail and anchor points; higher gives simpler, smoother paths with fewer points. Sets Segment length and Spline splitting under Advanced tracing"
+                      >Simplify</label
+                    >
+                    <output id="simplify-out" for="simplify">3</output>
+                  </div>
+                  <input type="range" id="simplify" min="0" max="6" step="1" value="3" />
+                </div>
+
+                <div class="field">
+                  <div class="label-row">
+                    <label
+                      for="corner-threshold"
+                      title="Angles smoother than this many degrees trace as curves. Lower keeps text and logo corners sharp; raise for flowing curves"
+                      >Corner rounding</label
+                    >
+                    <output id="corner-threshold-out" for="corner-threshold">60</output>
+                  </div>
+                  <input type="range" id="corner-threshold" min="0" max="120" step="1" value="60" />
+                </div>
+
+                <div class="field">
+                  <div class="label-row">
+                    <label
+                      for="straighten"
+                      title="Snap slightly wobbly or bumpy edges to true straight lines. Higher values straighten more aggressively; corners and real curves are kept"
+                      >Straighten lines</label
+                    >
+                    <output id="straighten-out" for="straighten">Off</output>
+                  </div>
+                  <input type="range" id="straighten" min="0" max="4" step="0.5" value="0" />
+                </div>
+
+                <div class="field">
+                  <label
+                    for="hierarchical"
+                    title="Stacked: shapes layer on top of each other (smallest files). Cutout: non-overlapping shapes that tile edge to edge; best for laser cutting, vinyl, and CNC"
+                    >Layering</label
+                  >
+                  <select id="hierarchical">
+                    <option value="stacked">Stacked (default)</option>
+                    <option value="cutout">Mosaic (seam-free cutout)</option>
+                  </select>
+                </div>
+
+                <details class="field advanced">
+                  <summary title="Tracer internals: path precision and curve fitting">
+                    Advanced tracing
+                  </summary>
+                  <div class="subfield">
+                    <div class="label-row">
+                      <label
+                        for="path-precision"
+                        title="Decimal places in path coordinates. 1-2 for small web files; 3-4 for print and fabrication"
+                        >Path precision</label
+                      >
+                      <output id="path-precision-out" for="path-precision">3</output>
+                    </div>
+                    <input type="range" id="path-precision" min="1" max="4" step="1" value="3" />
+                  </div>
+                  <div class="subfield">
+                    <div class="label-row">
+                      <label
+                        for="length-threshold"
+                        title="Curves subdivide until segments are shorter than this. Lower keeps more detail; higher simplifies"
+                        >Segment length</label
+                      >
+                      <output id="length-threshold-out" for="length-threshold">4</output>
+                    </div>
+                    <input
+                      type="range"
+                      id="length-threshold"
+                      min="3.5"
+                      max="10"
+                      step="0.5"
+                      value="4"
+                    />
+                  </div>
+                  <div class="subfield">
+                    <div class="label-row">
+                      <label
+                        for="splice-threshold"
+                        title="Angle change needed to split a spline. Lower traces more faithful curves; higher simplifies"
+                        >Spline splitting</label
+                      >
+                      <output id="splice-threshold-out" for="splice-threshold">45</output>
+                    </div>
+                    <input
+                      type="range"
+                      id="splice-threshold"
+                      min="10"
+                      max="90"
+                      step="5"
+                      value="45"
+                    />
+                  </div>
+                </details>
+              </div>
+            </details>
+
+            <details class="panel" data-panel-key="svg-export" data-sheet="export">
+              <summary
+                title="How the downloaded SVG file is written. Changes apply instantly without re-tracing"
               >
-            </div>
-          </details>
+                <span class="panel-heading"
+                  ><span class="panel-step" aria-hidden="true">4</span><span>SVG export</span
+                  ><span id="export-summary" class="panel-summary">Source size</span></span
+                >
+              </summary>
+              <div class="panel-body">
+                <div class="subfield">
+                  <label
+                    for="export-size"
+                    title="Match source pixels preserves the image dimensions. Custom size lets you set a width in px, mm, cm, or in."
+                    >Size</label
+                  >
+                  <select id="export-size">
+                    <option value="px">Match source pixels</option>
+                    <option value="physical">Custom size</option>
+                  </select>
+                </div>
+                <div class="subfield" id="physical-size-field" hidden>
+                  <div class="label-row">
+                    <label
+                      for="physical-width"
+                      title="Exported width; height follows the image aspect ratio"
+                      >Width</label
+                    >
+                    <output id="physical-height-out" for="physical-width"></output>
+                  </div>
+                  <div class="color-row">
+                    <input
+                      type="number"
+                      id="physical-width"
+                      min="1"
+                      step="any"
+                      value="100"
+                      inputmode="decimal"
+                    />
+                    <select id="physical-unit" aria-label="Output unit">
+                      <option value="px">px</option>
+                      <option value="mm">mm</option>
+                      <option value="cm">cm</option>
+                      <option value="in">in</option>
+                    </select>
+                  </div>
+                </div>
+                <label class="choice"
+                  ><input type="checkbox" id="minify" />
+                  <span
+                    title="Strips the XML declaration, generator comment, and accessibility title for the smallest possible file"
+                    >Minified (smallest file)</span
+                  ></label
+                >
+              </div>
+            </details>
+          </div>
         </aside>
 
         <div class="preview-pane">
+          <div class="canvas-strip" role="toolbar" aria-label="Preview">
+            <div class="view-toggle" role="group" aria-label="Preview view">
+              <button
+                type="button"
+                id="show-result"
+                class="toggle"
+                aria-pressed="true"
+                title="Show the traced SVG output"
+              >
+                Result
+              </button>
+              <button
+                type="button"
+                id="show-source"
+                class="toggle"
+                aria-pressed="false"
+                title="Show the original image"
+              >
+                Source
+              </button>
+            </div>
+            <div class="backdrop-row" role="group" aria-label="Preview background">
+              <span class="backdrop-label" aria-hidden="true">Backdrop</span>
+              <button
+                type="button"
+                id="green-screen"
+                class="backdrop-toggle"
+                aria-pressed="false"
+                aria-label="Green screen"
+                title="Preview transparency over green"
+              ></button>
+              <button
+                type="button"
+                id="white-screen"
+                class="backdrop-toggle"
+                aria-pressed="false"
+                aria-label="White screen"
+                title="Preview transparency over white"
+              ></button>
+              <button
+                type="button"
+                id="black-screen"
+                class="backdrop-toggle"
+                aria-pressed="false"
+                aria-label="Black screen"
+                title="Preview transparency over black"
+              ></button>
+            </div>
+            <div class="button-row" role="group" aria-label="Rotate and invert image">
+              <button
+                type="button"
+                id="rotate-left"
+                class="button button-ghost icon-button"
+                title="Rotate 90 degrees counter-clockwise"
+                aria-label="Rotate 90 degrees counter-clockwise"
+              >
+                <span class="material-icon icon-rotate_left" aria-hidden="true"></span>
+              </button>
+              <button
+                type="button"
+                id="rotate-right"
+                class="button button-ghost icon-button"
+                title="Rotate 90 degrees clockwise"
+                aria-label="Rotate 90 degrees clockwise"
+              >
+                <span class="material-icon icon-rotate_right" aria-hidden="true"></span>
+              </button>
+              <button
+                type="button"
+                id="invert-image"
+                class="button button-ghost icon-button"
+                aria-pressed="false"
+                title="Invert colors (negative), useful for stencils"
+                aria-label="Invert image colors"
+              >
+                <span class="material-icon icon-invert_colors" aria-hidden="true"></span>
+              </button>
+            </div>
+          </div>
           <div
             id="preview"
             class="preview checkerboard fitted"
@@ -1614,6 +1690,11 @@
 
     <footer class="statusbar">
       <p id="status" role="status" aria-live="polite">Ready</p>
+      <p class="trace-stats" aria-label="Trace result">
+        <span id="stat-paths">-</span> paths<span aria-hidden="true"> · </span
+        ><span id="stat-size">-</span><span aria-hidden="true"> · </span
+        ><span id="stat-time">-</span>
+      </p>
       <a
         class="repo-link"
         href="https://github.com/bradsec/rastertrace"
@@ -1808,6 +1889,6 @@
         location.reload();
       };
     </script>
-    <script type="module" src="js/app.js?v=124" onerror="window.recoverRasterTraceBoot()"></script>
+    <script type="module" src="js/app.js?v=126" onerror="window.recoverRasterTraceBoot()"></script>
   </body>
 </html>

@@ -40,11 +40,20 @@ for (const viewport of viewports) {
     await expect(page.locator("#tracing-veil")).toBeHidden();
 
     const workspace = await page.locator("#workspace").boundingBox();
-    const left = await page.locator(".controls:not(.controls-right)").boundingBox();
     const preview = await page.locator(".preview-pane").boundingBox();
     const right = await page.locator(".controls-right").boundingBox();
     expect(workspace.width).toBeLessThanOrEqual(viewport.width);
 
+    if (viewport.width <= 680) {
+      // Phones: section tabs under the preview, one section (Colors) below.
+      const tabs = await page.locator(".sheet-tabs").boundingBox();
+      await expect(page.locator(".controls-left")).toBeHidden();
+      expect(preview.y).toBeLessThan(tabs.y);
+      expect(tabs.y).toBeLessThan(right.y);
+      expect(right.width).toBeLessThanOrEqual(viewport.width);
+      return;
+    }
+    const left = await page.locator(".controls-left").boundingBox();
     if (viewport.width > 900) {
       expect(left.y).toBe(preview.y);
       expect(preview.y).toBe(right.y);

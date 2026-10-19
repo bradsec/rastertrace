@@ -220,6 +220,26 @@ test("Simplify sets the curve settings and shows Custom after hand edits", async
   await expect(page.locator("#simplify")).toHaveValue("2");
 });
 
+test("folded settings sections show their current value", async ({ page }) => {
+  const flat = await makePng(page, "flat.png", 120, 120, CREAM, [["#3c281e", 30, 30, 60, 60]]);
+  await traced(page, () => page.locator("#file-input").setInputFiles(flat));
+  await page.evaluate(() => {
+    for (const details of document.querySelectorAll("aside details")) details.open = true;
+  });
+  await setRange(page, "#colors", 12);
+  await traced(page, () => page.locator('input[name="mode"][value="polygon"]').check());
+  await page.locator("#export-size").selectOption("physical");
+  await page.locator("#physical-width").fill("250");
+  await page.locator("#physical-width").dispatchEvent("input");
+  await page.evaluate(() => {
+    for (const details of document.querySelectorAll("aside details")) details.open = false;
+  });
+  await expect(page.locator("#colors-summary")).toHaveText("12 colors");
+  await expect(page.locator("#tracing-summary")).toHaveText("Polygon");
+  await expect(page.locator("#export-summary")).toContainText("250");
+  await expect(page.locator("#colors-summary")).toBeVisible();
+});
+
 test("replacing an inverted image restores the knockout color", async ({ page }) => {
   const flat = await makePng(page, "flat.png", 120, 120, CREAM, [["#3c281e", 30, 30, 60, 60]]);
   await traced(page, () => page.locator("#file-input").setInputFiles(flat));

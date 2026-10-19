@@ -40,17 +40,17 @@ test("green screen toggle looks different when on", async ({ page }) => {
   await page.locator("#file-input").setInputFiles(path.resolve("android-chrome-192x192.png"));
   await expect(page.locator("#status")).toContainText(/Traced \d/, { timeout: 60_000 });
   const button = page.locator("#green-screen");
+  // The swatch is the backdrop color itself, so the pressed state shows as
+  // a ring and border rather than a fill change.
   const readStyle = () =>
     button.evaluate((el) => {
       const style = getComputedStyle(el);
-      return { boxShadow: style.boxShadow, backgroundColor: style.backgroundColor };
+      return { boxShadow: style.boxShadow, borderColor: style.borderColor };
     });
   const before = await readStyle();
   await button.click();
   await expect(button).toHaveAttribute("aria-pressed", "true");
-  await expect
-    .poll(async () => (await readStyle()).backgroundColor)
-    .not.toBe(before.backgroundColor);
+  await expect.poll(async () => (await readStyle()).borderColor).not.toBe(before.borderColor);
   await expect.poll(async () => (await readStyle()).boxShadow).not.toBe(before.boxShadow);
 });
 
