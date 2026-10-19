@@ -107,6 +107,28 @@ Static files only. The GitHub Actions workflow validates pushes to `main` and pu
 
 Requires OffscreenCanvas and module workers: Chrome/Edge 109+, Firefox 111+, Safari 16.4+. Chrome and Edge offer native Save As dialogs; other supported browsers use their standard download flow because they do not expose a file-location picker to web pages.
 
+## Acknowledgements and credits
+
+[vtracer](https://github.com/visioncortex/vtracer) by Vision Cortex powers rastertrace's raster-to-SVG tracing. The Rust tracing engine is compiled to WebAssembly and runs locally in the browser.
+
+Shipped runtime libraries and assets:
+
+| Component                                                                            | Purpose                                                                | Licence (SPDX)    |
+| ------------------------------------------------------------------------------------ | ---------------------------------------------------------------------- | ----------------- |
+| [vtracer](https://github.com/visioncortex/vtracer)                                   | Raster-to-vector tracing                                               | MIT OR Apache-2.0 |
+| [visioncortex](https://github.com/visioncortex/visioncortex)                         | Image processing and geometry used by vtracer                          | MIT OR Apache-2.0 |
+| [wasm-bindgen](https://github.com/wasm-bindgen/wasm-bindgen)                         | Rust/WebAssembly bindings for JavaScript                               | MIT OR Apache-2.0 |
+| [Material Design Icons](https://github.com/google/material-design-icons), Google LLC | Bundled SVG interface icons, sourced from `@material-design-icons/svg` | Apache-2.0        |
+
+vtracer and visioncortex are dual-licensed; rastertrace uses them under the MIT option. Fonts use system fallbacks; no font files are bundled or downloaded.
+
+Development-only tools, not shipped with the app:
+
+- [Playwright (`@playwright/test`)](https://github.com/microsoft/playwright): browser tests, Apache-2.0.
+- [Oxlint](https://github.com/oxc-project/oxc): linting, MIT.
+- [Oxfmt](https://github.com/oxc-project/oxc): formatting, MIT.
+- [TypeScript](https://github.com/microsoft/TypeScript): type checking, Apache-2.0.
+
 ## License
 
-[MIT](LICENSE)
+rastertrace is licensed under [MIT](LICENSE). See [THIRD-PARTY-LICENSES.txt](THIRD-PARTY-LICENSES.txt) for the full licence texts of every third-party component in the app, including the Rust crates compiled into the WebAssembly module.
