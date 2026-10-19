@@ -74,6 +74,8 @@ export const els = {
   colorsSummary: $("colors-summary"),
   tracingSummary: $("tracing-summary"),
   exportSummary: $("export-summary"),
+  toolRail: $("tool-rail"),
+  toolTrayToggle: /** @type {HTMLButtonElement} */ ($("tool-tray-toggle")),
   foldLeft: /** @type {HTMLButtonElement} */ ($("fold-left")),
   foldRight: /** @type {HTMLButtonElement} */ ($("fold-right")),
   knockoutColorField: $("knockout-color-field"),

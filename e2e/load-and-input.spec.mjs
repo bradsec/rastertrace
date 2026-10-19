@@ -24,6 +24,13 @@ async function eraseStroke(page) {
   await expect(page.locator("#eraser-undo")).toBeEnabled();
 }
 
+/** Phones fold the tool rail to the chosen tool; open the tray when needed. */
+async function chooseTool(page, id) {
+  const tool = page.locator(id);
+  if (!(await tool.isVisible())) await page.locator("#tool-tray-toggle").click();
+  await tool.click();
+}
+
 const transform = (page) => page.locator("#pan-stage").evaluate((el) => el.style.transform);
 
 test.beforeEach(async ({ page }) => {
@@ -96,7 +103,7 @@ test.describe("preview navigation", () => {
     const touchAction = () =>
       page.locator("#preview").evaluate((el) => getComputedStyle(el).touchAction);
     expect(await touchAction()).toBe("pan-y");
-    await page.locator("#eraser-tool").click();
+    await chooseTool(page, "#eraser-tool");
     expect(await touchAction()).toBe("none");
     await page.locator("#eraser-tool").click();
     await page.locator("#zoom-in").click();
@@ -181,7 +188,8 @@ test.describe("Illustrator habits", () => {
     await page.locator("#eraser-tool").click();
     const box = await page.locator("#result-view").boundingBox();
     await page.mouse.move(box.x + box.width * 0.5, box.y + box.height * 0.5);
-    await expect(page.locator(".eraser-controls").first()).toHaveCSS("opacity", "1");
+    await expect(page.locator(".tool-rail")).toHaveCSS("opacity", "1");
+    await expect(page.locator("#eraser-size")).toBeVisible();
     await page.keyboard.down("Space");
     await expect(page.locator("#preview")).toHaveClass(/space-pan/);
     await expect(page.locator("#preview")).toHaveCSS("cursor", "grab");
@@ -238,5 +246,35 @@ test.describe("side panels", () => {
     await traced(page, () => page.locator("#file-input").setInputFiles(IMAGE));
     await expect(page.locator("#export-profile")).toBeHidden();
     await expect(page.locator("#colors")).toBeVisible();
+  });
+});
+
+test.describe("tool rail", () => {
+  test.use({ viewport: { width: 1440, height: 900 } });
+
+  test("each tool shows its own options in the preview strip", async ({ page }) => {
+    await traced(page, () => page.locator("#file-input").setInputFiles(IMAGE));
+    await expect(page.locator("#tool-tray-toggle")).toBeHidden();
+    await expect(page.locator("#rotate-left")).toBeVisible();
+    for (const id of ["#eraser-size", "#blob-fill-color", "#sel-mode-new", "#wand-tolerance"]) {
+      await expect(page.locator(id)).toBeHidden();
+    }
+
+    await page.locator("#magic-wand").click();
+    await expect(page.locator("#wand-tolerance")).toBeVisible();
+    await expect(page.locator("#sel-mode-add")).toBeVisible();
+    await expect(page.locator("#eraser-size")).toBeHidden();
+    // Rotate and invert step aside while a tool works on the result.
+    await expect(page.locator("#rotate-left")).toBeHidden();
+    await expect(page.locator("#show-result")).toBeVisible();
+
+    await page.locator("#blob-fill-tool").click();
+    await expect(page.locator("#eraser-size")).toBeVisible();
+    await expect(page.locator("#blob-fill-hex")).toBeVisible();
+    await expect(page.locator("#wand-tolerance")).toBeHidden();
+
+    await page.keyboard.press("Escape");
+    await expect(page.locator("#blob-fill-tool")).toHaveAttribute("aria-pressed", "false");
+    await expect(page.locator("#rotate-left")).toBeVisible();
   });
 });

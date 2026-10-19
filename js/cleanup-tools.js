@@ -5,9 +5,9 @@
 // module first.
 import { brushSizeForShortcut, snapPointToAngle, svgViewBox } from "./eraser.js?v=11";
 import { parseHexColor, sampleRasterColor, toHexColor } from "./preprocess.js?v=59";
-import { els, hooks, state } from "./context.js?v=29";
+import { els, hooks, state } from "./context.js?v=30";
 import { floodRegion, growMask, maskLoops, unionMasks } from "./magicwand.js?v=11";
-import { refreshExport } from "./exporters.js?v=37";
+import { refreshExport } from "./exporters.js?v=38";
 
 export function setView(view) {
   const showResult = view === "result";
@@ -101,7 +101,11 @@ document.addEventListener(
   "pointerdown",
   (event) => {
     if (!(event.target instanceof Element)) return;
-    if (event.target.closest(".eraser-controls, #preview, #pick-from-image, #selection-actions"))
+    if (
+      event.target.closest(
+        ".tool-rail, .tool-options, #preview, #pick-from-image, #selection-actions",
+      )
+    )
       return;
     deactivateCleanupTools();
   },

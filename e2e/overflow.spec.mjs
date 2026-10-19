@@ -4,8 +4,8 @@
 // dialog at tablet and phone widths.
 import { devices, expect, test } from "@playwright/test";
 
-// Rows of tabs and tools that scroll sideways on purpose.
-const INTENDED = [".sheet-tabs", ".header-canvas-tools"];
+// The phone section tabs scroll sideways on purpose.
+const INTENDED = [".sheet-tabs"];
 
 function overflowing(intended) {
   const found = [];

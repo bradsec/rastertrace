@@ -53,7 +53,7 @@
       }
     </script>
 
-    <link rel="stylesheet" href="css/styles.css?v=102" />
+    <link rel="stylesheet" href="css/styles.css?v=109" />
   </head>
   <body>
     <header class="app-header">
@@ -92,6 +92,9 @@
           <div class="menu-popover">
             <button type="button" data-action="show-result">Show result</button>
             <button type="button" data-action="show-source">Show source</button>
+            <button type="button" data-action="rotate-left">Rotate left</button>
+            <button type="button" data-action="rotate-right">Rotate right</button>
+            <button type="button" data-action="invert-image">Invert colors</button>
             <hr />
             <button type="button" data-action="toggle-left-panel">Presets panel</button>
             <button type="button" data-action="toggle-right-panel">Settings panel</button>
@@ -117,290 +120,6 @@
             <button type="button" data-action="about">About rastertrace</button>
           </div>
         </details>
-      </div>
-      <div class="header-canvas-tools">
-        <div class="eraser-controls" role="group" aria-label="Vector cleanup tools">
-          <span class="eraser-tool-label">Cleanup</span>
-          <button
-            type="button"
-            id="eraser-tool"
-            class="header-tool eraser-tool"
-            aria-label="Eraser tool"
-            aria-pressed="false"
-            disabled
-            title="Erase parts of the vector result (E)"
-          >
-            <svg
-              class="cleanup-tool-icon"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              aria-hidden="true"
-              focusable="false"
-            >
-              <path
-                d="m14.5 5.2 4.3 4.3a2 2 0 0 1 0 2.8l-6.9 6.9a2.7 2.7 0 0 1-3.8 0l-3.3-3.3a2.7 2.7 0 0 1 0-3.8l6.9-6.9a2 2 0 0 1 2.8 0Z"
-              />
-              <path d="m7.2 9.8 7 7" />
-              <path d="M10.8 20h8.7" />
-            </svg>
-          </button>
-          <button
-            type="button"
-            id="blob-fill-tool"
-            class="header-tool cleanup-tool"
-            aria-label="Blob fill brush"
-            aria-pressed="false"
-            disabled
-            title="Paint vector color over the result (B)"
-          >
-            <span class="material-icon icon-brush" aria-hidden="true"></span>
-          </button>
-          <label
-            class="eraser-size"
-            for="eraser-size"
-            title="Eraser diameter. Use [ and ] to adjust"
-          >
-            <span>Size</span>
-            <input type="range" id="eraser-size" min="2" max="240" step="1" value="32" disabled />
-            <output id="eraser-size-out" for="eraser-size">32 px</output>
-          </label>
-          <label class="blob-color" for="blob-fill-color" title="Blob fill color">
-            <input
-              type="color"
-              id="blob-fill-color"
-              value="#000000"
-              disabled
-              aria-label="Blob fill color"
-            />
-            <input
-              type="text"
-              id="blob-fill-hex"
-              value="#000000"
-              maxlength="7"
-              spellcheck="false"
-              disabled
-              aria-label="Blob fill hex color"
-            />
-          </label>
-          <button
-            type="button"
-            id="blob-fill-pick"
-            class="header-tool cleanup-tool"
-            aria-label="Pick blob fill color from image"
-            aria-pressed="false"
-            disabled
-            title="Pick fill color from the source image"
-          >
-            <span class="material-icon icon-colorize" aria-hidden="true"></span>
-          </button>
-          <button
-            type="button"
-            id="marquee-rect"
-            class="header-tool cleanup-tool"
-            aria-label="Rectangular marquee"
-            aria-pressed="false"
-            disabled
-            title="Rectangular marquee (M)"
-          >
-            <svg
-              class="cleanup-tool-icon"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              aria-hidden="true"
-              focusable="false"
-            >
-              <rect x="3.5" y="5" width="17" height="14" rx="1" stroke-dasharray="3 2.5" />
-            </svg>
-          </button>
-          <button
-            type="button"
-            id="marquee-ellipse"
-            class="header-tool cleanup-tool"
-            aria-label="Elliptical marquee"
-            aria-pressed="false"
-            disabled
-            title="Elliptical marquee (Shift+M)"
-          >
-            <svg
-              class="cleanup-tool-icon"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              aria-hidden="true"
-              focusable="false"
-            >
-              <ellipse cx="12" cy="12" rx="8.5" ry="7" stroke-dasharray="3 2.5" />
-            </svg>
-          </button>
-          <button
-            type="button"
-            id="polygon-lasso"
-            class="header-tool cleanup-tool"
-            aria-label="Polygonal lasso"
-            aria-pressed="false"
-            disabled
-            title="Polygonal lasso (L)"
-          >
-            <svg
-              class="cleanup-tool-icon"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              aria-hidden="true"
-              focusable="false"
-            >
-              <path d="M5 6.5 18.5 4 20 15.5 9 20 4 13Z" stroke-dasharray="3 2.5" />
-              <circle cx="5" cy="6.5" r="1.25" fill="currentColor" stroke="none" />
-              <circle cx="18.5" cy="4" r="1.25" fill="currentColor" stroke="none" />
-              <circle cx="20" cy="15.5" r="1.25" fill="currentColor" stroke="none" />
-            </svg>
-          </button>
-          <button
-            type="button"
-            id="magic-wand"
-            class="header-tool cleanup-tool"
-            aria-label="Magic wand"
-            aria-pressed="false"
-            disabled
-            title="Magic wand: select a connected area of one color (W)"
-          >
-            <span class="material-icon icon-auto_fix_high" aria-hidden="true"></span>
-          </button>
-          <div class="selection-mode" role="group" aria-label="Selection mode">
-            <button
-              type="button"
-              id="sel-mode-new"
-              class="header-tool cleanup-tool"
-              aria-label="New selection"
-              aria-pressed="true"
-              title="New selection"
-            >
-              <svg
-                class="cleanup-tool-icon"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                aria-hidden="true"
-                focusable="false"
-              >
-                <rect x="5" y="5" width="14" height="14" rx="1" stroke-dasharray="3 2.5" />
-              </svg>
-            </button>
-            <button
-              type="button"
-              id="sel-mode-add"
-              class="header-tool cleanup-tool"
-              aria-label="Add to selection"
-              aria-pressed="false"
-              title="Add to selection (hold Shift)"
-            >
-              <svg
-                class="cleanup-tool-icon"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                aria-hidden="true"
-                focusable="false"
-              >
-                <rect x="3" y="3" width="12" height="12" rx="1" stroke-dasharray="3 2.5" />
-                <path d="M18 13v8M14 17h8" />
-              </svg>
-            </button>
-            <button
-              type="button"
-              id="sel-mode-subtract"
-              class="header-tool cleanup-tool"
-              aria-label="Subtract from selection"
-              aria-pressed="false"
-              title="Subtract from selection (hold Alt/Option)"
-            >
-              <svg
-                class="cleanup-tool-icon"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                aria-hidden="true"
-                focusable="false"
-              >
-                <rect x="3" y="3" width="12" height="12" rx="1" stroke-dasharray="3 2.5" />
-                <path d="M14 17h8" />
-              </svg>
-            </button>
-          </div>
-          <label
-            class="wand-option"
-            for="wand-tolerance"
-            title="How different a color can be and still join the selection"
-          >
-            <span>Tolerance</span>
-            <input type="range" id="wand-tolerance" min="0" max="50" step="1" value="12" />
-            <output id="wand-tolerance-out" for="wand-tolerance">12</output>
-          </label>
-          <label class="wand-option" for="wand-expand" title="Grow the selection to cover edges">
-            <span>Expand</span>
-            <input type="range" id="wand-expand" min="0" max="8" step="1" value="2" />
-            <output id="wand-expand-out" for="wand-expand">2 px</output>
-          </label>
-          <label
-            class="wand-option"
-            for="wand-smooth"
-            title="Round off the pixel staircase along the selection edge"
-          >
-            <span>Smooth</span>
-            <input type="range" id="wand-smooth" min="0" max="8" step="1" value="2" />
-            <output id="wand-smooth-out" for="wand-smooth">2</output>
-          </label>
-          <button
-            type="button"
-            id="eraser-undo"
-            class="header-tool eraser-action"
-            aria-label="Undo cleanup"
-            disabled
-            title="Undo cleanup (Ctrl/Cmd+Z)"
-          >
-            <span class="material-icon icon-undo" aria-hidden="true"></span>
-          </button>
-          <button
-            type="button"
-            id="eraser-redo"
-            class="header-tool eraser-action"
-            aria-label="Redo cleanup"
-            disabled
-            title="Redo cleanup (Ctrl/Cmd+Shift+Z)"
-          >
-            <span class="material-icon icon-redo" aria-hidden="true"></span>
-          </button>
-          <button
-            type="button"
-            id="eraser-clear"
-            class="header-tool eraser-action restore-original"
-            disabled
-            title="Remove all manual cleanup and restore the traced result"
-          >
-            <span class="material-icon icon-restore" aria-hidden="true"></span><span>Restore</span>
-          </button>
-        </div>
       </div>
       <div class="topbar-actions" role="group" aria-label="Quick actions">
         <button class="header-action" type="button" data-action="open-image">
@@ -1283,6 +1002,151 @@
 
         <div class="preview-pane">
           <div class="canvas-strip" role="toolbar" aria-label="Preview">
+            <div class="tool-options" role="group" aria-label="Tool options">
+              <label
+                class="eraser-size"
+                for="eraser-size"
+                title="Eraser diameter. Use [ and ] to adjust"
+              >
+                <span>Size</span>
+                <input
+                  type="range"
+                  id="eraser-size"
+                  min="2"
+                  max="240"
+                  step="1"
+                  value="32"
+                  disabled
+                />
+                <output id="eraser-size-out" for="eraser-size">32 px</output>
+              </label>
+              <label class="blob-color" for="blob-fill-color" title="Blob fill color">
+                <input
+                  type="color"
+                  id="blob-fill-color"
+                  value="#000000"
+                  disabled
+                  aria-label="Blob fill color"
+                />
+                <input
+                  type="text"
+                  id="blob-fill-hex"
+                  value="#000000"
+                  maxlength="7"
+                  spellcheck="false"
+                  disabled
+                  aria-label="Blob fill hex color"
+                />
+              </label>
+              <button
+                type="button"
+                id="blob-fill-pick"
+                class="header-tool option-tool"
+                aria-label="Pick blob fill color from image"
+                aria-pressed="false"
+                disabled
+                title="Pick fill color from the source image"
+              >
+                <span class="material-icon icon-colorize" aria-hidden="true"></span>
+              </button>
+              <div class="selection-mode" role="group" aria-label="Selection mode">
+                <button
+                  type="button"
+                  id="sel-mode-new"
+                  class="header-tool option-tool"
+                  aria-label="New selection"
+                  aria-pressed="true"
+                  title="New selection"
+                >
+                  <svg
+                    class="cleanup-tool-icon"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                    focusable="false"
+                  >
+                    <rect x="5" y="5" width="14" height="14" rx="1" stroke-dasharray="3 2.5" />
+                  </svg>
+                </button>
+                <button
+                  type="button"
+                  id="sel-mode-add"
+                  class="header-tool option-tool"
+                  aria-label="Add to selection"
+                  aria-pressed="false"
+                  title="Add to selection (hold Shift)"
+                >
+                  <svg
+                    class="cleanup-tool-icon"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                    focusable="false"
+                  >
+                    <rect x="3" y="3" width="12" height="12" rx="1" stroke-dasharray="3 2.5" />
+                    <path d="M18 13v8M14 17h8" />
+                  </svg>
+                </button>
+                <button
+                  type="button"
+                  id="sel-mode-subtract"
+                  class="header-tool option-tool"
+                  aria-label="Subtract from selection"
+                  aria-pressed="false"
+                  title="Subtract from selection (hold Alt/Option)"
+                >
+                  <svg
+                    class="cleanup-tool-icon"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                    focusable="false"
+                  >
+                    <rect x="3" y="3" width="12" height="12" rx="1" stroke-dasharray="3 2.5" />
+                    <path d="M14 17h8" />
+                  </svg>
+                </button>
+              </div>
+              <label
+                class="wand-option"
+                for="wand-tolerance"
+                title="How different a color can be and still join the selection"
+              >
+                <span>Tolerance</span>
+                <input type="range" id="wand-tolerance" min="0" max="50" step="1" value="12" />
+                <output id="wand-tolerance-out" for="wand-tolerance">12</output>
+              </label>
+              <label
+                class="wand-option"
+                for="wand-expand"
+                title="Grow the selection to cover edges"
+              >
+                <span>Expand</span>
+                <input type="range" id="wand-expand" min="0" max="8" step="1" value="2" />
+                <output id="wand-expand-out" for="wand-expand">2 px</output>
+              </label>
+              <label
+                class="wand-option"
+                for="wand-smooth"
+                title="Round off the pixel staircase along the selection edge"
+              >
+                <span>Smooth</span>
+                <input type="range" id="wand-smooth" min="0" max="8" step="1" value="2" />
+                <output id="wand-smooth-out" for="wand-smooth">2</output>
+              </label>
+            </div>
             <div class="view-toggle" role="group" aria-label="Preview view">
               <button
                 type="button"
@@ -1330,7 +1194,7 @@
                 title="Preview transparency over black"
               ></button>
             </div>
-            <div class="button-row" role="group" aria-label="Rotate and invert image">
+            <div class="button-row rotate-group" role="group" aria-label="Rotate and invert image">
               <button
                 type="button"
                 id="rotate-left"
@@ -1361,6 +1225,182 @@
               </button>
             </div>
           </div>
+          <nav id="tool-rail" class="tool-rail" aria-label="Cleanup tools">
+            <!-- Phones show the chosen tool and this button; it opens every tool. -->
+            <button
+              type="button"
+              id="tool-tray-toggle"
+              class="rail-tool tray-toggle"
+              aria-label="All cleanup tools"
+              aria-expanded="false"
+            >
+              <svg
+                class="cleanup-tool-icon"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                aria-hidden="true"
+                focusable="false"
+              >
+                <rect x="4" y="4" width="6" height="6" rx="1" />
+                <rect x="14" y="4" width="6" height="6" rx="1" />
+                <rect x="4" y="14" width="6" height="6" rx="1" />
+                <rect x="14" y="14" width="6" height="6" rx="1" />
+              </svg>
+            </button>
+            <button
+              type="button"
+              id="eraser-tool"
+              class="rail-tool"
+              aria-label="Eraser tool"
+              aria-pressed="false"
+              disabled
+              title="Erase parts of the vector result (E)"
+            >
+              <svg
+                class="cleanup-tool-icon"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+                focusable="false"
+              >
+                <path
+                  d="m14.5 5.2 4.3 4.3a2 2 0 0 1 0 2.8l-6.9 6.9a2.7 2.7 0 0 1-3.8 0l-3.3-3.3a2.7 2.7 0 0 1 0-3.8l6.9-6.9a2 2 0 0 1 2.8 0Z"
+                />
+                <path d="m7.2 9.8 7 7" />
+                <path d="M10.8 20h8.7" />
+              </svg>
+            </button>
+            <button
+              type="button"
+              id="blob-fill-tool"
+              class="rail-tool"
+              aria-label="Blob fill brush"
+              aria-pressed="false"
+              disabled
+              title="Paint vector color over the result (B)"
+            >
+              <span class="material-icon icon-brush" aria-hidden="true"></span>
+            </button>
+            <span class="rail-divider" aria-hidden="true"></span>
+            <button
+              type="button"
+              id="marquee-rect"
+              class="rail-tool"
+              aria-label="Rectangular marquee"
+              aria-pressed="false"
+              disabled
+              title="Rectangular marquee (M)"
+            >
+              <svg
+                class="cleanup-tool-icon"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                aria-hidden="true"
+                focusable="false"
+              >
+                <rect x="3.5" y="5" width="17" height="14" rx="1" stroke-dasharray="3 2.5" />
+              </svg>
+            </button>
+            <button
+              type="button"
+              id="marquee-ellipse"
+              class="rail-tool"
+              aria-label="Elliptical marquee"
+              aria-pressed="false"
+              disabled
+              title="Elliptical marquee (Shift+M)"
+            >
+              <svg
+                class="cleanup-tool-icon"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                aria-hidden="true"
+                focusable="false"
+              >
+                <ellipse cx="12" cy="12" rx="8.5" ry="7" stroke-dasharray="3 2.5" />
+              </svg>
+            </button>
+            <button
+              type="button"
+              id="polygon-lasso"
+              class="rail-tool"
+              aria-label="Polygonal lasso"
+              aria-pressed="false"
+              disabled
+              title="Polygonal lasso (L)"
+            >
+              <svg
+                class="cleanup-tool-icon"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+                focusable="false"
+              >
+                <path d="M5 6.5 18.5 4 20 15.5 9 20 4 13Z" stroke-dasharray="3 2.5" />
+                <circle cx="5" cy="6.5" r="1.25" fill="currentColor" stroke="none" />
+                <circle cx="18.5" cy="4" r="1.25" fill="currentColor" stroke="none" />
+                <circle cx="20" cy="15.5" r="1.25" fill="currentColor" stroke="none" />
+              </svg>
+            </button>
+            <button
+              type="button"
+              id="magic-wand"
+              class="rail-tool"
+              aria-label="Magic wand"
+              aria-pressed="false"
+              disabled
+              title="Magic wand: select a connected area of one color (W)"
+            >
+              <span class="material-icon icon-auto_fix_high" aria-hidden="true"></span>
+            </button>
+            <span class="rail-spacer" aria-hidden="true"></span>
+            <button
+              type="button"
+              id="eraser-undo"
+              class="rail-tool"
+              aria-label="Undo cleanup"
+              disabled
+              title="Undo cleanup (Ctrl/Cmd+Z)"
+            >
+              <span class="material-icon icon-undo" aria-hidden="true"></span>
+            </button>
+            <button
+              type="button"
+              id="eraser-redo"
+              class="rail-tool"
+              aria-label="Redo cleanup"
+              disabled
+              title="Redo cleanup (Ctrl/Cmd+Shift+Z)"
+            >
+              <span class="material-icon icon-redo" aria-hidden="true"></span>
+            </button>
+            <button
+              type="button"
+              id="eraser-clear"
+              class="rail-tool restore-original"
+              disabled
+              title="Remove all manual cleanup and restore the traced result"
+            >
+              <span class="material-icon icon-restore" aria-hidden="true"></span
+              ><span class="visually-hidden">Restore</span>
+            </button>
+          </nav>
           <div
             id="preview"
             class="preview checkerboard fitted"
@@ -1548,7 +1588,12 @@
         <form method="dialog" class="dialog-form guide-dialog-content">
           <div class="dialog-heading">
             <h2 id="cleanup-guide-title" tabindex="-1" autofocus>Vector cleanup</h2>
-            <p>Remove unwanted areas from the traced vector result.</p>
+            <p>
+              Remove unwanted areas from the traced vector result. The tools sit on the left edge of
+              the preview, and the chosen tool's options show in the strip above it. On phones the
+              rail shows the chosen tool; the grid button opens every tool, and its options open in
+              a panel at the bottom of the screen.
+            </p>
           </div>
           <dl class="help-settings">
             <div>
@@ -1581,7 +1626,7 @@
               <dd>
                 Hold Shift when you start a marquee, lasso or wand click to add it to the current
                 selection, or Alt/Option to subtract it; the cursor shows a + or −. On touch
-                screens, use the New, Add and Subtract buttons next to the tools. Switching
+                screens, use the New, Add and Subtract buttons in the tool options. Switching
                 selection tools keeps the selection, so a wand area can be combined with a marquee.
               </dd>
             </div>
@@ -1889,6 +1934,6 @@
         location.reload();
       };
     </script>
-    <script type="module" src="js/app.js?v=127" onerror="window.recoverRasterTraceBoot()"></script>
+    <script type="module" src="js/app.js?v=129" onerror="window.recoverRasterTraceBoot()"></script>
   </body>
 </html>

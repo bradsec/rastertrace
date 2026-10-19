@@ -26,14 +26,10 @@ for (const viewport of viewports) {
     );
 
     const menubar = await page.locator(".menubar").boundingBox();
-    const tools = await page.locator(".header-canvas-tools").boundingBox();
     const actions = await page.locator(".topbar-actions").boundingBox();
     expect(menubar).not.toBeNull();
-    expect(tools).not.toBeNull();
     expect(actions).not.toBeNull();
     expect(overlaps(menubar, actions)).toBe(false);
-    expect(overlaps(menubar, tools)).toBe(false);
-    expect(overlaps(tools, actions)).toBe(false);
 
     await page.locator("#file-input").setInputFiles(path.resolve("android-chrome-192x192.png"));
     await expect(page.locator("#workspace")).toBeVisible();
@@ -43,6 +39,12 @@ for (const viewport of viewports) {
     const preview = await page.locator(".preview-pane").boundingBox();
     const right = await page.locator(".controls-right").boundingBox();
     expect(workspace.width).toBeLessThanOrEqual(viewport.width);
+    // The cleanup tools live on the preview's left edge, under its strip.
+    const rail = await page.locator(".tool-rail").boundingBox();
+    const strip = await page.locator(".canvas-strip").boundingBox();
+    expect(rail.x).toBeGreaterThanOrEqual(preview.x);
+    expect(rail.y).toBeGreaterThanOrEqual(strip.y + strip.height - 1);
+    await expect(page.locator("#tool-tray-toggle")).toBeVisible({ visible: viewport.width <= 680 });
 
     if (viewport.width <= 680) {
       // Phones: section tabs under the preview, one section (Colors) below.

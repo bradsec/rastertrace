@@ -16,6 +16,13 @@ async function dragResult(page, [x1, y1], [x2, y2]) {
   await page.mouse.up();
 }
 
+/** Phones fold the tool rail to the chosen tool; open the tray when needed. */
+async function chooseTool(page, id) {
+  const tool = page.locator(id);
+  if (!(await tool.isVisible())) await page.locator("#tool-tray-toggle").click();
+  await tool.click();
+}
+
 async function clickResult(page, [x, y]) {
   const box = await page.locator("#result-view").boundingBox();
   await page.mouse.click(box.x + box.width * x, box.y + box.height * y);
@@ -36,7 +43,7 @@ test.describe("selection actions", () => {
   test("a finished marquee offers Erase, Fill and Cancel", async ({ page }) => {
     const actions = page.locator("#selection-actions");
     await expect(actions).toBeHidden();
-    await page.locator("#marquee-rect").click();
+    await chooseTool(page, "#marquee-rect");
     await dragResult(page, [0.2, 0.2], [0.6, 0.6]);
     await expect(actions).toBeVisible();
     for (const id of ["#selection-erase", "#selection-fill", "#selection-cancel"]) {
@@ -53,7 +60,7 @@ test.describe("selection actions", () => {
     // Safari's toolbars leave an iPhone about this tall, and the wand's
     // sliders push the preview pane under the sticky status bar.
     await page.setViewportSize({ width: 390, height: 664 });
-    await page.locator("#magic-wand").click();
+    await chooseTool(page, "#magic-wand");
     await clickResult(page, [0.5, 0.5]);
     await expect(page.locator("#selection-actions")).toBeVisible();
     const bar = await page.locator(".statusbar").boundingBox();
@@ -65,7 +72,7 @@ test.describe("selection actions", () => {
   });
 
   test("Fill commits the selection and Cancel discards it", async ({ page }) => {
-    await page.locator("#marquee-ellipse").click();
+    await chooseTool(page, "#marquee-ellipse");
     await dragResult(page, [0.2, 0.2], [0.6, 0.6]);
     await page.locator("#selection-cancel").click();
     await expect(page.locator("#selection-actions")).toBeHidden();
@@ -77,7 +84,7 @@ test.describe("selection actions", () => {
   });
 
   test("an open lasso can be closed with a button", async ({ page }) => {
-    await page.locator("#polygon-lasso").click();
+    await chooseTool(page, "#polygon-lasso");
     await clickResult(page, [0.2, 0.2]);
     await clickResult(page, [0.7, 0.25]);
     await expect(page.locator("#selection-close")).toBeHidden();
@@ -89,7 +96,7 @@ test.describe("selection actions", () => {
   });
 
   test("Backspace removes the last lasso point and keeps drawing", async ({ page }) => {
-    await page.locator("#polygon-lasso").click();
+    await chooseTool(page, "#polygon-lasso");
     await clickResult(page, [0.2, 0.2]);
     await clickResult(page, [0.7, 0.25]);
     await clickResult(page, [0.5, 0.7]);
@@ -123,7 +130,7 @@ test.describe("touch gestures", () => {
   }) => {
     test.skip(browserName !== "chromium", "multi-touch is driven through Chromium's CDP");
     await loadImage(page);
-    await page.locator("#eraser-tool").click();
+    await chooseTool(page, "#eraser-tool");
     const box = await page.locator("#result-view").boundingBox();
     const cx = box.x + box.width / 2;
     const cy = box.y + box.height / 2;
@@ -184,10 +191,10 @@ test.describe("small screens", () => {
   test("brush tools show size, color and restore options", async ({ page }) => {
     await loadImage(page);
     await expect(page.locator("#eraser-size")).toBeHidden();
-    await page.locator("#eraser-tool").click();
+    await chooseTool(page, "#eraser-tool");
     await expect(page.locator("#eraser-size")).toBeVisible();
     await expect(page.locator("#blob-fill-color")).toBeHidden();
-    await page.locator("#blob-fill-tool").click();
+    await chooseTool(page, "#blob-fill-tool");
     await expect(page.locator("#eraser-size")).toBeInViewport({ ratio: 1 });
     await expect(page.locator("#blob-fill-color")).toBeInViewport({ ratio: 1 });
     await dragResult(page, [0.3, 0.3], [0.6, 0.6]);

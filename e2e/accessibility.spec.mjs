@@ -21,13 +21,25 @@ test("guide dialog opens at its heading and returns focus to the menu", async ({
   await expect(help).toBeFocused();
 });
 
-test("cleanup toolbar fits a 360px screen", async ({ page }) => {
+test("cleanup tools fit a 360px screen", async ({ page }) => {
   await page.setViewportSize({ width: 360, height: 740 });
-  const fits = await page
-    .locator(".header-canvas-tools")
-    .evaluate((bar) => bar.scrollWidth <= bar.clientWidth);
-  expect(fits).toBe(true);
-  await expect(page.locator("#eraser-redo")).toBeInViewport({ ratio: 1 });
+  await page.locator("#file-input").setInputFiles(path.resolve("android-chrome-192x192.png"));
+  await expect(page.locator("#status")).toContainText(/Traced \d/, { timeout: 60_000 });
+  // The folded rail shows the tray toggle, undo and redo; the tray shows all.
+  for (const id of ["#tool-tray-toggle", "#eraser-undo", "#eraser-redo"]) {
+    await expect(page.locator(id)).toBeInViewport({ ratio: 1 });
+  }
+  await expect(page.locator("#magic-wand")).toBeHidden();
+  await page.locator("#tool-tray-toggle").click();
+  await expect(page.locator("#tool-tray-toggle")).toHaveAttribute("aria-expanded", "true");
+  for (const id of ["#eraser-tool", "#blob-fill-tool", "#polygon-lasso", "#magic-wand"]) {
+    await expect(page.locator(id)).toBeInViewport({ ratio: 1 });
+  }
+  await page.locator("#magic-wand").click();
+  await expect(page.locator("#tool-tray-toggle")).toHaveAttribute("aria-expanded", "false");
+  await expect(page.locator("#magic-wand")).toBeVisible();
+  await expect(page.locator("#eraser-tool")).toBeHidden();
+  await expect(page.locator("#wand-tolerance")).toBeInViewport({ ratio: 1 });
 });
 
 test("page heading stays in the accessibility tree on phones", async ({ page }) => {

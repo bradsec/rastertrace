@@ -29,16 +29,16 @@ import {
   USER_PRESET_PREFIX,
   userPresetName,
 } from "./preprocess.js?v=59";
-import { $, els, hooks, preferences, showError, state } from "./context.js?v=29";
-import { refreshExport, setResultActions } from "./exporters.js?v=37";
+import { $, els, hooks, preferences, showError, state } from "./context.js?v=30";
+import { refreshExport, setResultActions } from "./exporters.js?v=38";
 import {
   clearSelection,
   setBlobFill,
   setEraser,
   setSelectionTool,
   setView,
-} from "./cleanup-tools.js?v=45";
-import { afterTrace, resetPalette } from "./palette-ui.js?v=29";
+} from "./cleanup-tools.js?v=46";
+import { afterTrace, resetPalette } from "./palette-ui.js?v=30";
 import {
   applyExportProfile,
   applyMeasurementUnit,
@@ -68,8 +68,8 @@ import {
   updateTraceFields,
   updateTransparencyFields,
   userPresets,
-} from "./settings.js?v=45";
-import { actualSizeView, resetView } from "./view.js?v=45";
+} from "./settings.js?v=46";
+import { actualSizeView, resetView } from "./view.js?v=46";
 
 const EMPTY_IMAGE_SRC = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==";
 
@@ -395,6 +395,9 @@ const menuActionTargets = {
   "download-dxf": els.downloadDxf,
   "show-result": els.showResult,
   "show-source": els.showSource,
+  "rotate-left": els.rotateLeft,
+  "rotate-right": els.rotateRight,
+  "invert-image": els.invertImage,
   "zoom-fit": els.zoomReset,
   "zoom-in": els.zoomIn,
   "zoom-out": els.zoomOut,
@@ -497,6 +500,7 @@ document.addEventListener("click", (event) => {
 });
 window.addEventListener("keydown", (event) => {
   if (event.key === "Escape") {
+    setToolTray(false);
     const activeMenu = appMenus.find((menu) => menu.open && menu.contains(document.activeElement));
     closeMenus();
     activeMenu?.querySelector("summary")?.focus({ preventScroll: true });
@@ -1045,6 +1049,20 @@ for (const radio of document.querySelectorAll('input[name="mode"]')) {
     scheduleRetrace();
   });
 }
+
+// Phones fold the tool rail to the chosen tool; the toggle opens a tray of
+// every tool, and picking one closes it.
+function setToolTray(open) {
+  els.toolRail.classList.toggle("open", open);
+  els.toolTrayToggle.setAttribute("aria-expanded", String(open));
+}
+els.toolTrayToggle.addEventListener("click", () =>
+  setToolTray(!els.toolRail.classList.contains("open")),
+);
+els.toolRail.addEventListener("click", (event) => {
+  const tool = event.target instanceof Element && event.target.closest(".rail-tool");
+  if (tool && tool !== els.toolTrayToggle) setToolTray(false);
+});
 
 // Phone section tabs: one settings section shows at a time.
 const sheetTabs = /** @type {NodeListOf<HTMLButtonElement>} */ (
