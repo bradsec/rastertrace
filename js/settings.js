@@ -328,12 +328,11 @@ export function restoreSettings() {
   els.restoredNote.hidden = JSON.stringify(snapshotSettings()) === defaults;
 }
 
+/** Quick color count: sets Colors only, leaving cleanup settings alone. */
 export function applyPreset(name) {
   const preset = PRESETS[name];
   if (!preset) return;
-  els.colors.value = preset.colors;
-  els.speckle.value = preset.speckle;
-  els.layerDiff.value = preset.layerDiff;
+  els.colors.value = String(preset.colors);
   updateOutputs();
 }
 

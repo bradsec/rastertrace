@@ -191,3 +191,22 @@ test("replacing an inverted image restores the knockout color", async ({ page })
   await traced(page, () => page.locator("#file-input").setInputFiles(flat));
   await expect(page.locator("#knockout-color")).toHaveValue(CREAM);
 });
+
+test("a color preset sets Colors only", async ({ page }) => {
+  const flat = await makePng(page, "flat.png", 120, 120, CREAM, [["#3c281e", 30, 30, 60, 60]]);
+  await traced(page, () => page.locator("#file-input").setInputFiles(flat));
+  await page.evaluate(() => {
+    for (const details of document.querySelectorAll("aside details")) details.open = true;
+  });
+  await page.locator("#speckle").fill("20");
+  await page.locator("#layer-diff").fill("50");
+  await page.locator("#preset").selectOption("4");
+  await expect(page.locator("#colors")).toHaveValue("4");
+  await expect(page.locator("#speckle")).toHaveValue("20");
+  await expect(page.locator("#layer-diff")).toHaveValue("50");
+  // The preset names a color count, so it follows the Colors slider only.
+  await page.locator("#speckle").fill("10");
+  await expect(page.locator("#preset")).toHaveValue("4");
+  await page.locator("#colors").fill("5");
+  await expect(page.locator("#preset")).toHaveValue("");
+});

@@ -619,7 +619,11 @@ els.preset.addEventListener("change", () => {
 
 for (const input of [els.colors, els.speckle, els.layerDiff]) {
   input.addEventListener("input", () => {
-    els.preset.value = ""; // manual change leaves the preset
+    // The preset only names a color count, so it follows the Colors slider.
+    if (input === els.colors) {
+      const match = [...els.preset.options].some((o) => o.value === els.colors.value);
+      els.preset.value = match ? els.colors.value : "";
+    }
     els.autoDetect.checked = false; // and keeps the value for later images
     clearProfile();
     updateOutputs();

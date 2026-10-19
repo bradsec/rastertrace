@@ -21,7 +21,7 @@ Convert raster images to clean, scalable SVG vectors entirely in your browser. [
 - Minified output option (also compresses path data with relative commands for roughly 30% smaller SVG files), or accessible output with `role="img"` and a `<title>` from the file name
 - Straighten lines slider: snaps slightly wobbly or bumpy traced edges to true straight lines while keeping corners and real curves
 - Advanced tracing controls: path coordinate precision, curve segment length, spline splitting
-- Color-count presets from 2 to 256 with matched cleanup levels: fewer colors get more aggressive speckle and layer cleanup for flat print-style output. Below 256, the traced SVG uses at most that many colors: each shape's fill snaps to the reduced palette, and defringe repaints only with colors already in it
+- Color-count presets from 2 to 256: a quick way to set Colors that leaves speckle filter and layer difference as they are. Below 256, the traced SVG uses at most that many colors: each shape's fill snaps to the reduced palette, and defringe repaints only with colors already in it
 - Color auto-detection (on by default): each opened image sets colors, speckle filter, and layer difference; flat art snaps to its color count and photos get the defaults. Changing those controls, a preset, or a profile turns it off.
 - Crisp edges toggle: sharper corner tracing for hard-edged sources, available manually for any image.
 - Path modes: smooth splines, straight polygons, or pixel-exact outlines with nearest-neighbor upscaling for pixel art
