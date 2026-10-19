@@ -492,6 +492,10 @@ window.addEventListener("keydown", (event) => {
     event.preventDefault();
     actualSizeView();
   }
+  if (event.key === "0" && state.bitmap) {
+    event.preventDefault();
+    resetView();
+  }
 });
 
 // Rotation replaces the working bitmap, so the source view is re-rendered

@@ -119,16 +119,8 @@ function pinchState() {
   };
 }
 
-els.preview.addEventListener("pointerdown", (e) => {
-  if (
-    state.picking ||
-    state.palettePicking ||
-    state.erasing ||
-    state.blobFilling ||
-    state.blobPicking ||
-    e.button !== 0
-  )
-    return;
+/** @param {PointerEvent} e */
+function startPointer(e) {
   pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
   if (pointers.size === 1) {
     gesture = { x: e.clientX, y: e.clientY };
@@ -141,7 +133,76 @@ els.preview.addEventListener("pointerdown", (e) => {
   } catch {
     // synthetic events have no active pointer; drag still works unbounded
   }
+}
+
+els.preview.addEventListener("pointerdown", (e) => {
+  if (
+    state.picking ||
+    state.palettePicking ||
+    state.erasing ||
+    state.blobFilling ||
+    state.blobPicking ||
+    e.button !== 0
+  )
+    return;
+  startPointer(e);
 });
+
+// Holding Space pans with any tool active, like Illustrator's Hand tool.
+// The window capture listener runs before the tools' preview listeners.
+let spaceHeld = false;
+
+/** @param {boolean} held */
+function setSpacePan(held) {
+  spaceHeld = held;
+  els.preview.classList.toggle("space-pan", held);
+}
+
+// Text fields keep Space for typing. Elsewhere Space pans while the
+// pointer is over the preview, even when a tool button kept focus (its
+// Space press would otherwise toggle the tool), or when nothing else
+// has focus.
+const TYPING =
+  'textarea, select, [contenteditable]:not([contenteditable="false"]), input:not([type="range"], [type="checkbox"], [type="radio"], [type="button"], [type="color"], [type="file"])';
+let pointerOverPreview = false;
+els.preview.addEventListener("pointerenter", () => (pointerOverPreview = true));
+els.preview.addEventListener("pointerleave", () => (pointerOverPreview = false));
+
+/** @param {EventTarget | null} target */
+function spaceTarget(target) {
+  if (target instanceof Element && target.matches(TYPING)) return false;
+  return (
+    pointerOverPreview ||
+    target === null ||
+    target === document.body ||
+    (target instanceof Node && els.preview.contains(target))
+  );
+}
+
+document.addEventListener("keydown", (e) => {
+  if (e.code !== "Space" || !state.bitmap || !spaceTarget(e.target)) return;
+  e.preventDefault();
+  if (!e.repeat) setSpacePan(true);
+});
+// Buttons and checkboxes activate on Space keyup, so a pan's release
+// must not reach them either.
+document.addEventListener("keyup", (e) => {
+  if (e.code !== "Space" || !spaceHeld) return;
+  e.preventDefault();
+  setSpacePan(false);
+});
+window.addEventListener("blur", () => setSpacePan(false));
+window.addEventListener(
+  "pointerdown",
+  (e) => {
+    if (!spaceHeld || e.button !== 0 || !(e.target instanceof Node)) return;
+    if (!els.preview.contains(e.target)) return;
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    startPointer(e);
+  },
+  true,
+);
 
 // Cleanup tools own single touches, so a pinch that starts mid-stroke
 // arrives here with its first finger already down.

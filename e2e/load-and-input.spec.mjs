@@ -166,4 +166,34 @@ test.describe("Illustrator habits", () => {
     for (const id of mosaic) expect(id).toMatch(/^color-[0-9a-f]{6}$/);
     expect(new Set(mosaic).size).toBe(mosaic.length);
   });
+
+  test("Ctrl+0 fits the preview", async ({ page }) => {
+    await traced(page, () => page.locator("#file-input").setInputFiles(IMAGE));
+    await page.locator("#zoom-in").click();
+    expect(await transform(page)).not.toContain("scale(1)");
+    await page.keyboard.press("Control+0");
+    expect(await transform(page)).toBe("translate(0px, 0px) scale(1)");
+  });
+
+  test("holding Space pans over an active eraser without erasing", async ({ page }) => {
+    await traced(page, () => page.locator("#file-input").setInputFiles(IMAGE));
+    await page.locator("#eraser-tool").click();
+    const box = await page.locator("#result-view").boundingBox();
+    await page.mouse.move(box.x + box.width * 0.5, box.y + box.height * 0.5);
+    await expect(page.locator(".eraser-controls").first()).toHaveCSS("opacity", "1");
+    await page.keyboard.down("Space");
+    await expect(page.locator("#preview")).toHaveClass(/space-pan/);
+    await expect(page.locator("#preview")).toHaveCSS("cursor", "grab");
+    await page.mouse.down();
+    await page.mouse.move(box.x + box.width * 0.5 + 60, box.y + box.height * 0.5 + 40, {
+      steps: 4,
+    });
+    await page.mouse.up();
+    await page.keyboard.up("Space");
+    // Focus stayed on the eraser button: Space must not have toggled it off.
+    await expect(page.locator("#preview")).toHaveClass(/erasing/);
+    await expect(page.locator("#preview")).not.toHaveClass(/space-pan/);
+    await expect(page.locator("#eraser-undo")).toBeDisabled();
+    expect(await transform(page)).toContain("translate(60px, 40px)");
+  });
 });

@@ -1351,6 +1351,21 @@ details.advanced[open] {
     crosshair;
 }
 
+/* Space held: the Hand tool overrides every cleanup tool cursor. */
+.preview.space-pan,
+.preview.space-pan.selecting.sel-add,
+.preview.space-pan.selecting.sel-subtract {
+  cursor: grab;
+}
+.preview.space-pan.panning,
+.preview.space-pan.panning.selecting.sel-add,
+.preview.space-pan.panning.selecting.sel-subtract {
+  cursor: grabbing;
+}
+.preview.space-pan .eraser-cursor {
+  visibility: hidden;
+}
+
 .eraser-controls {
   display: inline-flex;
   align-items: center;
