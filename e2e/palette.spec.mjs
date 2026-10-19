@@ -364,3 +364,67 @@ test("hidden colors offer cutout layering and survive its retrace", async ({ pag
   await page.locator("#palette-reset-all").click();
   await expect(note).toBeHidden();
 });
+
+/** Distinct visible fills in the result SVG. */
+async function fillsInResult(page) {
+  const svg = await resultSvg(page);
+  return new Set(
+    [...svg.matchAll(/fill="(#[0-9a-fA-F]{6})"/g)].map(([, fill]) => fill.toUpperCase()),
+  );
+}
+
+test("selected swatches merge into one color and split back", async ({ page }) => {
+  await loadShapes(page);
+  const swatches = page.locator("#palette-grid .swatch");
+  await expect(swatches).toHaveCount(3);
+  const [, red, blue] = await swatches.evaluateAll((all) => all.map((s) => s.dataset.fill));
+  await expect.poll(async () => (await fillsInResult(page)).size).toBe(3);
+
+  await page.locator(`#palette-grid .swatch[data-fill="${red}"]`).click({ modifiers: ["Shift"] });
+  await page.locator(`#palette-grid .swatch[data-fill="${blue}"]`).click({ modifiers: ["Shift"] });
+  await expect(page.locator("#palette-editor")).toBeHidden();
+  await page.locator("#palette-merge").click();
+  await expect(swatches).toHaveCount(2);
+  await expect(page.locator(".swatch-merge-badge")).toHaveText("2");
+  await expect(page.locator("#palette-summary")).toContainText("1 merged");
+  await expect.poll(async () => (await fillsInResult(page)).size).toBe(2);
+
+  // Editing the merged swatch recolors every color in it.
+  await page.locator(".swatch:has(.swatch-merge-badge)").click();
+  await expect(page.locator("#palette-reset")).toHaveText("Split colors");
+  await page.locator("#palette-hex").fill("#00FF00");
+  await expect.poll(() => fillsInResult(page)).toContain("#00FF00");
+  const after = await fillsInResult(page);
+  expect(after.has(red) || after.has(blue)).toBe(false);
+
+  await page.locator("#palette-reset").click();
+  await expect(swatches).toHaveCount(3);
+  await expect.poll(() => fillsInResult(page)).toContain(red);
+  expect(await fillsInResult(page)).toContain(blue);
+});
+
+test("Select mode lets taps choose swatches to merge", async ({ page }) => {
+  await loadShapes(page);
+  const swatches = page.locator("#palette-grid .swatch");
+  await page.locator("#palette-select").click();
+  await expect(page.locator("#palette-select")).toHaveAttribute("aria-pressed", "true");
+  await swatches.nth(1).click();
+  await expect(page.locator("#palette-merge")).toBeHidden();
+  await swatches.nth(2).click();
+  await expect(page.locator("#palette-merge")).toHaveText("Merge 2 colors");
+  await expect(swatches.nth(2)).toHaveAttribute("aria-pressed", "true");
+  await page.keyboard.press("Escape");
+  await expect(page.locator("#palette-select")).toHaveAttribute("aria-pressed", "false");
+  await expect(page.locator("#palette-merge")).toBeHidden();
+  await expect(swatches).toHaveCount(3);
+});
+
+test("two colors edited to the same hex merge into one swatch", async ({ page }) => {
+  await loadShapes(page);
+  const swatches = page.locator("#palette-grid .swatch");
+  const target = await swatches.nth(2).getAttribute("data-fill");
+  await swatches.nth(1).click();
+  await page.locator("#palette-hex").fill(target);
+  await expect(swatches).toHaveCount(2);
+  await expect(page.locator(".swatch-merge-badge")).toHaveText("2");
+});

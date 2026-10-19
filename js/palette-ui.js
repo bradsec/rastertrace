@@ -2,9 +2,11 @@
 // that picks a traced color to edit. Edits recolor fills only; they
 // only retrace when switching layering.
 import { els, hooks, state } from "./context.js?v=30";
-import { deactivateCleanupTools, setView } from "./cleanup-tools.js?v=46";
-import { refreshExport } from "./exporters.js?v=38";
+import { deactivateCleanupTools, setView } from "./cleanup-tools.js?v=47";
+import { refreshExport } from "./exporters.js?v=39";
 import {
+  mergeEdits,
+  mergeGroups,
   nearestFill,
   paletteMapping,
   PALETTE_GRID_MAX,
@@ -13,7 +15,7 @@ import {
   rasterPalette,
   stencilFill,
   svgPalette,
-} from "./palette.js?v=12";
+} from "./palette.js?v=13";
 import { parseHexColor, toHexColor } from "./preprocess.js?v=59";
 
 // Local lookup: adding it to els would bump context.js at every importer.
@@ -27,10 +29,16 @@ const paletteOriginalHidden = /** @type {HTMLElement} */ (
   document.getElementById("palette-original-hidden")
 );
 const paletteError = /** @type {HTMLElement} */ (document.getElementById("palette-error"));
+const paletteSelect = /** @type {HTMLButtonElement} */ (document.getElementById("palette-select"));
+const paletteMerge = /** @type {HTMLButtonElement} */ (document.getElementById("palette-merge"));
 
 /** Original fill the editor is open on, or null when closed. */
 let editing = null;
 let refreshFrame = 0;
+/** Swatches (by their largest color) chosen for merging. */
+const selected = new Set();
+/** Select mode: plain clicks select, for touch screens without modifiers. */
+let selecting = false;
 const hiddenColors = new Map();
 const paletteHide = /** @type {HTMLButtonElement} */ (document.getElementById("palette-hide"));
 
@@ -54,6 +62,11 @@ paletteUseCutout.addEventListener("click", () => {
 
 function syncEditor() {
   if (!editing) return;
+  const merged = membersOf(editing).length > 1;
+  els.paletteReset.textContent = merged ? "Split colors" : "Reset color";
+  els.paletteReset.title = merged
+    ? "Undo the merge: every color goes back to its traced color"
+    : "Go back to the traced color";
   const hidden = editedFill(editing) === "none";
   paletteOriginalHidden.hidden = !hidden;
   paletteHide.textContent = hidden ? "Show color" : "Hide color";
@@ -101,45 +114,100 @@ function editedFill(fill) {
   return state.colorEdits.get(fill) ?? fill;
 }
 
+/** Grid swatches: traced colors edited to one value merge into one. */
+function swatchGroups() {
+  return mergeGroups(currentPalette(), state.colorEdits);
+}
+
+/** Every traced color sharing a swatch with `fill`, largest first. */
+function membersOf(fill) {
+  return swatchGroups().find((group) => group.members.includes(fill))?.members ?? [fill];
+}
+
+function setSelecting(on) {
+  selecting = on;
+  paletteSelect.setAttribute("aria-pressed", String(on));
+  if (!on) selected.clear();
+  renderPalette();
+}
+
+function toggleSelected(fill) {
+  if (selected.has(fill)) selected.delete(fill);
+  else selected.add(fill);
+  renderPalette();
+}
+
 function swatchButton(fill, className) {
   const button = document.createElement("button");
   button.type = "button";
   button.className = className;
   button.dataset.fill = fill;
   button.style.background = editedFill(fill) === "none" ? fill : editedFill(fill);
-  button.addEventListener("click", () => openEditor(fill));
+  button.addEventListener("click", (event) => {
+    if (selecting || event.shiftKey || event.ctrlKey || event.metaKey) toggleSelected(fill);
+    else openEditor(fill);
+  });
   return button;
 }
 
 export function renderPalette() {
+  const groups = swatchGroups();
+  // A merge can make another color the swatch's name: follow it.
+  if (editing) editing = groups.find((group) => group.members.includes(editing))?.fill ?? editing;
+  for (const fill of [...selected]) {
+    if (!groups.some((group) => group.fill === fill)) selected.delete(fill);
+  }
   if (editing) syncEditor();
   syncLayeringNote();
   const palette = currentPalette();
+  const merged = groups.filter((group) => group.members.length > 1).length;
   const hiddenCount = [...state.colorEdits.values()].filter((value) => value === "none").length;
   const edited = state.colorEdits.size - hiddenCount;
   paletteHiddenNote.hidden = hiddenCount === 0;
   paletteHiddenCount.textContent = `${hiddenCount} ${hiddenCount === 1 ? "color" : "colors"} hidden`;
   els.paletteSummary.textContent = palette.length
-    ? `${palette.length} colors${edited ? `, ${edited} edited` : ""}${hiddenCount ? `, ${hiddenCount} hidden` : ""}`
+    ? `${groups.length} colors${merged ? `, ${merged} merged` : ""}${edited ? `, ${edited} edited` : ""}${hiddenCount ? `, ${hiddenCount} hidden` : ""}`
     : "No trace";
   els.palettePick.disabled = !palette.length;
 
   const showGrid = palette.length > 0 && palette.length <= PALETTE_GRID_MAX;
+  paletteSelect.disabled = !showGrid || groups.length < 2;
+  paletteMerge.hidden = selected.size < 2;
+  paletteMerge.textContent = `Merge ${selected.size} colors`;
   els.paletteGrid.hidden = !showGrid;
   els.paletteHint.hidden = showGrid;
   els.paletteGrid.replaceChildren(
     ...(showGrid
-      ? palette.map(({ fill }) => {
+      ? groups.map(({ fill, members }) => {
           const button = swatchButton(fill, "swatch");
           button.setAttribute("role", "listitem");
           const hidden = editedFill(fill) === "none";
+          const count = members.length;
           button.classList.toggle("hidden-color", hidden);
-          button.setAttribute("aria-label", hidden ? `Color ${fill} hidden` : `Edit color ${fill}`);
+          button.classList.toggle("selected", selected.has(fill));
+          const name = count > 1 ? `${editedFill(fill)}, merged from ${count} colors` : fill;
+          button.setAttribute(
+            "aria-label",
+            hidden
+              ? `Color ${fill} hidden`
+              : selecting
+                ? `Select color ${name}`
+                : `Edit color ${name}`,
+          );
           button.title = hidden
             ? `Color ${fill} hidden`
-            : state.colorEdits.has(fill)
-              ? `${fill} changed to ${editedFill(fill)}`
-              : fill;
+            : count > 1
+              ? `${count} colors merged into ${editedFill(fill)}`
+              : state.colorEdits.has(fill)
+                ? `${fill} changed to ${editedFill(fill)}`
+                : fill;
+          if (count > 1) {
+            const badge = document.createElement("span");
+            badge.className = "swatch-merge-badge";
+            badge.setAttribute("aria-hidden", "true");
+            badge.textContent = String(count);
+            button.append(badge);
+          }
           if (hidden) {
             const badge = document.createElement("span");
             badge.className = "swatch-hidden-badge";
@@ -150,7 +218,10 @@ export function renderPalette() {
             button.append(badge);
           }
           button.classList.toggle("edited", state.colorEdits.has(fill) && !hidden);
-          button.setAttribute("aria-pressed", String(fill === editing));
+          button.setAttribute(
+            "aria-pressed",
+            String(selecting || selected.size ? selected.has(fill) : fill === editing),
+          );
           return button;
         })
       : []),
@@ -212,10 +283,12 @@ function showFieldError() {
 }
 
 function openEditor(fill) {
-  editing = fill;
+  const members = membersOf(fill);
+  editing = members[0];
   els.paletteEditor.hidden = false;
-  els.paletteOriginalSwatch.style.background = fill;
-  els.paletteOriginalHex.textContent = fill;
+  els.paletteOriginalSwatch.style.background = editing;
+  els.paletteOriginalHex.textContent =
+    members.length > 1 ? `${editing} and ${members.length - 1} more` : editing;
   syncFields(editedFill(fill) === "none" ? (hiddenColors.get(fill) ?? fill) : editedFill(fill));
   syncEditor();
   renderPalette();
@@ -227,11 +300,16 @@ function closeEditor() {
   renderPalette();
 }
 
-/** Record `hex` as the edit for the open color; equal to the original clears it. */
+/**
+ * Record `hex` for the open swatch, every merged color with it; a color
+ * set back to its own traced value has no edit.
+ */
 function applyEdit(hex) {
   if (!editing) return;
-  if (hex === editing) state.colorEdits.delete(editing);
-  else state.colorEdits.set(editing, hex);
+  for (const fill of membersOf(editing)) {
+    if (hex === fill) state.colorEdits.delete(fill);
+    else state.colorEdits.set(fill, hex);
+  }
   renderPalette();
   scheduleRefresh();
 }
@@ -284,24 +362,59 @@ for (const input of [els.paletteR, els.paletteG, els.paletteB]) {
 }
 els.paletteReset.addEventListener("click", () => {
   if (!editing) return;
-  hiddenColors.delete(editing);
-  applyEdit(editing);
+  // On a merged swatch this is Split: each color back to its own.
+  const members = membersOf(editing);
+  for (const fill of members) {
+    hiddenColors.delete(fill);
+    state.colorEdits.delete(fill);
+  }
+  if (members.length > 1) {
+    els.paletteOriginalHex.textContent = editing;
+    els.status.textContent = `Split ${members.length} colors back to their traced colors.`;
+  }
   syncFields(editing);
   syncEditor();
+  renderPalette();
+  scheduleRefresh();
 });
 paletteHide.addEventListener("click", () => {
   if (!editing) return;
   if (editedFill(editing) === "none") {
-    applyEdit(hiddenColors.get(editing) ?? editing);
-    hiddenColors.delete(editing);
+    // Showing brings back every color hidden with it as one merged swatch.
+    const color = hiddenColors.get(editing) ?? editing;
+    for (const [fill, before] of [...hiddenColors]) {
+      if (before !== color || state.colorEdits.get(fill) !== "none") continue;
+      if (before === fill) state.colorEdits.delete(fill);
+      else state.colorEdits.set(fill, before);
+      hiddenColors.delete(fill);
+    }
+    // Hidden before its color was remembered: back to the traced color.
+    if (state.colorEdits.get(editing) === "none") state.colorEdits.delete(editing);
+    renderPalette();
+    scheduleRefresh();
   } else {
-    hiddenColors.set(editing, editedFill(editing));
+    for (const fill of membersOf(editing)) hiddenColors.set(fill, editedFill(fill));
     applyEdit("none");
   }
   syncFields(editedFill(editing) === "none" ? hiddenColors.get(editing) : editedFill(editing));
   syncEditor();
 });
 els.paletteClose.addEventListener("click", closeEditor);
+paletteSelect.addEventListener("click", () => setSelecting(!selecting));
+paletteMerge.addEventListener("click", () => {
+  const groups = swatchGroups().filter((group) => selected.has(group.fill));
+  const fills = groups.flatMap((group) => group.members);
+  if (groups.length < 2) return;
+  const color = mergeEdits(state.colorEdits, currentPalette(), fills);
+  for (const fill of fills) hiddenColors.delete(fill);
+  selected.clear();
+  selecting = false;
+  paletteSelect.setAttribute("aria-pressed", "false");
+  if (editing && fills.includes(editing)) syncFields(color);
+  renderPalette();
+  scheduleRefresh();
+  els.status.textContent = `Merged ${fills.length} colors into ${color}.`;
+});
 els.paletteResetAll.addEventListener("click", () => {
   state.colorEdits.clear();
   hiddenColors.clear();
@@ -334,7 +447,9 @@ hooks.cancelPalettePick = () => setPalettePick(false);
 els.palettePick.addEventListener("click", () => setPalettePick(!state.palettePicking));
 
 document.addEventListener("keydown", (e) => {
-  if (e.key === "Escape" && state.palettePicking) setPalettePick(false);
+  if (e.key !== "Escape") return;
+  if (state.palettePicking) setPalettePick(false);
+  if (selecting || selected.size) setSelecting(false);
 });
 
 // Registered before view.js's pan handler (app.js import order), so the
@@ -391,6 +506,9 @@ export function afterTrace() {
 export function resetPalette() {
   state.colorEdits.clear();
   hiddenColors.clear();
+  selected.clear();
+  selecting = false;
+  paletteSelect.setAttribute("aria-pressed", "false");
   state.paletteColors = [];
   state.paletteMapping = null;
   setPalettePick(false);

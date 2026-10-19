@@ -917,6 +917,41 @@ main:has(> #empty-state:not([hidden])) {
   transform: translateY(-50%) rotate(-45deg);
   pointer-events: none;
 }
+/* Selected for merging: a ring outside the swatch, distinct from the
+   editing ring. */
+.palette-grid .swatch.selected {
+  box-shadow:
+    0 0 0 2px var(--bg),
+    0 0 0 4px var(--accent);
+}
+/* A merged swatch shows how many traced colors it covers. */
+.swatch-merge-badge {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 3px;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  background: var(--surface-3);
+  color: var(--text);
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 14px;
+  text-align: center;
+  pointer-events: none;
+}
+#palette-merge {
+  width: 100%;
+}
+/* Pick keeps its label on one line; Select takes only what it needs. */
+#palette-pick {
+  flex: 1;
+}
+#palette-select {
+  flex: none;
+}
 .swatch-hidden-badge {
   position: absolute;
   bottom: 1px;

@@ -1,6 +1,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
+  mergeEdits,
+  mergeGroups,
   nearestFill,
   paletteMapping,
   PALETTE_GRID_MAX,
@@ -156,4 +158,55 @@ test("pruneEdits keeps hidden edits when the palette is unchanged", () => {
   const edits = new Map([["#FF0000", "none"]]);
   assert.equal(pruneEdits(edits, [{ fill: "#FF0000" }]), 0);
   assert.equal(edits.get("#FF0000"), "none");
+});
+
+// Palette entries come sorted by area, largest first.
+const AREA = [{ fill: "#3A2010" }, { fill: "#331811" }, { fill: "#2E1510" }, { fill: "#FFFFFF" }];
+
+test("mergeGroups joins colors edited to the same value, largest first", () => {
+  const edits = new Map([
+    ["#331811", "#3A2010"],
+    ["#2E1510", "#3A2010"],
+  ]);
+  assert.deepEqual(mergeGroups(AREA, edits), [
+    { fill: "#3A2010", color: "#3A2010", members: ["#3A2010", "#331811", "#2E1510"] },
+    { fill: "#FFFFFF", color: "#FFFFFF", members: ["#FFFFFF"] },
+  ]);
+});
+
+test("mergeGroups keeps hidden colors apart and merges equal manual edits", () => {
+  const edits = new Map([
+    ["#3A2010", "none"],
+    ["#331811", "none"],
+    ["#2E1510", "#123456"],
+    ["#FFFFFF", "#123456"],
+  ]);
+  assert.deepEqual(
+    mergeGroups(AREA, edits).map((g) => g.members),
+    [["#3A2010"], ["#331811"], ["#2E1510", "#FFFFFF"]],
+  );
+});
+
+test("mergeEdits gives every chosen color the largest one's color", () => {
+  const edits = new Map([["#331811", "none"]]);
+  assert.equal(mergeEdits(edits, AREA, ["#2E1510", "#331811", "#3A2010"]), "#3A2010");
+  assert.deepEqual(
+    [...edits],
+    [
+      ["#331811", "#3A2010"],
+      ["#2E1510", "#3A2010"],
+    ],
+  );
+});
+
+test("mergeEdits follows the largest color's own edit and skips hidden ones", () => {
+  const edits = new Map([
+    ["#3A2010", "none"],
+    ["#331811", "#AA0000"],
+  ]);
+  assert.equal(mergeEdits(edits, AREA, ["#3A2010", "#331811", "#FFFFFF"]), "#AA0000");
+  assert.equal(edits.get("#3A2010"), "#AA0000");
+  assert.equal(edits.get("#FFFFFF"), "#AA0000");
+  const merged = mergeGroups(AREA, edits).find((g) => g.members.length > 1);
+  assert.deepEqual(merged.members, ["#3A2010", "#331811", "#FFFFFF"]);
 });

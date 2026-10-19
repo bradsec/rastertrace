@@ -30,15 +30,15 @@ import {
   userPresetName,
 } from "./preprocess.js?v=59";
 import { $, els, hooks, preferences, showError, state } from "./context.js?v=30";
-import { refreshExport, setResultActions } from "./exporters.js?v=38";
+import { refreshExport, setResultActions } from "./exporters.js?v=39";
 import {
   clearSelection,
   setBlobFill,
   setEraser,
   setSelectionTool,
   setView,
-} from "./cleanup-tools.js?v=46";
-import { afterTrace, resetPalette } from "./palette-ui.js?v=30";
+} from "./cleanup-tools.js?v=47";
+import { afterTrace, resetPalette } from "./palette-ui.js?v=31";
 import {
   applyExportProfile,
   applyMeasurementUnit,
@@ -68,12 +68,12 @@ import {
   updateTraceFields,
   updateTransparencyFields,
   userPresets,
-} from "./settings.js?v=46";
-import { actualSizeView, resetView } from "./view.js?v=46";
+} from "./settings.js?v=47";
+import { actualSizeView, resetView } from "./view.js?v=47";
 
 const EMPTY_IMAGE_SRC = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==";
 
-const tracer = new Tracer(new URL("./worker.js?v=63", import.meta.url));
+const tracer = new Tracer(new URL("./worker.js?v=64", import.meta.url));
 
 let elapsedTimer = 0;
 

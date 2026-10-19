@@ -53,7 +53,7 @@
       }
     </script>
 
-    <link rel="stylesheet" href="css/styles.css?v=109" />
+    <link rel="stylesheet" href="css/styles.css?v=111" />
   </head>
   <body>
     <header class="app-header">
@@ -300,12 +300,31 @@
                   >
                     Pick from result
                   </button>
+                  <button
+                    type="button"
+                    id="palette-select"
+                    class="button button-secondary"
+                    aria-pressed="false"
+                    title="Select several swatches to merge them into one color. Shift- or Ctrl-click also selects"
+                    disabled
+                  >
+                    Select
+                  </button>
                 </div>
                 <p id="palette-hidden-note" hidden>
                   <span class="material-icon icon-visibility_off" aria-hidden="true"></span>
                   <span id="palette-hidden-count"></span>
                 </p>
                 <div id="palette-grid" class="palette-grid" role="list" hidden></div>
+                <button
+                  type="button"
+                  id="palette-merge"
+                  class="button button-secondary"
+                  title="Give the selected colors the color of the largest one"
+                  hidden
+                >
+                  Merge colors
+                </button>
                 <p id="palette-hint" class="palette-hint">
                   Pick a color from the result to edit it. The full palette shows at 32 colors or
                   fewer.
@@ -1571,12 +1590,16 @@
               <dd>
                 Changes a traced color to a new HEX or RGB value without retracing; shapes stay the
                 same. Use Pick from result and click a color in the result, or click a swatch when
-                the trace has 32 colors or fewer. Edits apply to the preview and every export, are
-                kept when a retrace still has that color, and clear when you open a new image. With
-                Colors set to All, edits match exact traced colors only. Hide color makes a color
-                transparent, exact in Cutout layering. In Stacked layering, hiding a color reveals
-                the shape beneath it; hiding the background color makes it transparent. Click Use
-                cutout layering in the palette panel to switch with one click.
+                the trace has 32 colors or fewer. To merge similar colors, Shift- or Ctrl-click
+                swatches (or press Select and tap them), then Merge: they all take the color of the
+                largest one and show as one swatch with a count. Colors you set to the same value
+                merge too. Split colors on a merged swatch restores each one. Edits apply to the
+                preview and every export, are kept when a retrace still has that color, and clear
+                when you open a new image. With Colors set to All, edits match exact traced colors
+                only. Hide color makes a color transparent, exact in Cutout layering. In Stacked
+                layering, hiding a color reveals the shape beneath it; hiding the background color
+                makes it transparent. Click Use cutout layering in the palette panel to switch with
+                one click.
               </dd>
             </div>
           </dl>
@@ -1934,6 +1957,6 @@
         location.reload();
       };
     </script>
-    <script type="module" src="js/app.js?v=129" onerror="window.recoverRasterTraceBoot()"></script>
+    <script type="module" src="js/app.js?v=130" onerror="window.recoverRasterTraceBoot()"></script>
   </body>
 </html>

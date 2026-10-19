@@ -186,3 +186,48 @@ export function pruneEdits(edits, palette) {
   }
   return removed;
 }
+
+/**
+ * Swatches for the palette grid: colors edited to the same value are one
+ * merged swatch, named by its largest member. Hidden colors stay apart.
+ * @param {{ fill: string }[]} palette sorted largest area first
+ * @param {Map<string, string>} edits
+ * @returns {{ fill: string, color: string, members: string[] }[]}
+ */
+export function mergeGroups(palette, edits) {
+  const groups = [];
+  /** @type {Map<string, { fill: string, color: string, members: string[] }>} */
+  const byColor = new Map();
+  for (const { fill } of palette) {
+    const color = edits.get(fill) ?? fill;
+    const group = color !== "none" && byColor.get(color);
+    if (group) {
+      group.members.push(fill);
+      continue;
+    }
+    const created = { fill, color, members: [fill] };
+    groups.push(created);
+    if (color !== "none") byColor.set(color, created);
+  }
+  return groups;
+}
+
+/**
+ * Merge `fills` into one color: the current color of the largest visible
+ * one. Records an edit for every other member and returns the color.
+ * @param {Map<string, string>} edits
+ * @param {{ fill: string }[]} palette sorted largest area first
+ * @param {string[]} fills
+ * @returns {string}
+ */
+export function mergeEdits(edits, palette, fills) {
+  const chosen = new Set(fills);
+  const ordered = palette.map((entry) => entry.fill).filter((fill) => chosen.has(fill));
+  const largest = ordered.find((fill) => (edits.get(fill) ?? fill) !== "none");
+  const color = largest ? (edits.get(largest) ?? largest) : ordered[0];
+  for (const fill of ordered) {
+    if (fill === color) edits.delete(fill);
+    else edits.set(fill, color);
+  }
+  return color;
+}
