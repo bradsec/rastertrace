@@ -292,15 +292,25 @@ function snapshotSettings() {
 
 let saveTimer = 0;
 
+function writeSettings() {
+  saveTimer = 0;
+  try {
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify(snapshotSettings()));
+  } catch {
+    // storage full or blocked (private mode): persistence is optional
+  }
+}
+
 export function saveSettings() {
   clearTimeout(saveTimer);
-  saveTimer = setTimeout(() => {
-    try {
-      localStorage.setItem(SETTINGS_KEY, JSON.stringify(snapshotSettings()));
-    } catch {
-      // storage full or blocked (private mode): persistence is optional
-    }
-  }, 250);
+  saveTimer = setTimeout(writeSettings, 250);
+}
+
+/** Write a pending debounced save now, before the page goes away. */
+export function flushSettings() {
+  if (!saveTimer) return;
+  clearTimeout(saveTimer);
+  writeSettings();
 }
 
 /**

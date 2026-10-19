@@ -36,8 +36,8 @@
     "sha": "c791ac290668f1933993695c39260283c51955aad4524eed259bbfb501e43f72"
   },
   "js/app.js": {
-    "v": 122,
-    "sha": "b52956ce915c8cd6d4fd6de1ad2179ff855840e3067fb699594c6d5644a742a1"
+    "v": 123,
+    "sha": "5665d9af97cffeacade7b9beac7b7f4e291fde9f91a5fb5f45f3aa6313ea3f8e"
   },
   "js/cleanup-tools.js": {
     "v": 42,
@@ -76,8 +76,8 @@
     "sha": "7fd2c2d0bc6735467acd106b6fee3c0bd07e752fb01be7b6897e2ba187bb4e82"
   },
   "js/settings.js": {
-    "v": 41,
-    "sha": "2a622a71cebc5abbbd6f4f348dde72a0f534668efb2f5e8284ed033e94bc768c"
+    "v": 42,
+    "sha": "76b79bb274df82e41fa2202d9fbfb2d43fbabb5097931d2c1db85889f24df9c4"
   },
   "js/vectorexport.js": {
     "v": 43,

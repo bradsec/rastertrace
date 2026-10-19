@@ -156,6 +156,18 @@ test("reset settings keeps the preferred measurement unit", async ({ page }) => 
   await expect(page.locator("#physical-unit")).toHaveValue("in");
 });
 
+test("a change made just before reload is kept", async ({ page }) => {
+  const flat = await makePng(page, "flat.png", 120, 120, CREAM, [["#3c281e", 30, 30, 60, 60]]);
+  await traced(page, () => page.locator("#file-input").setInputFiles(flat));
+  await page.evaluate(() => {
+    for (const details of document.querySelectorAll("aside details")) details.open = true;
+  });
+  await page.locator("#straighten").fill("3");
+  // No wait for the save debounce: leaving the page must flush it.
+  await page.reload();
+  await expect(page.locator("#straighten")).toHaveValue("3");
+});
+
 test("controls the trace ignores are disabled", async ({ page }) => {
   const flat = await makePng(page, "flat.png", 120, 120, CREAM, [["#3c281e", 30, 30, 60, 60]]);
   await traced(page, () => page.locator("#file-input").setInputFiles(flat));

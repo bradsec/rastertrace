@@ -49,6 +49,7 @@ import {
   currentSwatches,
   deleteUserPreset,
   findUserPreset,
+  flushSettings,
   importUserPresets,
   loadUserPresets,
   readPreferences,
@@ -65,7 +66,7 @@ import {
   updateTraceFields,
   updateTransparencyFields,
   userPresets,
-} from "./settings.js?v=41";
+} from "./settings.js?v=42";
 import { actualSizeView, resetView } from "./view.js?v=42";
 
 const EMPTY_IMAGE_SRC = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==";
@@ -1070,6 +1071,12 @@ els.resetSettingsBtn.addEventListener("click", () => {
     controlsRoot.addEventListener("change", saveSettings);
   }
 }
+// pagehide covers reload and navigation; iOS can discard a backgrounded
+// tab without firing it, so also flush when the page is hidden.
+addEventListener("pagehide", flushSettings);
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "hidden") flushSettings();
+});
 
 loadUserPresets(); // before restore: a saved session may have a preset selected
 restoreSettings();
