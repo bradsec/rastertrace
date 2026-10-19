@@ -64,6 +64,12 @@ body {
   min-height: 100%;
 }
 
+/* Double-tap zoom on iOS turns quick taps on buttons into page zooms.
+   manipulation drops it but keeps pinch zoom and scrolling. */
+html {
+  touch-action: manipulation;
+}
+
 body {
   background: var(--bg);
   color: var(--text);
@@ -475,6 +481,9 @@ body:has(#empty-state:not([hidden])) .eraser-controls {
   gap: 0;
   min-height: 0;
   overflow-y: auto;
+  /* Scrolling past either end stays in the panel instead of dragging the
+     whole page on iOS. */
+  overscroll-behavior: contain;
   padding: 0;
   background: var(--surface-1);
   border-right: 1px solid var(--border);
@@ -630,8 +639,12 @@ body:has(#empty-state:not([hidden])) .eraser-controls {
   border-bottom: 1px solid var(--border);
 }
 
+/* Columns never grow past the panel: an auto column takes its widest
+   child's text width (a select at 16px touch size), and on iOS that
+   overflow lets the whole panel drag sideways. */
 .field {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 6px;
   margin: 0;
   padding: 0;
@@ -816,6 +829,7 @@ body:has(#empty-state:not([hidden])) .eraser-controls {
 
 .subfield {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 4px;
 }
 .color-row {
@@ -946,6 +960,7 @@ body:has(#empty-state:not([hidden])) .eraser-controls {
 }
 .swatch-field {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 8px;
 }
 .swatch-field .palette-grid {
@@ -1418,13 +1433,13 @@ details.advanced[open] {
 
 .help-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr));
   gap: 16px;
 }
 
 .help-settings {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(320px, 100%), 1fr));
   gap: 16px 24px;
   margin: 0 0 20px;
 }
@@ -2049,6 +2064,7 @@ dialog {
   margin: auto;
   padding: 0;
   overflow: auto;
+  overscroll-behavior: contain;
   border: 1px solid var(--border-strong);
   border-radius: var(--r-lg);
   background: var(--surface-3);
@@ -2584,6 +2600,7 @@ dialog::backdrop {
   input[type="text"],
   input[type="number"],
   .blob-color input[type="text"],
+  .dialog-form input[type="text"],
   select {
     font-size: 16px;
   }
