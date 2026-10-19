@@ -2527,6 +2527,13 @@ dialog::backdrop {
     outline: none;
     box-shadow: var(--ring);
   }
+  /* Named grid rows would pin the left column above the tabs; flow by order. */
+  .workspace {
+    grid-template-areas: none;
+  }
+  .workspace > * {
+    grid-area: auto;
+  }
   .controls {
     order: 3;
   }
@@ -2545,7 +2552,9 @@ dialog::backdrop {
   .workspace:not([data-sheet="export"]) [data-sheet="export"] {
     display: none;
   }
-  .workspace:not([data-sheet="presets"], [data-sheet="palette"]) .controls-left,
+  /* Colors spans both columns: the colors panel left, cleanup right. */
+  .workspace:not([data-sheet="presets"], [data-sheet="palette"], [data-sheet="colors"])
+    .controls-left,
   .workspace[data-sheet="presets"] .controls-right,
   .workspace[data-sheet="palette"] .controls-right {
     display: none;

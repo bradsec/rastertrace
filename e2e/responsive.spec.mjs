@@ -47,9 +47,13 @@ for (const viewport of viewports) {
     await expect(page.locator("#tool-tray-toggle")).toBeVisible({ visible: viewport.width <= 680 });
 
     if (viewport.width <= 680) {
-      // Phones: section tabs under the preview, one section (Colors) below.
+      // Phones: section tabs under the preview, one section (Colors) below,
+      // drawn from both columns: the colors panel and noise cleanup.
       const tabs = await page.locator(".sheet-tabs").boundingBox();
-      await expect(page.locator(".controls-left")).toBeHidden();
+      await expect(page.locator("#colors")).toBeVisible();
+      await expect(page.locator("#speckle")).toBeVisible();
+      await expect(page.locator("#export-profile")).toBeHidden();
+      await expect(page.locator('[data-sheet="palette"]')).toBeHidden();
       expect(preview.y).toBeLessThan(tabs.y);
       expect(tabs.y).toBeLessThan(right.y);
       expect(right.width).toBeLessThanOrEqual(viewport.width);

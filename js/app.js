@@ -1073,20 +1073,22 @@ for (const tab of sheetTabs) {
     const sheet = tab.dataset.sheetTab;
     els.workspace.dataset.sheet = sheet;
     for (const other of sheetTabs) other.setAttribute("aria-pressed", String(other === tab));
-    const section = els.workspace.querySelector(`[data-sheet="${sheet}"]`);
-    if (section instanceof HTMLDetailsElement) section.open = true;
+    openSheet(sheet);
   });
 }
-if (phoneSheet.matches) {
-  const section = els.workspace.querySelector(`[data-sheet="${els.workspace.dataset.sheet}"]`);
-  if (section instanceof HTMLDetailsElement) section.open = true;
+/** @param {string | undefined} sheet */
+function openSheet(sheet) {
+  for (const section of els.workspace.querySelectorAll(`[data-sheet="${sheet}"]`)) {
+    if (section instanceof HTMLDetailsElement) section.open = true;
+  }
 }
+if (phoneSheet.matches) openSheet(els.workspace.dataset.sheet);
 
 // Each side panel folds to a narrow rail, like Illustrator's or
 // Lightroom's panel toggles, so the preview can take the room.
 const FOLD_KEY = "rastertrace:folded";
 const foldButtons = { left: els.foldLeft, right: els.foldRight };
-const foldLabels = { left: "presets and palette", right: "settings" };
+const foldLabels = { left: "profile, colors and palette", right: "settings" };
 
 function isFolded(side) {
   return els.workspace.classList.contains(`${side}-folded`);

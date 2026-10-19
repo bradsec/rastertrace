@@ -53,7 +53,7 @@
       }
     </script>
 
-    <link rel="stylesheet" href="css/styles.css?v=111" />
+    <link rel="stylesheet" href="css/styles.css?v=113" />
   </head>
   <body>
     <header class="app-header">
@@ -96,8 +96,10 @@
             <button type="button" data-action="rotate-right">Rotate right</button>
             <button type="button" data-action="invert-image">Invert colors</button>
             <hr />
-            <button type="button" data-action="toggle-left-panel">Presets panel</button>
-            <button type="button" data-action="toggle-right-panel">Settings panel</button>
+            <button type="button" data-action="toggle-left-panel">
+              Profile &amp; colors panel
+            </button>
+            <button type="button" data-action="toggle-right-panel">Trace settings panel</button>
             <button type="button" data-action="toggle-panels">
               Hide or show both<span>Ctrl+\</span>
             </button>
@@ -216,7 +218,7 @@
       <section id="workspace" class="workspace" data-sheet="colors" hidden>
         <!-- Phones show one settings section at a time under the preview. -->
         <div class="sheet-tabs" role="group" aria-label="Settings section">
-          <button type="button" data-sheet-tab="presets" aria-pressed="false">Presets</button>
+          <button type="button" data-sheet-tab="presets" aria-pressed="false">Profile</button>
           <button type="button" data-sheet-tab="background" aria-pressed="false">Background</button>
           <button type="button" data-sheet-tab="colors" aria-pressed="true">Colors</button>
           <button type="button" data-sheet-tab="tracing" aria-pressed="false">Tracing</button>
@@ -225,14 +227,14 @@
         </div>
         <aside id="left-panel" class="controls controls-left" aria-labelledby="left-panel-title">
           <div class="rail-head">
-            <h2 id="left-panel-title" class="rail-title">Presets</h2>
+            <h2 id="left-panel-title" class="rail-title">Profile &amp; colors</h2>
             <button
               type="button"
               id="fold-left"
               class="rail-fold"
               aria-expanded="true"
               aria-controls="left-panel-body"
-              aria-label="Hide presets and palette"
+              aria-label="Hide profile, colors and palette"
               title="Hide panel (Ctrl+\ for both)"
             >
               <svg
@@ -280,6 +282,168 @@
                 Save preset
               </button>
             </div>
+
+            <details class="panel" data-panel-key="colors" data-sheet="colors" open>
+              <summary title="How many colors the trace keeps and where they come from">
+                <span class="panel-heading"
+                  ><span>Colors</span
+                  ><span id="colors-summary" class="panel-summary">16 colors</span></span
+                >
+              </summary>
+              <div class="panel-body">
+                <div class="field">
+                  <label
+                    for="preset"
+                    title="Quick color count. Sets Max colors only; every other setting stays as it is"
+                    >Color presets</label
+                  >
+                  <select id="preset">
+                    <option value="">Custom</option>
+                    <option value="2">2 colors</option>
+                    <option value="3">3 colors</option>
+                    <option value="4">4 colors</option>
+                    <option value="6">6 colors</option>
+                    <option value="8">8 colors</option>
+                    <option value="16">16 colors</option>
+                    <option value="32">32 colors</option>
+                    <option value="64">64 colors</option>
+                    <option value="128">128 colors</option>
+                    <option value="256">256 colors (all)</option>
+                  </select>
+                  <label class="choice"
+                    ><input type="checkbox" id="auto-detect" checked />
+                    <span
+                      title="On: max colors, smallest shape and merge similar shades are set from each image you open. Changing them yourself, or picking a preset or profile, turns this off so your values carry over to the next image"
+                      >Auto-detect colors for each image</span
+                    ></label
+                  >
+                </div>
+
+                <div class="field">
+                  <label
+                    for="color-source"
+                    title="Trace with the image's own colors, or snap every shape to colors you choose, such as brand colors or stocked inks"
+                    >Color source</label
+                  >
+                  <select id="color-source">
+                    <option value="auto">This image (automatic)</option>
+                    <option value="custom">My colors</option>
+                  </select>
+                  <div id="swatch-field" class="swatch-field" hidden>
+                    <div
+                      id="swatch-list"
+                      class="palette-grid"
+                      role="group"
+                      aria-label="My colors"
+                    ></div>
+                    <p id="swatch-empty" class="palette-hint">
+                      Add colors to trace with. Until then the image's own colors are used.
+                    </p>
+                    <div class="color-row">
+                      <input
+                        type="text"
+                        id="swatch-input"
+                        class="swatch-input"
+                        placeholder="#1f2a3b, #ffffff"
+                        aria-label="Colors to add, as hex codes"
+                        spellcheck="false"
+                        autocomplete="off"
+                      />
+                      <button type="button" id="swatch-add" class="button button-secondary">
+                        Add
+                      </button>
+                    </div>
+                    <div class="color-row">
+                      <button
+                        type="button"
+                        id="swatch-import"
+                        class="button button-secondary"
+                        title="Adobe .ase (Illustrator Swatches panel), GIMP or Inkscape .gpl, or a text list of hex codes"
+                      >
+                        Import file
+                      </button>
+                      <button type="button" id="swatch-clear" class="button button-secondary">
+                        Clear
+                      </button>
+                    </div>
+                    <input type="file" id="swatch-file" accept=".ase,.gpl,.txt,.hex,.css" hidden />
+                    <input type="hidden" id="swatches" value="" />
+                    <p id="swatch-note" class="palette-hint" role="status"></p>
+                  </div>
+                </div>
+
+                <div class="field">
+                  <div class="label-row">
+                    <label
+                      for="colors"
+                      title="Maximum colors in the output. Fewer colors gives simpler, cleaner, smaller SVGs"
+                      >Max colors</label
+                    >
+                    <output id="colors-out" for="colors">All</output>
+                  </div>
+                  <input type="range" id="colors" min="2" max="256" step="1" value="256" />
+                </div>
+
+                <div class="field">
+                  <div class="label-row">
+                    <label
+                      for="layer-diff"
+                      title="Minimum color difference between stacked layers. Raise to merge similar shades into one shape"
+                      >Merge similar shades</label
+                    >
+                    <output id="layer-diff-out" for="layer-diff">16</output>
+                  </div>
+                  <input type="range" id="layer-diff" min="0" max="128" step="1" value="16" />
+                </div>
+
+                <div class="field">
+                  <label class="choice"
+                    ><input type="checkbox" id="stencil" />
+                    <span
+                      title="Black and white stencil trace: dark areas become black shapes, everything else drops out. Best for laser cutting, stamps, and silhouettes"
+                      >Stencil (black &amp; white)</span
+                    ></label
+                  >
+                  <div class="subfield" id="stencil-threshold-field" hidden>
+                    <div class="label-row">
+                      <label
+                        for="stencil-threshold"
+                        title="Brightness cut-off: pixels darker than this become black shapes. Lower keeps only the darkest areas; raise to pick up midtones"
+                        >Stencil threshold</label
+                      >
+                      <output id="stencil-threshold-out" for="stencil-threshold">128</output>
+                    </div>
+                    <input
+                      type="range"
+                      id="stencil-threshold"
+                      min="1"
+                      max="254"
+                      step="1"
+                      value="128"
+                    />
+                  </div>
+                  <div class="subfield" id="stencil-ink-field" hidden>
+                    <span class="label-row"><label>Stencil ink</label></span>
+                    <label class="choice"
+                      ><input type="radio" name="stencil-ink" value="black" checked />
+                      <span title="Dark areas become black shapes on a transparent background"
+                        >Black on transparent</span
+                      ></label
+                    >
+                    <label class="choice"
+                      ><input type="radio" name="stencil-ink" value="white" />
+                      <span title="Dark areas become white shapes on a solid black background"
+                        >White on black</span
+                      ></label
+                    >
+                  </div>
+                  <label class="choice"
+                    ><input type="checkbox" id="grayscale" />
+                    <span title="Convert to shades of gray before tracing">Grayscale</span></label
+                  >
+                </div>
+              </div>
+            </details>
 
             <details class="panel" data-panel-key="palette" data-sheet="palette" open>
               <summary title="Change any traced color to a HEX or RGB value. Shapes stay the same">
@@ -432,7 +596,7 @@
 
         <aside id="right-panel" class="controls controls-right" aria-labelledby="right-panel-title">
           <div class="rail-head">
-            <h2 id="right-panel-title" class="rail-title">Settings</h2>
+            <h2 id="right-panel-title" class="rail-title">Trace settings</h2>
             <button
               type="button"
               id="reset-settings"
@@ -630,114 +794,20 @@
               </div>
             </details>
 
-            <details class="panel" data-panel-key="colors" data-sheet="colors" open>
+            <details class="panel" data-panel-key="cleanup" data-sheet="colors" open>
               <summary>
                 <span class="panel-heading"
                   ><span class="panel-step" aria-hidden="true">2</span
-                  ><span>Colors &amp; cleanup</span
-                  ><span id="colors-summary" class="panel-summary">16 colors</span></span
+                  ><span>Noise cleanup</span></span
                 >
               </summary>
               <div class="panel-body">
-                <div class="field">
-                  <label
-                    for="preset"
-                    title="Quick color count. Sets Colors only; speckle and layer settings stay as they are"
-                    >Preset</label
-                  >
-                  <select id="preset">
-                    <option value="">Custom</option>
-                    <option value="2">2 colors</option>
-                    <option value="3">3 colors</option>
-                    <option value="4">4 colors</option>
-                    <option value="6">6 colors</option>
-                    <option value="8">8 colors</option>
-                    <option value="16">16 colors</option>
-                    <option value="32">32 colors</option>
-                    <option value="64">64 colors</option>
-                    <option value="128">128 colors</option>
-                    <option value="256">256 colors (all)</option>
-                  </select>
-                  <label class="choice"
-                    ><input type="checkbox" id="auto-detect" checked />
-                    <span
-                      title="On: colors, speckle filter and layer difference are set from each image you open. Changing them yourself, or picking a preset or profile, turns this off so your values carry over to the next image"
-                      >Auto-detect colors for each image</span
-                    ></label
-                  >
-                </div>
-
-                <div class="field">
-                  <label
-                    for="color-source"
-                    title="Trace with the image's own colors, or snap every shape to colors you choose, such as brand colors or stocked inks"
-                    >Colors from</label
-                  >
-                  <select id="color-source">
-                    <option value="auto">This image (automatic)</option>
-                    <option value="custom">My colors</option>
-                  </select>
-                  <div id="swatch-field" class="swatch-field" hidden>
-                    <div
-                      id="swatch-list"
-                      class="palette-grid"
-                      role="group"
-                      aria-label="My colors"
-                    ></div>
-                    <p id="swatch-empty" class="palette-hint">
-                      Add colors to trace with. Until then the image's own colors are used.
-                    </p>
-                    <div class="color-row">
-                      <input
-                        type="text"
-                        id="swatch-input"
-                        class="swatch-input"
-                        placeholder="#1f2a3b, #ffffff"
-                        aria-label="Colors to add, as hex codes"
-                        spellcheck="false"
-                        autocomplete="off"
-                      />
-                      <button type="button" id="swatch-add" class="button button-secondary">
-                        Add
-                      </button>
-                    </div>
-                    <div class="color-row">
-                      <button
-                        type="button"
-                        id="swatch-import"
-                        class="button button-secondary"
-                        title="Adobe .ase (Illustrator Swatches panel), GIMP or Inkscape .gpl, or a text list of hex codes"
-                      >
-                        Import file
-                      </button>
-                      <button type="button" id="swatch-clear" class="button button-secondary">
-                        Clear
-                      </button>
-                    </div>
-                    <input type="file" id="swatch-file" accept=".ase,.gpl,.txt,.hex,.css" hidden />
-                    <input type="hidden" id="swatches" value="" />
-                    <p id="swatch-note" class="palette-hint" role="status"></p>
-                  </div>
-                </div>
-
-                <div class="field">
-                  <div class="label-row">
-                    <label
-                      for="colors"
-                      title="Maximum colors in the output. Fewer colors gives simpler, cleaner, smaller SVGs"
-                      >Colors</label
-                    >
-                    <output id="colors-out" for="colors">All</output>
-                  </div>
-                  <input type="range" id="colors" min="2" max="256" step="1" value="256" />
-                </div>
-
                 <div class="field">
                   <div class="label-row">
                     <label
                       for="speckle"
                       title="Drops traced specks smaller than this many pixels. Raise to remove noise and dust"
-                      >Speckle filter</label
+                      >Smallest shape (px)</label
                     >
                     <output id="speckle-out" for="speckle">8</output>
                   </div>
@@ -745,62 +815,6 @@
                 </div>
 
                 <div class="field">
-                  <div class="label-row">
-                    <label
-                      for="layer-diff"
-                      title="Minimum color difference between stacked layers. Raise to merge similar shades into one shape"
-                      >Layer difference</label
-                    >
-                    <output id="layer-diff-out" for="layer-diff">16</output>
-                  </div>
-                  <input type="range" id="layer-diff" min="0" max="128" step="1" value="16" />
-                </div>
-
-                <div class="field">
-                  <label class="choice"
-                    ><input type="checkbox" id="stencil" />
-                    <span
-                      title="Black and white stencil trace: dark areas become black shapes, everything else drops out. Best for laser cutting, stamps, and silhouettes"
-                      >Stencil (black &amp; white)</span
-                    ></label
-                  >
-                  <div class="subfield" id="stencil-threshold-field" hidden>
-                    <div class="label-row">
-                      <label
-                        for="stencil-threshold"
-                        title="Brightness cut-off: pixels darker than this become black shapes. Lower keeps only the darkest areas; raise to pick up midtones"
-                        >Stencil threshold</label
-                      >
-                      <output id="stencil-threshold-out" for="stencil-threshold">128</output>
-                    </div>
-                    <input
-                      type="range"
-                      id="stencil-threshold"
-                      min="1"
-                      max="254"
-                      step="1"
-                      value="128"
-                    />
-                  </div>
-                  <div class="subfield" id="stencil-ink-field" hidden>
-                    <span class="label-row"><label>Stencil ink</label></span>
-                    <label class="choice"
-                      ><input type="radio" name="stencil-ink" value="black" checked />
-                      <span title="Dark areas become black shapes on a transparent background"
-                        >Black on transparent</span
-                      ></label
-                    >
-                    <label class="choice"
-                      ><input type="radio" name="stencil-ink" value="white" />
-                      <span title="Dark areas become white shapes on a solid black background"
-                        >White on black</span
-                      ></label
-                    >
-                  </div>
-                  <label class="choice"
-                    ><input type="checkbox" id="grayscale" />
-                    <span title="Convert to shades of gray before tracing">Grayscale</span></label
-                  >
                   <label class="choice"
                     ><input type="checkbox" id="denoise" />
                     <span
@@ -974,7 +988,7 @@
                   <label
                     for="export-size"
                     title="Match source pixels preserves the image dimensions. Custom size lets you set a width in px, mm, cm, or in."
-                    >Size</label
+                    >Output size</label
                   >
                   <select id="export-size">
                     <option value="px">Match source pixels</option>
@@ -1486,29 +1500,29 @@
           </div>
           <dl class="help-settings">
             <div>
-              <dt>Preset &amp; Colors</dt>
+              <dt>Color presets &amp; Max colors</dt>
               <dd>
                 Maximum colors in the output. Fewer colors means simpler, cleaner, smaller SVGs. A
                 preset is a quick way to pick a color count and changes nothing else.
               </dd>
             </div>
             <div>
-              <dt>Colors from</dt>
+              <dt>Color source</dt>
               <dd>
                 This image picks the colors automatically. My colors snaps every shape to a palette
-                you supply: paste hex codes or import an Adobe .ase, .gpl, or hex list. Colors is
-                disabled while My colors has swatches.
+                you supply: paste hex codes or import an Adobe .ase, .gpl, or hex list. Max colors
+                is disabled while My colors has swatches.
               </dd>
             </div>
             <div>
-              <dt>Speckle filter</dt>
+              <dt>Smallest shape</dt>
               <dd>
                 Drops traced specks smaller than this many pixels. Raise it to remove noise, dust,
                 and JPEG artifacts.
               </dd>
             </div>
             <div>
-              <dt>Layer difference</dt>
+              <dt>Merge similar shades</dt>
               <dd>
                 Minimum color difference between stacked layers. Raise it to merge similar shades
                 into one shape.
@@ -1563,8 +1577,8 @@
               <dd>
                 Black &amp; white trace: pixels darker than the threshold become shapes, everything
                 else drops out. Ink chooses black shapes on a transparent background, or white
-                shapes on a black backing. Best for laser cutting, stamps, silhouettes. Colors,
-                Layer difference and Grayscale do not apply while it is on.
+                shapes on a black backing. Best for laser cutting, stamps, silhouettes. Max colors,
+                Merge similar shades and Grayscale do not apply while it is on.
               </dd>
             </div>
             <div>
@@ -1957,6 +1971,6 @@
         location.reload();
       };
     </script>
-    <script type="module" src="js/app.js?v=130" onerror="window.recoverRasterTraceBoot()"></script>
+    <script type="module" src="js/app.js?v=132" onerror="window.recoverRasterTraceBoot()"></script>
   </body>
 </html>

@@ -20,8 +20,8 @@
     "sha": "6486ec188e8134f3f19111232f03848b04d5592262022c311946bbfcdfc25c45"
   },
   "css/styles.css": {
-    "v": 111,
-    "sha": "ea6595fc211cbde3d93cb49577e811737f2de1777ffd0ac310994ac7c74571ac"
+    "v": 113,
+    "sha": "e282719eebcbef8692d937a038f498a90f568675733d9993fc409b1a808bea83"
   },
   "favicon-16x16.png": {
     "v": 2,
@@ -36,8 +36,8 @@
     "sha": "c791ac290668f1933993695c39260283c51955aad4524eed259bbfb501e43f72"
   },
   "js/app.js": {
-    "v": 130,
-    "sha": "f19a749b5ca707468ded4d4804a5f7cd2ecaadee6e98de46d048efd27e3e8946"
+    "v": 132,
+    "sha": "e27381daa42fcf22cc090b1239480822341578350f554c5d56d6e44fac2a88ca"
   },
   "js/cleanup-tools.js": {
     "v": 47,

@@ -217,14 +217,16 @@ test.describe("side panels", () => {
 
     await page.locator("#fold-left").click();
     await expect(page.locator("#fold-left")).toHaveAttribute("aria-expanded", "false");
-    await expect(page.locator("#fold-left")).toHaveAccessibleName("Show presets and palette");
+    await expect(page.locator("#fold-left")).toHaveAccessibleName(
+      "Show profile, colors and palette",
+    );
     await expect(page.locator("#export-profile")).toBeHidden();
     expect((await preview.boundingBox()).width).toBeGreaterThan(wide + 150);
 
     await page.reload();
     await traced(page, () => page.locator("#file-input").setInputFiles(IMAGE));
     await expect(page.locator("#export-profile")).toBeHidden();
-    await expect(page.locator("#colors")).toBeVisible();
+    await expect(page.locator("#speckle")).toBeVisible();
     await page.locator("#fold-left").click();
     await expect(page.locator("#export-profile")).toBeVisible();
   });
@@ -245,7 +247,7 @@ test.describe("side panels", () => {
     await page.reload();
     await traced(page, () => page.locator("#file-input").setInputFiles(IMAGE));
     await expect(page.locator("#export-profile")).toBeHidden();
-    await expect(page.locator("#colors")).toBeVisible();
+    await expect(page.locator("#speckle")).toBeVisible();
   });
 });
 
