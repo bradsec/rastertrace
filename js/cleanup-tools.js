@@ -6,8 +6,8 @@
 import { brushSizeForShortcut, snapPointToAngle, svgViewBox } from "./eraser.js?v=11";
 import { parseHexColor, sampleRasterColor, toHexColor } from "./preprocess.js?v=57";
 import { els, hooks, state } from "./context.js?v=26";
-import { floodRegion, growMask, maskLoops, unionMasks } from "./magicwand.js?v=8";
-import { refreshExport } from "./exporters.js?v=33";
+import { floodRegion, growMask, maskLoops, unionMasks } from "./magicwand.js?v=9";
+import { refreshExport } from "./exporters.js?v=34";
 
 export function setView(view) {
   const showResult = view === "result";

@@ -10,7 +10,7 @@ import {
   rotateBitmap,
   sniffImageSize,
   Tracer,
-} from "./pipeline.js?v=56";
+} from "./pipeline.js?v=57";
 import {
   analyzeFlatness,
   detectedColorSettings,
@@ -30,15 +30,15 @@ import {
   userPresetName,
 } from "./preprocess.js?v=57";
 import { $, els, hooks, preferences, showError, state } from "./context.js?v=26";
-import { refreshExport, setResultActions } from "./exporters.js?v=33";
+import { refreshExport, setResultActions } from "./exporters.js?v=34";
 import {
   clearSelection,
   setBlobFill,
   setEraser,
   setSelectionTool,
   setView,
-} from "./cleanup-tools.js?v=41";
-import { afterTrace, resetPalette } from "./palette-ui.js?v=25";
+} from "./cleanup-tools.js?v=42";
+import { afterTrace, resetPalette } from "./palette-ui.js?v=26";
 import {
   applyExportProfile,
   applyMeasurementUnit,
@@ -65,12 +65,12 @@ import {
   updateTraceFields,
   updateTransparencyFields,
   userPresets,
-} from "./settings.js?v=40";
-import { actualSizeView, resetView } from "./view.js?v=41";
+} from "./settings.js?v=41";
+import { actualSizeView, resetView } from "./view.js?v=42";
 
 const EMPTY_IMAGE_SRC = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==";
 
-const tracer = new Tracer(new URL("./worker.js?v=60", import.meta.url));
+const tracer = new Tracer(new URL("./worker.js?v=61", import.meta.url));
 
 let elapsedTimer = 0;
 
