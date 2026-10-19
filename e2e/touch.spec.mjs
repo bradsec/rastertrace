@@ -224,3 +224,22 @@ test.describe("small screens", () => {
     );
   });
 });
+
+test("changing brush size previews the diameter on the result", async ({ page }) => {
+  await loadImage(page);
+  await chooseTool(page, "#blob-fill-tool");
+  const cursor = page.locator("#eraser-cursor");
+  await expect(cursor).toBeHidden();
+  await page.locator("#eraser-size").fill("60");
+  await expect(cursor).toBeVisible();
+  // Drawn at the stroke's on-screen size: brush px scaled by the zoom.
+  const expected = await page.evaluate(async () => {
+    const img = /** @type {HTMLImageElement} */ (document.querySelector("#result-view"));
+    const svg = await (await fetch(img.src)).text();
+    const viewBoxWidth = Number(/viewBox="[\d.-]+ [\d.-]+ ([\d.]+)/.exec(svg)[1]);
+    return (60 * img.getBoundingClientRect().width) / viewBoxWidth;
+  });
+  const box = await cursor.boundingBox();
+  expect(Math.abs(box.width - expected)).toBeLessThan(3);
+  await expect(cursor).toBeHidden({ timeout: 3000 });
+});

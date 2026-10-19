@@ -1127,6 +1127,39 @@ function setEraserSize(value) {
   );
   els.eraserSize.value = String(size);
   els.eraserSizeOut.textContent = `${size} px`;
+  previewBrushSize();
+}
+
+// Touch has no hover, so the brush circle never shows before a stroke.
+// While the size changes, show it over the preview's centre (or where the
+// pointer hovers), then hide it again unless a pointer is hovering.
+let cursorHovering = false;
+let sizePreviewTimer = 0;
+
+function previewBrushSize() {
+  if (!state.erasing && !state.blobFilling) return;
+  const rect = els.resultView.getBoundingClientRect();
+  if (!rect.width || !rect.height) return;
+  if (!cursorHovering) {
+    els.eraserCursor.style.left = `${els.preview.clientWidth / 2}px`;
+    els.eraserCursor.style.top = `${els.preview.clientHeight / 2}px`;
+  }
+  sizeCleanupCursor(rect);
+  els.eraserCursor.hidden = false;
+  clearTimeout(sizePreviewTimer);
+  sizePreviewTimer = window.setTimeout(() => {
+    if (!cursorHovering) els.eraserCursor.hidden = true;
+  }, 900);
+}
+
+/** @param {DOMRect} rect the result image's on-screen box */
+function sizeCleanupCursor(rect) {
+  const box = svgViewBox(state.svgRaw || "");
+  const screenSize = box
+    ? (Number(els.eraserSize.value) * rect.width) / box.width
+    : Number(els.eraserSize.value);
+  els.eraserCursor.style.width = `${screenSize}px`;
+  els.eraserCursor.style.height = `${screenSize}px`;
 }
 
 els.eraserTool.addEventListener("click", () => setEraser(!state.erasing));
@@ -1201,15 +1234,11 @@ function cleanupPoint(event) {
 function moveCleanupCursor(event) {
   if (!state.erasing && !state.blobFilling && !state.blobPicking) return;
   const point = cleanupPoint(event);
+  cursorHovering = Boolean(point) && event.pointerType !== "touch";
   els.eraserCursor.hidden = !point;
   if (!point) return;
   const previewRect = els.preview.getBoundingClientRect();
-  const box = svgViewBox(state.svgRaw || "");
-  const screenSize = box
-    ? (Number(els.eraserSize.value) * point.rect.width) / box.width
-    : Number(els.eraserSize.value);
-  els.eraserCursor.style.width = `${screenSize}px`;
-  els.eraserCursor.style.height = `${screenSize}px`;
+  sizeCleanupCursor(point.rect);
   els.eraserCursor.style.left = `${event.clientX - previewRect.left}px`;
   els.eraserCursor.style.top = `${event.clientY - previewRect.top}px`;
 }
@@ -1227,6 +1256,7 @@ function redrawErasure() {
 }
 
 els.preview.addEventListener("pointerleave", () => {
+  cursorHovering = false;
   els.eraserCursor.hidden = true;
 });
 els.preview.addEventListener("pointermove", (event) => {

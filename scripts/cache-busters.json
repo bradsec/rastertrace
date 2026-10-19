@@ -36,12 +36,12 @@
     "sha": "c791ac290668f1933993695c39260283c51955aad4524eed259bbfb501e43f72"
   },
   "js/app.js": {
-    "v": 133,
-    "sha": "ef84aae0067a387d1b11204b72419f22584161cfb35f4c39b2c2a26dc096753e"
+    "v": 134,
+    "sha": "c508be7e22a62cd45c6500f2d9ebe8d03ef0246a2d679e5e3a3761eb7144198f"
   },
   "js/cleanup-tools.js": {
-    "v": 48,
-    "sha": "0985f817851eb6f14b99e4ea77c8cc3f711cfa1dadf541c86fbd81366b8bb2c0"
+    "v": 49,
+    "sha": "55a4f1fa31d6dfbba4a30b9634f792630ecc8078dd122b5a23dee8775086f7be"
   },
   "js/context.js": {
     "v": 31,
@@ -60,8 +60,8 @@
     "sha": "e6801fcdd1e4b7080b73fe09122d84c5d772c7d48d7398d71a4811678519ae56"
   },
   "js/palette-ui.js": {
-    "v": 32,
-    "sha": "012a0452ee63950222c314a1e86ccdc51fc6048ea0ab12e76da847dfd8698c35"
+    "v": 33,
+    "sha": "eeea749e3807f4b64337d066f13c5943d982190fb7370838666ec185e10608f3"
   },
   "js/palette.js": {
     "v": 13,
@@ -76,16 +76,16 @@
     "sha": "e1ed70c45ae0c8b90d91caa877e8a6dc4856b98b497411d86749d887dac216ce"
   },
   "js/settings.js": {
-    "v": 48,
-    "sha": "0dce6592682d9c4d2bb6a02aa58cf64a22b936ac506d254592b505a43b83c948"
+    "v": 49,
+    "sha": "9140062fbe1c85cbaf2bc606752ff51981ffa5bdafd54afbaf555c22349c6612"
   },
   "js/vectorexport.js": {
     "v": 43,
     "sha": "d3a3a6e1c85f2686458a22625566fc29c18a275c93111ad6a5844dc7a90b8818"
   },
   "js/view.js": {
-    "v": 48,
-    "sha": "cc456c5851f724c23d660d2495f34fc31f145e68ae9baa6d44c24f28cdb3793a"
+    "v": 49,
+    "sha": "d0cbac2c4ba74089219b0142d09f4cc7249030c5499b9360073eeff9323ef2b3"
   },
   "js/worker.js": {
     "v": 64,
