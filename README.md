@@ -1,5 +1,10 @@
 # rastertrace
 
+[![Tests](https://github.com/bradsec/rastertrace/actions/workflows/tests.yml/badge.svg?branch=main)](https://github.com/bradsec/rastertrace/actions/workflows/tests.yml)
+[![Version](https://img.shields.io/github/package-json/v/bradsec/rastertrace)](package.json)
+[![License: MIT](https://img.shields.io/github/license/bradsec/rastertrace)](LICENSE)
+[![Live site](https://img.shields.io/website?url=https%3A%2F%2Frastertrace.com&label=rastertrace.com)](https://rastertrace.com)
+
 Convert raster images to clean, scalable SVG vectors entirely in your browser. [vtracer](https://github.com/visioncortex/vtracer) compiled to WebAssembly plus a Canvas/JS preprocessing stage. Images never leave your machine: no upload, no backend.
 
 **Live app: https://rastertrace.com/**
