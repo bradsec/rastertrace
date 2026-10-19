@@ -11,18 +11,22 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # e2e/upgrade.spec.mjs serves the previous release from history.
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
       - run: npm ci
       - run: npm test
-      - run: npx playwright install --with-deps chromium
+      - run: npx playwright install --with-deps chromium webkit
       - run: npm run test:responsive
       - run: npm run typecheck
       - run: npm run lint
       - run: npm run format:check
       - run: npm run check:icons
+      - run: npm run check:cache-busters
 
   wasm:
     runs-on: ubuntu-latest

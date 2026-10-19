@@ -117,7 +117,11 @@ test.describe("touch gestures", () => {
     });
   }
 
-  test("a second finger turns an eraser stroke into a pinch zoom", async ({ page }) => {
+  test("a second finger turns an eraser stroke into a pinch zoom", async ({
+    page,
+    browserName,
+  }) => {
+    test.skip(browserName !== "chromium", "multi-touch is driven through Chromium's CDP");
     await loadImage(page);
     await page.locator("#eraser-tool").click();
     const box = await page.locator("#result-view").boundingBox();

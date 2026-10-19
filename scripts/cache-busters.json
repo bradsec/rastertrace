@@ -1,0 +1,102 @@
+{
+  "android-chrome-192x192.png": {
+    "v": 2,
+    "sha": "b09411ebe66af6abfb9fda956b376d86ffea917d7822818043f8259a9299e3af"
+  },
+  "android-chrome-512x512.png": {
+    "v": 2,
+    "sha": "546f33b408c3cbebfa3f63000edf347b011eeb56cf8b0980828a80af1a9ad81a"
+  },
+  "apple-touch-icon.png": {
+    "v": 2,
+    "sha": "d3625b047915f065258fe677228beb39ffe87b6ff0e20f747bba7776f17fe823"
+  },
+  "assets/logo-mark.svg": {
+    "v": 1,
+    "sha": "e75e7587ca8392942eea1b5ba318979ccc24e31495ec69cee39e16a92c21883b"
+  },
+  "assets/logo.svg": {
+    "v": 3,
+    "sha": "6486ec188e8134f3f19111232f03848b04d5592262022c311946bbfcdfc25c45"
+  },
+  "css/styles.css": {
+    "v": 96,
+    "sha": "e415c85cad91764f236e0edcf9ae0adf9557a6a6383bebdf58132d7c6b6b9a97"
+  },
+  "favicon-16x16.png": {
+    "v": 2,
+    "sha": "d85dc7a51d1a5afcab1749248139bd5d74b29382a509dfbd66944d42fb2538d0"
+  },
+  "favicon-32x32.png": {
+    "v": 2,
+    "sha": "2441e83de11008a5ac740362e845e929334b1134345a5db97ab884389781f1f5"
+  },
+  "favicon.ico": {
+    "v": 2,
+    "sha": "c791ac290668f1933993695c39260283c51955aad4524eed259bbfb501e43f72"
+  },
+  "js/app.js": {
+    "v": 122,
+    "sha": "b52956ce915c8cd6d4fd6de1ad2179ff855840e3067fb699594c6d5644a742a1"
+  },
+  "js/cleanup-tools.js": {
+    "v": 42,
+    "sha": "5bdac6f4d07559a13dedcaafffa4de1f4acee3018ea257a61a5cf6c70787bf2d"
+  },
+  "js/context.js": {
+    "v": 26,
+    "sha": "1372bdc55a63a8f167526bba4d0201f76f9bfa7d3524a81f1845a59768667105"
+  },
+  "js/eraser.js": {
+    "v": 11,
+    "sha": "712c9839c5391bbad6769e6534f8317204f9303f9232e209dadcf5ac4e190c3f"
+  },
+  "js/exporters.js": {
+    "v": 34,
+    "sha": "24744cbc528500b434734b35405ca56864c50b0519562b6aa0cf1e9f63cfc948"
+  },
+  "js/magicwand.js": {
+    "v": 9,
+    "sha": "99f67703346796d31e5d97dc83bb4159e532529fe80a118dd11e4aa1c23cbd9b"
+  },
+  "js/palette-ui.js": {
+    "v": 26,
+    "sha": "ef6974803de178252cf879f2826a443262f30067ffc31aab2bb03b627d6c6660"
+  },
+  "js/palette.js": {
+    "v": 10,
+    "sha": "233555ec9ea6d4000a3144da5c319380a138114701f5739f485868e417c64890"
+  },
+  "js/pipeline.js": {
+    "v": 57,
+    "sha": "7d622ecff2ed60c9acca9431c07adbfade209ecaca1e0b6bc4bdae7f1cdbaa00"
+  },
+  "js/preprocess.js": {
+    "v": 57,
+    "sha": "7fd2c2d0bc6735467acd106b6fee3c0bd07e752fb01be7b6897e2ba187bb4e82"
+  },
+  "js/settings.js": {
+    "v": 41,
+    "sha": "2a622a71cebc5abbbd6f4f348dde72a0f534668efb2f5e8284ed033e94bc768c"
+  },
+  "js/vectorexport.js": {
+    "v": 43,
+    "sha": "d3a3a6e1c85f2686458a22625566fc29c18a275c93111ad6a5844dc7a90b8818"
+  },
+  "js/view.js": {
+    "v": 42,
+    "sha": "5ba16435476c307ddf0741aeaf104f369aeac39eaf6d644692a87162de8a2943"
+  },
+  "js/worker.js": {
+    "v": 61,
+    "sha": "1408cf941197d9303ca2a2409ada057c13a255f343a8ff97a9988548d79a7105"
+  },
+  "pkg/rastertrace_wasm.js": {
+    "v": 43,
+    "sha": "d3af86c3e3388a07b07901195df1001b5ce956e869cffd514bdf15265b504a06"
+  },
+  "pkg/rastertrace_wasm_bg.wasm": {
+    "v": 43,
+    "sha": "95dc45b642f115057ff2f0e9e62826932ecea89cf7ebfdd8453b8c4f64fc8ff5"
+  }
+}

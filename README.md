@@ -82,15 +82,19 @@ e2e/                Playwright layout and workflow tests
 ```bash
 npm ci                   # install the locked development dependencies
 npm test                 # unit tests (node --test)
-npm run test:responsive  # Playwright checks at desktop, laptop, tablet and mobile sizes
+npm run test:responsive  # Playwright suite in desktop Chromium and iPad WebKit, plus an upgrade test from the previous release
 npm run typecheck        # check JavaScript and DOM types
 npm run lint             # run Oxlint
 npm run format:check     # verify Oxfmt formatting
 npm run format           # apply Oxfmt formatting
 npm run check:icons      # verify bundled Material icons match the pinned package
+npm run check:cache-busters # verify every ?v= URL changed with its file
+npm run fix:cache-busters   # bump stale ?v= URLs (cascading to importers) and record them
 npm run serve            # http://localhost:8137
 npm run build:wasm       # rebuild pkg/ (Rust 1.94.0 and wasm-pack 0.15.0)
 ```
+
+Asset URLs carry `?v=` cache busters, and `sw.js` serves them cache-first. Any edit to a file, including a changed import line, needs a new `?v=` in every URL that names it, which in turn edits those files. `npm run fix:cache-busters` does the cascade and records versions and content hashes in `scripts/cache-busters.json`; CI fails when a file changed under its recorded version.
 
 ## Deploy
 

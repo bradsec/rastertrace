@@ -172,7 +172,8 @@ test.describe("Illustrator habits", () => {
     await page.locator("#zoom-in").click();
     expect(await transform(page)).not.toContain("scale(1)");
     await page.keyboard.press("Control+0");
-    expect(await transform(page)).toBe("translate(0px, 0px) scale(1)");
+    // Fit is the only state labelled "Fit"; transform strings differ by engine.
+    await expect(page.locator("#zoom-reset")).toHaveText("Fit");
   });
 
   test("holding Space pans over an active eraser without erasing", async ({ page }) => {
