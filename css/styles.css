@@ -783,6 +783,34 @@ body:has(#empty-state:not([hidden])) .eraser-controls {
   width: 12px;
   height: 12px;
 }
+.swatch-field {
+  display: grid;
+  gap: 8px;
+}
+.swatch-field .palette-grid {
+  margin-top: 0;
+}
+.swatch-field .palette-grid:empty,
+.swatch-field .palette-hint:empty {
+  display: none;
+}
+.swatch-input {
+  flex: 1;
+  min-width: 0;
+  min-height: var(--control-h);
+  padding: 4px 8px;
+  border: 1px solid var(--border-input);
+  border-radius: var(--r-sm);
+  background: var(--surface-2);
+  color: var(--text);
+  font: var(--fs-sm) var(--font-mono);
+}
+.swatch-field .color-row .button {
+  flex: 1;
+}
+.swatch-field .color-row .button#swatch-add {
+  flex: 0 0 auto;
+}
 .palette-hint {
   margin: 8px 0 0;
   font-size: var(--fs-sm);

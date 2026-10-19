@@ -18,10 +18,13 @@ import {
   isStaleModuleError,
   MAX_TRACE_SIDE,
   MAX_TRACE_SIDE_ULTRA,
+  parseAse,
   parseHexColor,
+  parseSwatchText,
   presetName,
   PRESETS_MAX,
   sanitizePresets,
+  SWATCHES_MAX,
   toHexColor,
   USER_PRESET_PREFIX,
   userPresetName,
@@ -43,6 +46,7 @@ import {
   applyUserPreset,
   clearProfile,
   currentSettings,
+  currentSwatches,
   deleteUserPreset,
   findUserPreset,
   importUserPresets,
@@ -53,6 +57,8 @@ import {
   savePreferences,
   saveSettings,
   saveUserPreset,
+  setSwatches,
+  updateColorSourceFields,
   updateExportFields,
   updateOutputs,
   updateStencilFields,
@@ -785,6 +791,99 @@ els.exportProfile.addEventListener("change", async () => {
   if (els.upscale.value === "ultra") await ensureUltraBitmap();
   refreshExport(); // minify may have changed; applies without waiting
   scheduleRetrace();
+});
+
+// -- My colors: a fixed palette the trace snaps to ------------------------
+
+/** @param {string[]} list @param {string} [note] */
+function changeSwatches(list, note = "") {
+  setSwatches(list);
+  els.swatchNote.textContent = note;
+  clearProfile();
+  saveSettings();
+  if (els.colorSource.value === "custom") scheduleRetrace();
+}
+
+els.colorSource.addEventListener("change", () => {
+  clearProfile();
+  updateColorSourceFields();
+  scheduleRetrace();
+});
+
+function addTypedSwatches() {
+  const added = parseSwatchText(els.swatchInput.value);
+  if (!added.length) {
+    els.swatchNote.textContent = "No hex color codes found. Use codes like #1f2a3b.";
+    return;
+  }
+  const current = currentSwatches();
+  const merged = [...new Set([...current, ...added])];
+  els.swatchInput.value = "";
+  changeSwatches(
+    merged.slice(0, SWATCHES_MAX),
+    merged.length > SWATCHES_MAX ? `Kept the first ${SWATCHES_MAX} colors.` : "",
+  );
+}
+els.swatchAdd.addEventListener("click", addTypedSwatches);
+els.swatchInput.addEventListener("keydown", (event) => {
+  if (event.key !== "Enter") return;
+  event.preventDefault();
+  addTypedSwatches();
+});
+
+els.swatchList.addEventListener("click", (event) => {
+  const button = event.target instanceof Element && event.target.closest("[data-swatch]");
+  if (!(button instanceof HTMLElement)) return;
+  const index = [...els.swatchList.children].indexOf(button);
+  changeSwatches(
+    currentSwatches().filter((hex) => hex !== button.dataset.swatch),
+    `Removed ${button.dataset.swatch}.`,
+  );
+  // The removed swatch had focus: move to its neighbour, or the input.
+  const next = els.swatchList.children[Math.min(index, els.swatchList.children.length - 1)];
+  (next instanceof HTMLElement ? next : els.swatchInput).focus();
+});
+
+els.swatchClear.addEventListener("click", () => {
+  changeSwatches([], "Colors cleared.");
+  els.swatchInput.focus();
+});
+
+// Swatch files are small; anything far larger is not one.
+const SWATCH_FILE_MAX_BYTES = 1_000_000;
+
+els.swatchImport.addEventListener("click", () => els.swatchFile.click());
+els.swatchFile.addEventListener("change", async () => {
+  const file = els.swatchFile.files?.[0];
+  els.swatchFile.value = "";
+  if (!file) return;
+  let swatches = [];
+  let approximate = false;
+  try {
+    if (file.size > SWATCH_FILE_MAX_BYTES)
+      throw new Error("That file is too large to be a swatch file.");
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    if (String.fromCharCode(...bytes.subarray(0, 4)) === "ASEF") {
+      ({ swatches, approximate } = parseAse(bytes));
+    } else {
+      swatches = parseSwatchText(new TextDecoder().decode(bytes));
+    }
+  } catch (err) {
+    els.swatchNote.textContent = err.message || "That swatch file could not be read.";
+    return;
+  }
+  if (!swatches.length) {
+    els.swatchNote.textContent = "No colors found in that file.";
+    return;
+  }
+  // A swatch file is a whole palette: it replaces the list.
+  changeSwatches(
+    swatches,
+    `Imported ${swatches.length} color${swatches.length === 1 ? "" : "s"} from ${file.name}.` +
+      (approximate
+        ? " CMYK, Lab and spot colors are converted to screen RGB, so they are approximate."
+        : ""),
+  );
 });
 
 // -- Saved presets -------------------------------------------------------

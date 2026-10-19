@@ -56,12 +56,13 @@ self.onmessage = async (event) => {
     // The helper orders quantize and knockout per background mode.
     // The image holds at most `colors` colors from here on; matte repairs
     // and the trace's fills must not add more.
-    const reduced = !settings.stencil && settings.colors < 256;
+    const swatches = settings.stencil ? null : settings.swatches;
+    const reduced = !settings.stencil && (settings.colors < 256 || Boolean(swatches?.length));
     const knockedOut = reduceAndRemoveBackground(
       img,
       settings.stencil ? 256 : settings.colors,
       // Trace pixels per source pixel: enclosed sizes are set in source px.
-      { ...settings, scale: img.width / sourceWidth },
+      { ...settings, swatches, scale: img.width / sourceWidth },
       stage,
     );
     if (settings.transparent) {

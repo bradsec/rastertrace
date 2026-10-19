@@ -672,6 +672,59 @@
               </div>
 
               <div class="field">
+                <label
+                  for="color-source"
+                  title="Trace with the image's own colors, or snap every shape to colors you choose, such as brand colors or stocked inks"
+                  >Colors from</label
+                >
+                <select id="color-source">
+                  <option value="auto">This image (automatic)</option>
+                  <option value="custom">My colors</option>
+                </select>
+                <div id="swatch-field" class="swatch-field" hidden>
+                  <div
+                    id="swatch-list"
+                    class="palette-grid"
+                    role="group"
+                    aria-label="My colors"
+                  ></div>
+                  <p id="swatch-empty" class="palette-hint">
+                    Add colors to trace with. Until then the image's own colors are used.
+                  </p>
+                  <div class="color-row">
+                    <input
+                      type="text"
+                      id="swatch-input"
+                      class="swatch-input"
+                      placeholder="#1f2a3b, #ffffff"
+                      aria-label="Colors to add, as hex codes"
+                      spellcheck="false"
+                      autocomplete="off"
+                    />
+                    <button type="button" id="swatch-add" class="button button-secondary">
+                      Add
+                    </button>
+                  </div>
+                  <div class="color-row">
+                    <button
+                      type="button"
+                      id="swatch-import"
+                      class="button button-secondary"
+                      title="Adobe .ase (Illustrator Swatches panel), GIMP or Inkscape .gpl, or a text list of hex codes"
+                    >
+                      Import file
+                    </button>
+                    <button type="button" id="swatch-clear" class="button button-secondary">
+                      Clear
+                    </button>
+                  </div>
+                  <input type="file" id="swatch-file" accept=".ase,.gpl,.txt,.hex,.css" hidden />
+                  <input type="hidden" id="swatches" value="" />
+                  <p id="swatch-note" class="palette-hint" role="status"></p>
+                </div>
+              </div>
+
+              <div class="field">
                 <div class="label-row">
                   <label
                     for="colors"
@@ -1290,6 +1343,14 @@
               <dd>
                 Maximum colors in the output. Fewer colors means simpler, cleaner, smaller SVGs. A
                 preset is a quick way to pick a color count and changes nothing else.
+              </dd>
+            </div>
+            <div>
+              <dt>Colors from</dt>
+              <dd>
+                This image picks the colors automatically. My colors snaps every shape to a palette
+                you supply: paste hex codes or import an Adobe .ase, .gpl, or hex list. Colors is
+                disabled while My colors has swatches.
               </dd>
             </div>
             <div>

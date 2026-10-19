@@ -21,6 +21,10 @@ import {
   finalizeSvg,
   fitTraceScale,
   groupSvgFills,
+  mapToPalette,
+  parseAse,
+  parseSwatchText,
+  SWATCHES_MAX,
   mergePresets,
   PRESETS_MAX,
   sanitizePresets,
@@ -1609,4 +1613,132 @@ test("sanitizeSettings accepts a saved user preset as the active profile", () =>
   });
   assert.deepEqual(sanitizeSettings({ profile: "user:" }), {});
   assert.deepEqual(sanitizeSettings({ profile: "nonsense" }), {});
+});
+
+/** Adobe Swatch Exchange bytes for [name, model, values, type] entries, in one group. */
+function aseBytes(entries) {
+  const blocks = [];
+  const nameBytes = (name) => {
+    const units = [...name].map((c) => c.charCodeAt(0)).concat(0);
+    const out = new Uint8Array(2 + units.length * 2);
+    const view = new DataView(out.buffer);
+    view.setUint16(0, units.length);
+    units.forEach((u, i) => view.setUint16(2 + i * 2, u));
+    return out;
+  };
+  const block = (type, body) => {
+    const out = new Uint8Array(6 + body.length);
+    const view = new DataView(out.buffer);
+    view.setUint16(0, type);
+    view.setUint32(2, body.length);
+    out.set(body, 6);
+    blocks.push(out);
+  };
+  block(0xc001, nameBytes("Brand"));
+  for (const [name, model, values, type] of entries) {
+    const head = nameBytes(name);
+    const body = new Uint8Array(head.length + 4 + values.length * 4 + 2);
+    const view = new DataView(body.buffer);
+    body.set(head, 0);
+    let o = head.length;
+    for (const ch of model) body[o++] = ch.charCodeAt(0);
+    for (const v of values) {
+      view.setFloat32(o, v);
+      o += 4;
+    }
+    view.setUint16(o, type);
+    block(0x0001, body);
+  }
+  block(0xc002, new Uint8Array(0));
+  const size = 12 + blocks.reduce((n, b) => n + b.length, 0);
+  const out = new Uint8Array(size);
+  const view = new DataView(out.buffer);
+  out.set([0x41, 0x53, 0x45, 0x46], 0);
+  view.setUint16(4, 1);
+  view.setUint16(6, 0);
+  view.setUint32(8, blocks.length);
+  let o = 12;
+  for (const b of blocks) {
+    out.set(b, o);
+    o += b.length;
+  }
+  return out;
+}
+
+test("parseAse reads RGB swatches exactly and flags converted CMYK, Lab and spot colors", () => {
+  const rgbOnly = parseAse(
+    aseBytes([
+      ["Red", "RGB ", [1, 0, 0], 2],
+      ["Navy", "RGB ", [0, 0, 0.5], 0],
+    ]),
+  );
+  assert.deepEqual(rgbOnly, { swatches: ["#FF0000", "#000080"], approximate: false });
+
+  const mixed = parseAse(
+    aseBytes([
+      ["Cyan", "CMYK", [1, 0, 0, 0], 2],
+      ["White", "LAB ", [1, 0, 0], 2],
+      ["Spot", "RGB ", [0, 1, 0], 1],
+      ["Red", "RGB ", [1, 0, 0], 2],
+    ]),
+  );
+  assert.equal(mixed.approximate, true);
+  assert.equal(mixed.swatches[0], "#00FFFF");
+  assert.equal(mixed.swatches[1], "#FFFFFF");
+  assert.deepEqual(mixed.swatches.slice(2), ["#00FF00", "#FF0000"]);
+});
+
+test("parseAse rejects other and truncated files", () => {
+  assert.throws(() => parseAse(new TextEncoder().encode("GIMP Palette")), /swatch/i);
+  const good = aseBytes([["Red", "RGB ", [1, 0, 0], 2]]);
+  assert.throws(() => parseAse(good.slice(0, good.length - 5)), /swatch/i);
+});
+
+test("parseSwatchText reads hex lists and GIMP palettes", () => {
+  assert.deepEqual(parseSwatchText("#1f2a3b, ffffff\n#abc nope #12345 #1F2A3B"), [
+    "#1F2A3B",
+    "#FFFFFF",
+    "#AABBCC",
+  ]);
+  const gpl =
+    "GIMP Palette\nName: Brand\nColumns: 4\n#\n255   0   0\tRed\n  0 128 255 Sky\n300 0 0 bad\n";
+  assert.deepEqual(parseSwatchText(gpl), ["#FF0000", "#0080FF"]);
+  const many = Array.from(
+    { length: SWATCHES_MAX + 10 },
+    (_, i) => `#${i.toString(16).padStart(6, "0")}`,
+  ).join(" ");
+  assert.equal(parseSwatchText(many).length, SWATCHES_MAX);
+});
+
+test("mapToPalette snaps opaque pixels to the nearest swatch and backfills transparency", () => {
+  const img = {
+    width: 3,
+    height: 1,
+    data: new Uint8ClampedArray([250, 10, 5, 255, 20, 20, 240, 255, 1, 2, 3, 0]),
+  };
+  mapToPalette(img, ["#FF0000", "#0000FF", "#00FF00"]);
+  assert.deepEqual([...img.data], [255, 0, 0, 255, 0, 0, 255, 255, 255, 0, 0, 0]);
+});
+
+test("reduceAndRemoveBackground uses my colors instead of quantizing", () => {
+  const data = new Uint8ClampedArray(4 * 4 * 4);
+  for (let i = 0; i < data.length; i += 4)
+    data.set(i < 32 ? [200, 30, 30, 255] : [30, 30, 200, 255], i);
+  const img = { width: 4, height: 4, data };
+  reduceAndRemoveBackground(img, 256, { swatches: ["#FF0000", "#0000FF"] });
+  const colors = new Set();
+  for (let i = 0; i < data.length; i += 4) colors.add(`${data[i]},${data[i + 1]},${data[i + 2]}`);
+  assert.deepEqual([...colors].sort(), ["0,0,255", "255,0,0"]);
+});
+
+test("sanitizeSettings validates the color source and swatches", () => {
+  assert.deepEqual(sanitizeSettings({ colorSource: "custom", swatches: ["#FF0000", "#00ff00"] }), {
+    colorSource: "custom",
+    swatches: ["#FF0000", "#00ff00"],
+  });
+  assert.deepEqual(sanitizeSettings({ colorSource: "pantone", swatches: ["red"] }), {});
+  assert.deepEqual(
+    sanitizeSettings({ swatches: Array.from({ length: SWATCHES_MAX + 1 }, () => "#000000") }),
+    {},
+  );
 });

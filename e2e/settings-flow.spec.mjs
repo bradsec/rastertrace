@@ -286,3 +286,45 @@ test("a color preset sets Colors only", async ({ page }) => {
   await page.locator("#colors").fill("5");
   await expect(page.locator("#preset")).toHaveValue("");
 });
+
+test("My colors traces with only the swatches given", async ({ page }) => {
+  const art = await makePng(page, "art.png", 120, 120, "#f8f8f8", [
+    ["#c03020", 10, 10, 40, 40],
+    ["#2040b0", 60, 60, 50, 50],
+  ]);
+  await traced(page, () => page.locator("#file-input").setInputFiles(art));
+  await page.evaluate(() => {
+    for (const details of document.querySelectorAll("aside details")) details.open = true;
+  });
+  await page.locator("#color-source").selectOption("custom");
+  await expect(page.locator("#swatch-empty")).toBeVisible();
+  await expect(page.locator("#colors")).toBeEnabled();
+
+  await traced(page, async () => {
+    await page.locator("#swatch-input").fill("#ff0000, #0000ff #ffffff");
+    await page.locator("#swatch-input").press("Enter");
+  });
+  await expect(page.locator("#swatch-list [data-swatch]")).toHaveCount(3);
+  await expect(page.locator("#colors")).toBeDisabled();
+  await expect(page.locator("#preset")).toBeDisabled();
+  const svg = await page
+    .locator("#result-view")
+    .evaluate(async (img) => (await fetch(/** @type {HTMLImageElement} */ (img).src)).text());
+  const fills = new Set(
+    [...svg.matchAll(/fill="(#[0-9A-Fa-f]{6})"/g)].map((m) => m[1].toUpperCase()),
+  );
+  expect([...fills].sort()).toEqual(["#0000FF", "#FF0000", "#FFFFFF"]);
+
+  await traced(page, () => page.getByRole("button", { name: "Remove #FFFFFF" }).click());
+  await expect(page.locator("#swatch-list [data-swatch]")).toHaveCount(2);
+
+  await traced(page, () =>
+    page.locator("#swatch-file").setInputFiles({
+      name: "brand.gpl",
+      mimeType: "text/plain",
+      buffer: Buffer.from("GIMP Palette\nName: Brand\n#\n255 255 255 Paper\n200 40 30 Red\n"),
+    }),
+  );
+  await expect(page.locator("#swatch-note")).toHaveText("Imported 2 colors from brand.gpl.");
+  await expect(page.locator("#swatch-list [data-swatch]")).toHaveCount(2);
+});

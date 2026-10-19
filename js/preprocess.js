@@ -565,6 +565,11 @@ const SETTING_CHECKS = {
   physicalWidth: (v) => typeof v === "number" && physicalWidthValue(v) !== null,
   physicalUnit: (v) => ["px", "mm", "cm", "in"].includes(v),
   minify: (v) => typeof v === "boolean",
+  colorSource: (v) => v === "auto" || v === "custom",
+  swatches: (v) =>
+    Array.isArray(v) &&
+    v.length <= SWATCHES_MAX &&
+    v.every((c) => typeof c === "string" && /^#[0-9a-fA-F]{6}$/.test(c)),
 };
 
 /**
@@ -650,6 +655,120 @@ export function mergePresets(list, incoming, { replace = true } = {}) {
     }
   }
   return { presets, added, replaced, skipped };
+}
+
+/** Most swatches a fixed palette may hold, like the 256-color ceiling. */
+export const SWATCHES_MAX = 256;
+
+/**
+ * Swatches from pasted text or a text swatch file: a GIMP/Inkscape .gpl
+ * palette ("R G B name" rows), otherwise every #RGB, #RRGGBB or bare
+ * RRGGBB code in order. Returns unique "#RRGGBB", at most SWATCHES_MAX.
+ * @param {string} text
+ */
+export function parseSwatchText(text) {
+  const colors = [];
+  if (/^\s*GIMP Palette/.test(text)) {
+    for (const line of text.split(/\r?\n/)) {
+      const m = /^\s*(\d{1,3})\s+(\d{1,3})\s+(\d{1,3})(?:\s|$)/.exec(line);
+      const rgb = m && /** @type {[number, number, number]} */ ([
+        Number(m[1]),
+        Number(m[2]),
+        Number(m[3]),
+      ]);
+      if (rgb && rgb.every((c) => c <= 255)) colors.push(toHexColor(rgb));
+    }
+  } else {
+    for (const [, hex] of text.matchAll(
+      /(?:^|[^0-9a-zA-Z#])#?([0-9a-fA-F]{6}|(?<=#)[0-9a-fA-F]{3})(?![0-9a-zA-Z])/g,
+    )) {
+      const full = hex.length === 3 ? [...hex].map((c) => c + c).join("") : hex;
+      colors.push(`#${full.toUpperCase()}`);
+    }
+  }
+  return [...new Set(colors)].slice(0, SWATCHES_MAX);
+}
+
+/** CIE Lab (D50, as Adobe stores it) to sRGB [0-255], clamped. */
+function labD50ToSrgb([L, a, b]) {
+  const fy = (L + 16) / 116;
+  const fx = fy + a / 500;
+  const fz = fy - b / 200;
+  const inv = (t) => (t ** 3 > 216 / 24389 ? t ** 3 : (116 * t - 16) / (24389 / 27));
+  const x = 0.96422 * inv(fx);
+  const y = 1 * inv(fy);
+  const z = 0.82521 * inv(fz);
+  // XYZ D50 to linear sRGB (D65), Bradford-adapted matrix.
+  const lr = 3.1338561 * x - 1.6168667 * y - 0.4906146 * z;
+  const lg = -0.9787684 * x + 1.9161415 * y + 0.033454 * z;
+  const lb = 0.0719453 * x - 0.2289914 * y + 1.4052427 * z;
+  const gam = (v) => {
+    const c = v <= 0.0031308 ? 12.92 * v : 1.055 * Math.max(0, v) ** (1 / 2.4) - 0.055;
+    return Math.max(0, Math.min(255, Math.round(c * 255)));
+  };
+  return [gam(lr), gam(lg), gam(lb)];
+}
+
+/**
+ * Swatches from an Adobe Swatch Exchange (.ase) file, as exported from
+ * Illustrator's Swatches panel. RGB entries are exact. CMYK, Lab, gray and
+ * spot entries convert to screen RGB without a color profile, so
+ * `approximate` is true when any appear. Throws on anything else.
+ * @param {Uint8Array} bytes
+ * @returns {{ swatches: string[], approximate: boolean }}
+ */
+export function parseAse(bytes) {
+  const fail = () => {
+    throw new Error("Not a readable Adobe swatch (.ase) file.");
+  };
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  const colors = [];
+  let approximate = false;
+  try {
+    if (String.fromCharCode(...bytes.subarray(0, 4)) !== "ASEF") fail();
+    const blocks = view.getUint32(8);
+    let o = 12;
+    for (let n = 0; n < blocks; n++) {
+      const type = view.getUint16(o);
+      const length = view.getUint32(o + 2);
+      const start = o + 6;
+      o = start + length;
+      if (o > bytes.length) fail();
+      if (type !== 0x0001) continue; // group start/end
+      let p = start + 2 + view.getUint16(start) * 2;
+      const model = String.fromCharCode(...bytes.subarray(p, p + 4));
+      p += 4;
+      const f = (i) => view.getFloat32(p + i * 4);
+      const unit = (v) => Math.max(0, Math.min(255, Math.round(v * 255)));
+      let rgb;
+      if (model === "RGB ") {
+        rgb = [unit(f(0)), unit(f(1)), unit(f(2))];
+        p += 12;
+      } else if (model === "CMYK") {
+        const k = 1 - f(3);
+        rgb = [unit((1 - f(0)) * k), unit((1 - f(1)) * k), unit((1 - f(2)) * k)];
+        approximate = true;
+        p += 16;
+      } else if (model === "LAB ") {
+        rgb = labD50ToSrgb([f(0) * 100, f(1), f(2)]);
+        approximate = true;
+        p += 12;
+      } else if (model === "Gray") {
+        rgb = [unit(f(0)), unit(f(0)), unit(f(0))];
+        approximate = true;
+        p += 4;
+      } else {
+        fail();
+      }
+      if (p + 2 > o) fail();
+      if (view.getUint16(p) === 1) approximate = true; // spot color
+      colors.push(toHexColor(rgb));
+    }
+  } catch (err) {
+    if (err instanceof RangeError) fail();
+    throw err;
+  }
+  return { swatches: [...new Set(colors)].slice(0, SWATCHES_MAX), approximate };
 }
 
 /** Parse "#RRGGBB" or "RRGGBB" into [r, g, b], or null. */
@@ -1150,6 +1269,7 @@ export function reduceAndRemoveBackground(img, colors, background, stage = () =>
     enclosedMaxSize = DEFAULTS.enclosedMaxSize,
     gradient = false,
     scale = 1,
+    swatches = null,
   } = background;
   const options = {
     contiguous,
@@ -1158,10 +1278,16 @@ export function reduceAndRemoveBackground(img, colors, background, stage = () =>
       enclosedMaxSize >= ENCLOSED_NO_LIMIT ? Infinity : enclosedAreaLimit(enclosedMaxSize, scale),
     gradient,
   };
-  const quantized = colors < 256;
+  const custom = Array.isArray(swatches) && swatches.length > 0;
+  const quantized = custom || colors < 256;
   const reduce = () => {
-    stage(`Reducing to ${colors} colors…`);
-    quantize(img, colors);
+    if (custom) {
+      stage("Matching your colors…");
+      mapToPalette(img, swatches);
+    } else {
+      stage(`Reducing to ${colors} colors…`);
+      quantize(img, colors);
+    }
     modeFilter(img);
   };
   const connected = transparent === "edges" || (Array.isArray(transparent) && contiguous);
@@ -1582,6 +1708,48 @@ export function analyzeFlatness(img) {
     flat: topCoverage >= 0.9,
     colorCount: Math.min(32, Math.max(2, colorCount)),
   };
+}
+
+/**
+ * Snap every opaque pixel to the nearest of `swatches` ("#RRGGBB") in
+ * Oklab: a fixed palette (brand colors, stocked inks) in place of
+ * quantize's automatic one. Transparent pixels get the dominant opaque
+ * color's swatch, as quantize backfills them. Mutates img in place.
+ */
+export function mapToPalette(img, swatches) {
+  const palette = swatches.map((hex) => {
+    const rgb = /** @type {[number, number, number]} */ (parseHexColor(hex));
+    return { rgb, lab: srgbToOklab(rgb) };
+  });
+  /** @type {Map<number, [number, number, number]>} */
+  const nearest = new Map();
+  const snap = (r, g, b) => {
+    const key = (r << 16) | (g << 8) | b;
+    let hit = nearest.get(key);
+    if (!hit) {
+      const [L, A, B] = srgbToOklab([r, g, b]);
+      let best = Infinity;
+      for (const { rgb, lab } of palette) {
+        const d = (L - lab[0]) ** 2 + (A - lab[1]) ** 2 + (B - lab[2]) ** 2;
+        if (d < best) {
+          best = d;
+          hit = rgb;
+        }
+      }
+      nearest.set(key, hit);
+    }
+    return hit;
+  };
+  const { data } = img;
+  const dominant = dominantOpaqueColor(img);
+  const backfill = dominant ? snap(dominant[0], dominant[1], dominant[2]) : palette[0].rgb;
+  for (let i = 0; i < data.length; i += 4) {
+    const rgb = data[i + 3] < ALPHA_THRESHOLD ? backfill : snap(data[i], data[i + 1], data[i + 2]);
+    data[i] = rgb[0];
+    data[i + 1] = rgb[1];
+    data[i + 2] = rgb[2];
+  }
+  return img;
 }
 
 // Quantize clusters colors at 6 bits per channel: a 4 MP photo carries

@@ -109,7 +109,39 @@ export function currentSettings() {
     edgeTrim: Number(els.edgeTrim.value),
     defringe: Number(els.defringe.value),
     edgeSmooth: Number(els.edgeSmooth.value),
+    swatches:
+      els.colorSource.value === "custom" && currentSwatches().length ? currentSwatches() : null,
   };
+}
+
+/** "My colors" swatches, held comma-joined in a hidden input so snapshots see them. */
+export function currentSwatches() {
+  return els.swatches.value ? els.swatches.value.split(",") : [];
+}
+
+/** Replace the swatch list and redraw it; each swatch button removes itself. */
+export function setSwatches(list) {
+  els.swatches.value = list.join(",");
+  els.swatchList.replaceChildren(
+    ...list.map((hex) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "swatch";
+      button.dataset.swatch = hex;
+      button.style.background = hex;
+      button.title = `${hex} (click to remove)`;
+      button.setAttribute("aria-label", `Remove ${hex}`);
+      return button;
+    }),
+  );
+  els.swatchEmpty.hidden = list.length > 0;
+  els.swatchClear.disabled = list.length === 0;
+  updateTraceFields();
+}
+
+export function updateColorSourceFields() {
+  els.swatchField.hidden = els.colorSource.value !== "custom";
+  updateTraceFields();
 }
 
 export function updateOutputs() {
@@ -142,7 +174,10 @@ export function updateOutputs() {
  */
 export function updateTraceFields() {
   const stencil = els.stencil.checked;
-  els.colors.disabled = stencil;
+  // My colors sets the palette, so the color count no longer applies.
+  els.colors.disabled =
+    stencil || (els.colorSource.value === "custom" && currentSwatches().length > 0);
+  els.preset.disabled = els.colors.disabled;
   els.layerDiff.disabled = stencil;
   els.grayscale.disabled = stencil;
   const spline = radioEl('input[name="mode"]:checked').value === "spline";
@@ -250,6 +285,8 @@ function snapshotSettings() {
     physicalWidth: Number(els.physicalWidth.value),
     physicalUnit: els.physicalUnit.value,
     minify: els.minify.checked,
+    colorSource: els.colorSource.value,
+    swatches: currentSwatches(),
   };
 }
 
@@ -314,6 +351,9 @@ function applySnapshot(saved) {
   set(els.physicalWidth, "physicalWidth");
   set(els.physicalUnit, "physicalUnit");
   check(els.minify, "minify");
+  set(els.colorSource, "colorSource");
+  if (saved.swatches) setSwatches(saved.swatches);
+  updateColorSourceFields();
   updateTransparencyFields();
   updateExportFields();
   updateStencilFields();
@@ -409,6 +449,9 @@ export function resetSettings() {
   // The unit is a preference (Preferences dialog), not a per-trace setting.
   els.physicalUnit.value = preferences.measurementUnit;
   els.minify.checked = false;
+  // The swatch list is kept: switching back to My colors restores it.
+  els.colorSource.value = "auto";
+  updateColorSourceFields();
   setEyedropper(false);
   updateTransparencyFields();
   updateExportFields();
