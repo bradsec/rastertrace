@@ -68,7 +68,7 @@ async function loadShapes(page) {
   const file = await makePng(page, "shapes.png", ...SIZE, CREAM, SHAPES);
   await traced(page, () => page.locator("#file-input").setInputFiles(file));
   await page.evaluate(() => {
-    for (const details of document.querySelectorAll("details")) details.open = true;
+    for (const details of document.querySelectorAll("aside details")) details.open = true;
   });
 }
 
@@ -187,7 +187,7 @@ test("grid shows palettes between 17 and 32 colors", async ({ page }) => {
   const file = await makePng(page, "20-colors.png", 200, 160, "#000000", shapes);
   await traced(page, () => page.locator("#file-input").setInputFiles(file));
   await page.evaluate(() => {
-    for (const details of document.querySelectorAll("details")) details.open = true;
+    for (const details of document.querySelectorAll("aside details")) details.open = true;
   });
   await traced(page, async () => {
     await page.locator("#colors").fill("32");
@@ -205,7 +205,7 @@ test("grid hidden above 32 colors", async ({ page }) => {
   const photo = await makePng(page, "photo.png", 200, 200, "noise");
   await traced(page, () => page.locator("#file-input").setInputFiles(photo));
   await page.evaluate(() => {
-    for (const details of document.querySelectorAll("details")) details.open = true;
+    for (const details of document.querySelectorAll("aside details")) details.open = true;
   });
   await traced(page, async () => {
     await page.locator("#speckle").fill("0");
@@ -227,7 +227,7 @@ test("reduced palette groups near-duplicate traced fills", async ({ page }) => {
   const photo = await makePng(page, "photo.png", 120, 120, "noise");
   await traced(page, () => page.locator("#file-input").setInputFiles(photo));
   await page.evaluate(() => {
-    for (const details of document.querySelectorAll("details")) details.open = true;
+    for (const details of document.querySelectorAll("aside details")) details.open = true;
   });
   await traced(page, async () => {
     await page.locator("#colors").fill("8");
@@ -261,7 +261,7 @@ test("defringe keeps a reduced cutout to its color count", async ({ page }) => {
   const file = await makePng(page, "stripes.png", 120, 90, CREAM, stripes);
   await traced(page, () => page.locator("#file-input").setInputFiles(file));
   await page.evaluate(() => {
-    for (const details of document.querySelectorAll("details")) details.open = true;
+    for (const details of document.querySelectorAll("aside details")) details.open = true;
   });
   await page.locator("#auto-detect").uncheck();
   await traced(page, async () => {

@@ -48,7 +48,7 @@ async function traced(page, action) {
 
 async function openPanels(page) {
   await page.evaluate(() => {
-    for (const details of document.querySelectorAll("details")) details.open = true;
+    for (const details of document.querySelectorAll("aside details")) details.open = true;
   });
 }
 
@@ -145,10 +145,7 @@ test("auto-detect sets colors per image; manual changes carry over", async ({ pa
 test("reset settings keeps the preferred measurement unit", async ({ page }) => {
   const flat = await makePng(page, "flat.png", 120, 120, CREAM, [["#3c281e", 30, 30, 60, 60]]);
   await traced(page, () => page.locator("#file-input").setInputFiles(flat));
-  // Settings panels only: openPanels also opens the File menu over them.
-  await page.evaluate(() => {
-    for (const details of document.querySelectorAll("aside details")) details.open = true;
-  });
+  await openPanels(page);
   await page.locator("#export-size").selectOption("physical");
   await page.locator("#physical-unit").selectOption("in");
   await page.locator("#reset-settings").click();

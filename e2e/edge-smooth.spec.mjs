@@ -54,7 +54,7 @@ test("edge smooth fills small notches in a cutout edge", async ({ page }) => {
   await page.reload();
   await loadNotchedBlock(page);
   await page.evaluate(() => {
-    for (const details of document.querySelectorAll("details")) details.open = true;
+    for (const details of document.querySelectorAll("aside details")) details.open = true;
   });
   await traced(page, () => page.locator("#transparent").selectOption("edges"));
   await expect(page.locator("#edge-smooth")).toBeVisible();
