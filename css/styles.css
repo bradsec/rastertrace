@@ -510,6 +510,9 @@ body:has(#empty-state:not([hidden])) .eraser-controls {
   padding: 12px var(--rail-pad) 16px;
   border-bottom: 1px solid var(--border);
 }
+#save-preset {
+  justify-self: start;
+}
 #stencil-threshold-slot:not([hidden]) {
   display: grid;
   padding: 0 var(--rail-pad) 14px;
@@ -1951,6 +1954,35 @@ dialog::backdrop {
 }
 .dialog-form a:hover {
   text-decoration: underline;
+}
+.dialog-form input[type="text"] {
+  width: 100%;
+  min-height: var(--control-h);
+  padding: 4px 8px;
+  border: 1px solid var(--border-input);
+  border-radius: var(--r-sm);
+  background: var(--surface-2);
+  color: var(--text);
+  font: inherit;
+}
+.preset-list {
+  display: grid;
+  gap: 6px;
+  max-height: 50dvh;
+  margin: 0;
+  padding: 0;
+  overflow: auto;
+  list-style: none;
+}
+.preset-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  overflow-wrap: anywhere;
+}
+.preset-list:empty {
+  display: none;
 }
 .dialog-actions {
   display: flex;

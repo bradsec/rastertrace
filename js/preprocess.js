@@ -529,7 +529,8 @@ export function physicalWidthValue(value) {
 }
 
 const SETTING_CHECKS = {
-  profile: (v) => v === "" || v in EXPORT_PROFILES,
+  profile: (v) =>
+    v === "" || v in EXPORT_PROFILES || (typeof v === "string" && userPresetName(v) !== null),
   preset: (v) => typeof v === "string",
   autoDetect: (v) => typeof v === "boolean",
   colors: (v) => Number.isFinite(v) && v >= 2 && v <= 256,
@@ -579,6 +580,76 @@ export function sanitizeSettings(raw) {
     }
   }
   return out;
+}
+
+export const PRESET_NAME_MAX = 40;
+export const PRESETS_MAX = 50;
+/** Export profile select value for a saved user preset. */
+export const USER_PRESET_PREFIX = "user:";
+// A preset stands in for the profile select and turns color auto-detection
+// off when applied, so neither is stored inside it.
+const PRESET_SESSION_KEYS = ["profile", "autoDetect"];
+
+/** Trimmed preset name without control characters, or null when unusable. */
+export function presetName(value) {
+  if (typeof value !== "string") return null;
+  // oxlint-disable-next-line no-control-regex -- stripping them is the point
+  const name = value.replace(/[\u0000-\u001f\u007f]/g, "").trim();
+  return name && name.length <= PRESET_NAME_MAX ? name : null;
+}
+
+/** Preset name from a "user:<name>" profile value, or null. */
+export function userPresetName(profile) {
+  return profile.startsWith(USER_PRESET_PREFIX)
+    ? presetName(profile.slice(USER_PRESET_PREFIX.length))
+    : null;
+}
+
+const sameName = (a, b) => a.toLowerCase() === b.toLowerCase();
+
+/**
+ * Validate saved or imported presets: a bare array or an export file's
+ * { presets }. Names compare case-insensitively and the first one wins;
+ * each preset's settings pass sanitizeSettings. Capped at PRESETS_MAX.
+ * @returns {{ name: string, settings: object }[]}
+ */
+export function sanitizePresets(raw) {
+  const entries = Array.isArray(raw) ? raw : Array.isArray(raw?.presets) ? raw.presets : [];
+  const out = [];
+  for (const entry of entries) {
+    if (out.length >= PRESETS_MAX) break;
+    const name = presetName(entry?.name);
+    if (!name || out.some((p) => sameName(p.name, name))) continue;
+    const settings = sanitizeSettings(entry.settings);
+    for (const key of PRESET_SESSION_KEYS) delete settings[key];
+    out.push({ name, settings });
+  }
+  return out;
+}
+
+/**
+ * Add `incoming` presets to `list` without mutating it. A same-named
+ * preset is replaced in place (or skipped with replace: false); new names
+ * append while the list is under PRESETS_MAX.
+ */
+export function mergePresets(list, incoming, { replace = true } = {}) {
+  const presets = [...list];
+  const added = [];
+  const replaced = [];
+  const skipped = [];
+  for (const preset of incoming) {
+    const index = presets.findIndex((p) => sameName(p.name, preset.name));
+    if (index >= 0 && replace) {
+      presets[index] = preset;
+      replaced.push(preset.name);
+    } else if (index < 0 && presets.length < PRESETS_MAX) {
+      presets.push(preset);
+      added.push(preset.name);
+    } else {
+      skipped.push(preset.name);
+    }
+  }
+  return { presets, added, replaced, skipped };
 }
 
 /** Parse "#RRGGBB" or "RRGGBB" into [r, g, b], or null. */

@@ -192,6 +192,82 @@ test("replacing an inverted image restores the knockout color", async ({ page })
   await expect(page.locator("#knockout-color")).toHaveValue(CREAM);
 });
 
+test.describe("saved presets", () => {
+  const openSettingsPanels = (page) =>
+    page.evaluate(() => {
+      for (const details of document.querySelectorAll("aside details")) details.open = true;
+    });
+
+  async function savePreset(page, name) {
+    await page.locator("#save-preset").click();
+    await page.locator("#preset-name").fill(name);
+    await page.locator("#save-preset-dialog button[value='save']").click();
+    await expect(page.locator("#status")).toContainText(`Preset "${name}" saved.`);
+  }
+
+  test("a saved preset restores its settings and survives a reload", async ({ page }) => {
+    const flat = await makePng(page, "flat.png", 120, 120, CREAM, [["#3c281e", 30, 30, 60, 60]]);
+    await traced(page, () => page.locator("#file-input").setInputFiles(flat));
+    await openSettingsPanels(page);
+    await page.locator("#export-profile").selectOption("print");
+    await page.locator("#straighten").fill("3");
+    await page.locator("#export-size").selectOption("physical");
+    await page.locator("#physical-width").fill("250");
+    await savePreset(page, "Client logo");
+    await expect(page.locator("#export-profile")).toHaveValue("user:Client logo");
+
+    await page.locator("#reset-settings").click();
+    await expect(page.locator("#straighten")).not.toHaveValue("3");
+    await page.locator("#export-profile").selectOption("user:Client logo");
+    await expect(page.locator("#straighten")).toHaveValue("3");
+    await expect(page.locator("#physical-width")).toHaveValue("250");
+    await expect(page.locator("#auto-detect")).not.toBeChecked();
+
+    // Settings save on a short debounce; reload only once it has landed.
+    await expect
+      .poll(() => page.evaluate(() => localStorage.getItem("rastertrace-settings")))
+      .toContain('"profile":"user:Client logo"');
+    await page.reload();
+    await expect(page.locator("#export-profile")).toHaveValue("user:Client logo");
+    await expect(page.locator('#export-profile optgroup[label="My presets"] option')).toHaveText([
+      "Client logo",
+    ]);
+  });
+
+  test("presets export, delete, and import again", async ({ page }) => {
+    const flat = await makePng(page, "flat.png", 120, 120, CREAM, [["#3c281e", 30, 30, 60, 60]]);
+    await traced(page, () => page.locator("#file-input").setInputFiles(flat));
+    await savePreset(page, "Laser job");
+    page.on("dialog", (dialog) => dialog.accept());
+
+    await page.locator('[data-action="manage-presets"]').evaluate((el) => el.click());
+    await expect(page.locator("#preset-list li")).toHaveCount(1);
+    const [download] = await Promise.all([
+      page.waitForEvent("download"),
+      page.locator("#preset-export").click(),
+    ]);
+    const file = await download.path();
+
+    await page.getByRole("button", { name: "Delete preset Laser job" }).click();
+    await expect(page.locator("#preset-list li")).toHaveCount(0);
+    await expect(page.locator("#preset-empty")).toBeVisible();
+    await expect(page.locator("#export-profile")).toHaveValue("");
+
+    await page.locator("#preset-import-input").setInputFiles(file);
+    await expect(page.locator("#preset-message")).toHaveText("Imported 1 preset.");
+    await expect(page.locator("#preset-list li")).toHaveText(["Laser jobDelete"]);
+
+    await page.locator("#preset-import-input").setInputFiles({
+      name: "bad.json",
+      mimeType: "application/json",
+      buffer: Buffer.from("{not json"),
+    });
+    await expect(page.locator("#preset-message")).toHaveText(
+      "No rastertrace presets found in that file.",
+    );
+  });
+});
+
 test("a color preset sets Colors only", async ({ page }) => {
   const flat = await makePng(page, "flat.png", 120, 120, CREAM, [["#3c281e", 30, 30, 60, 60]]);
   await traced(page, () => page.locator("#file-input").setInputFiles(flat));

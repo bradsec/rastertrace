@@ -21,6 +21,9 @@ import {
   finalizeSvg,
   fitTraceScale,
   groupSvgFills,
+  mergePresets,
+  PRESETS_MAX,
+  sanitizePresets,
   nameColorGroups,
   isStaleModuleError,
   MAX_TRACE_SIDE,
@@ -1537,4 +1540,73 @@ test("isStaleModuleError matches module load failures only", () => {
   assert.equal(isStaleModuleError("Image is too large to trace at 4x"), false);
   assert.equal(isStaleModuleError("Conversion failed."), false);
   assert.equal(isStaleModuleError(""), false);
+});
+
+test("sanitizePresets keeps valid named presets and drops session-only keys", () => {
+  const out = sanitizePresets({
+    app: "rastertrace",
+    presets: [
+      {
+        name: "  Client logo ",
+        settings: { colors: 8, profile: "web", autoDetect: true, bogus: 1 },
+      },
+      { name: "client LOGO", settings: { colors: 4 } },
+      { name: "", settings: { colors: 4 } },
+      { name: "x".repeat(41), settings: {} },
+      { name: "bad\u0000name", settings: { colors: 999, speckle: 4 } },
+      null,
+      "nope",
+    ],
+  });
+  assert.deepEqual(out, [
+    { name: "Client logo", settings: { colors: 8 } },
+    { name: "badname", settings: { speckle: 4 } },
+  ]);
+  assert.deepEqual(sanitizePresets("not json"), []);
+  assert.deepEqual(sanitizePresets([{ name: "Bare array", settings: { minify: true } }]), [
+    { name: "Bare array", settings: { minify: true } },
+  ]);
+});
+
+test("sanitizePresets caps the list", () => {
+  const many = Array.from({ length: PRESETS_MAX + 5 }, (_, i) => ({ name: `P${i}`, settings: {} }));
+  assert.equal(sanitizePresets(many).length, PRESETS_MAX);
+});
+
+test("mergePresets replaces same names in place, appends new ones, and respects the cap", () => {
+  const list = [
+    { name: "Logo", settings: { colors: 8 } },
+    { name: "Laser", settings: { stencil: true } },
+  ];
+  const merged = mergePresets(list, [
+    { name: "logo", settings: { colors: 4 } },
+    { name: "Web", settings: { minify: true } },
+  ]);
+  assert.deepEqual(merged.presets, [
+    { name: "logo", settings: { colors: 4 } },
+    { name: "Laser", settings: { stencil: true } },
+    { name: "Web", settings: { minify: true } },
+  ]);
+  assert.deepEqual(merged.replaced, ["logo"]);
+  assert.deepEqual(merged.added, ["Web"]);
+  assert.deepEqual(merged.skipped, []);
+  // The input list is not mutated.
+  assert.equal(list[0].settings.colors, 8);
+
+  const kept = mergePresets(list, [{ name: "LOGO", settings: {} }], { replace: false });
+  assert.deepEqual(kept.presets, list);
+  assert.deepEqual(kept.skipped, ["LOGO"]);
+
+  const full = Array.from({ length: PRESETS_MAX }, (_, i) => ({ name: `P${i}`, settings: {} }));
+  const over = mergePresets(full, [{ name: "One more", settings: {} }]);
+  assert.equal(over.presets.length, PRESETS_MAX);
+  assert.deepEqual(over.skipped, ["One more"]);
+});
+
+test("sanitizeSettings accepts a saved user preset as the active profile", () => {
+  assert.deepEqual(sanitizeSettings({ profile: "user:Client logo" }), {
+    profile: "user:Client logo",
+  });
+  assert.deepEqual(sanitizeSettings({ profile: "user:" }), {});
+  assert.deepEqual(sanitizeSettings({ profile: "nonsense" }), {});
 });

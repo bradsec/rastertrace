@@ -35,6 +35,7 @@ Convert raster images to clean, scalable SVG vectors entirely in your browser. [
 - Live re-trace on setting changes, Save As dialogs for SVG, PNG, PDF, and DXF, clipboard copy, and PNG export at the trace resolution. Exports default to `<source>_rt.<ext>` so saving never overwrites the original image
 - Vector PDF export (true curves, physical page size when set) for print shops and design handoff
 - DXF export (R12) for CAD, CNC, and cutters: one closed polyline per shape, one layer per color, mm units when a physical size is set
+- Saved presets: Save preset stores every trace and export setting under your own name (palette edits and cleanup stay with the image). Presets appear under My presets in the Export profile list, and File > Manage presets deletes them or exports and imports them as a `.json` file for another device or a teammate. Up to 50 presets, kept in this browser
 - Settings persist across visits and image replacements: with color auto-detection off, every setting carries over unchanged; one-click Reset settings
 - Works offline after the first visit (service worker, everything stays local)
 - Zoomable preview: pinch, scroll wheel, buttons, Fit (Ctrl/Cmd+0), or Actual size (Ctrl/Cmd+1); drag or use the arrow keys (Shift for larger steps) to pan. Hold Space and drag to pan with any cleanup tool active, like Illustrator's Hand tool. A second finger during an eraser, brush, or selection gesture switches to pinch-zoom and undoes the partial stroke

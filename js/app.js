@@ -19,7 +19,12 @@ import {
   MAX_TRACE_SIDE,
   MAX_TRACE_SIDE_ULTRA,
   parseHexColor,
+  presetName,
+  PRESETS_MAX,
+  sanitizePresets,
   toHexColor,
+  USER_PRESET_PREFIX,
+  userPresetName,
 } from "./preprocess.js?v=57";
 import { $, els, hooks, preferences, showError, state } from "./context.js?v=26";
 import { refreshExport, setResultActions } from "./exporters.js?v=33";
@@ -35,18 +40,25 @@ import {
   applyExportProfile,
   applyMeasurementUnit,
   applyPreset,
+  applyUserPreset,
   clearProfile,
   currentSettings,
+  deleteUserPreset,
+  findUserPreset,
+  importUserPresets,
+  loadUserPresets,
   readPreferences,
   resetSettings,
   restoreSettings,
   savePreferences,
   saveSettings,
+  saveUserPreset,
   updateExportFields,
   updateOutputs,
   updateStencilFields,
   updateTraceFields,
   updateTransparencyFields,
+  userPresets,
 } from "./settings.js?v=40";
 import { actualSizeView, resetView } from "./view.js?v=41";
 
@@ -768,10 +780,134 @@ for (const input of [els.pathPrecision, els.lengthThreshold, els.spliceThreshold
 els.exportProfile.addEventListener("change", async () => {
   const name = els.exportProfile.value;
   if (!name) return;
-  applyExportProfile(name);
+  if (name.startsWith(USER_PRESET_PREFIX)) applyUserPreset(name);
+  else applyExportProfile(name);
   if (els.upscale.value === "ultra") await ensureUltraBitmap();
   refreshExport(); // minify may have changed; applies without waiting
   scheduleRetrace();
+});
+
+// -- Saved presets -------------------------------------------------------
+
+const PRESET_STORAGE_ERROR = "Presets could not be saved: browser storage is full or blocked.";
+
+els.savePreset.addEventListener("click", () => {
+  els.savePresetDialog.returnValue = "";
+  els.presetName.value = userPresetName(els.exportProfile.value) ?? "";
+  els.savePresetDialog.showModal();
+  els.presetName.select();
+});
+els.savePresetDialog.addEventListener("close", () => {
+  if (els.savePresetDialog.returnValue !== "save") return;
+  const name = presetName(els.presetName.value);
+  if (!name) {
+    els.status.textContent = "Preset not saved: enter a name.";
+    return;
+  }
+  const existing = findUserPreset(name);
+  if (existing && !window.confirm(`Replace the preset "${existing.name}"?`)) return;
+  if (!existing && userPresets.length >= PRESETS_MAX) {
+    showError(`You can save up to ${PRESETS_MAX} presets. Delete one in File > Manage presets.`);
+    return;
+  }
+  if (!saveUserPreset(name)) {
+    showError(PRESET_STORAGE_ERROR);
+    return;
+  }
+  saveSettings();
+  els.status.textContent = `Preset "${name}" saved.`;
+});
+
+function renderPresetList() {
+  els.presetList.replaceChildren(
+    ...userPresets.map(({ name }) => {
+      const item = document.createElement("li");
+      const label = document.createElement("span");
+      label.textContent = name;
+      const remove = document.createElement("button");
+      remove.type = "button";
+      remove.className = "button button-secondary";
+      remove.textContent = "Delete";
+      remove.setAttribute("aria-label", `Delete preset ${name}`);
+      remove.addEventListener("click", () => {
+        if (!window.confirm(`Delete the preset "${name}"?`)) return;
+        if (!deleteUserPreset(name)) {
+          els.presetMessage.textContent = PRESET_STORAGE_ERROR;
+          return;
+        }
+        saveSettings();
+        renderPresetList();
+        els.presetMessage.textContent = `Deleted "${name}".`;
+        // The focused row is gone; keep focus inside the dialog.
+        els.presetImport.focus();
+      });
+      item.append(label, remove);
+      return item;
+    }),
+  );
+  els.presetEmpty.hidden = userPresets.length > 0;
+  els.presetExport.disabled = userPresets.length === 0;
+}
+
+document.querySelector('[data-action="manage-presets"]').addEventListener("click", () => {
+  els.presetMessage.textContent = "";
+  renderPresetList();
+  els.presetsDialog.showModal();
+});
+
+els.presetExport.addEventListener("click", () => {
+  const file = JSON.stringify({ app: "rastertrace", version: 1, presets: userPresets }, null, 2);
+  const url = URL.createObjectURL(new Blob([file], { type: "application/json" }));
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = "rastertrace-presets.json";
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  const count = userPresets.length;
+  els.presetMessage.textContent = `Exported ${count} preset${count === 1 ? "" : "s"}.`;
+});
+
+// Preset files are small JSON; anything far larger is not one.
+const PRESET_FILE_MAX_BYTES = 1_000_000;
+
+els.presetImport.addEventListener("click", () => els.presetImportInput.click());
+els.presetImportInput.addEventListener("change", async () => {
+  const file = els.presetImportInput.files?.[0];
+  els.presetImportInput.value = "";
+  if (!file) return;
+  let incoming = [];
+  try {
+    if (file.size <= PRESET_FILE_MAX_BYTES)
+      incoming = sanitizePresets(JSON.parse(await file.text()));
+  } catch {
+    // Not JSON: reported below like a file with no presets.
+  }
+  if (!incoming.length) {
+    els.presetMessage.textContent = "No rastertrace presets found in that file.";
+    return;
+  }
+  const conflicts = incoming.filter((p) => findUserPreset(p.name));
+  const replace =
+    conflicts.length > 0 &&
+    window.confirm(
+      conflicts.length === 1
+        ? `Replace the existing preset "${conflicts[0].name}"?`
+        : `Replace ${conflicts.length} existing presets that have the same names?`,
+    );
+  const result = importUserPresets(incoming, replace);
+  if (!result) {
+    els.presetMessage.textContent = PRESET_STORAGE_ERROR;
+    return;
+  }
+  saveSettings();
+  renderPresetList();
+  const imported = result.added.length + result.replaced.length;
+  const skipped = result.skipped.length;
+  els.presetMessage.textContent =
+    `Imported ${imported} preset${imported === 1 ? "" : "s"}.` +
+    (skipped
+      ? ` Skipped ${skipped}: same name kept or the ${PRESETS_MAX}-preset limit reached.`
+      : "");
 });
 
 // Export options are post-processing only: no re-trace, instant apply.
@@ -836,6 +972,7 @@ els.resetSettingsBtn.addEventListener("click", () => {
   }
 }
 
+loadUserPresets(); // before restore: a saved session may have a preset selected
 restoreSettings();
 Object.assign(preferences, readPreferences(els.physicalUnit.value));
 applyMeasurementUnit(preferences.measurementUnit);

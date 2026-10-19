@@ -5,9 +5,13 @@ import {
   ENCLOSED_NO_LIMIT,
   EXPORT_PROFILES,
   parseHexColor,
+  mergePresets,
   PRESETS,
+  sanitizePresets,
   sanitizeSettings,
   toGrayscaleColor,
+  USER_PRESET_PREFIX,
+  userPresetName,
 } from "./preprocess.js?v=57";
 import { els, preferences } from "./context.js?v=26";
 import { refreshExport, updatePhysicalHeightOut } from "./exporters.js?v=33";
@@ -262,25 +266,17 @@ export function saveSettings() {
   }, 250);
 }
 
-export function restoreSettings() {
-  let saved;
-  try {
-    saved = sanitizeSettings(JSON.parse(localStorage.getItem(SETTINGS_KEY)));
-  } catch {
-    return;
-  }
-  const defaults = JSON.stringify(snapshotSettings());
+/**
+ * Set every control present in a sanitized snapshot; absent keys keep
+ * their current value. Profile and auto-detect are the caller's call.
+ */
+function applySnapshot(saved) {
   const set = (el, key) => {
     if (saved[key] !== undefined) el.value = String(saved[key]);
   };
   const check = (el, key) => {
     if (saved[key] !== undefined) el.checked = saved[key];
   };
-  set(els.exportProfile, "profile");
-  // Saves from before the checkbox existed: a chosen profile or preset
-  // means the user picked color settings, so keep them across images.
-  if (saved.autoDetect === undefined && (saved.profile || saved.preset)) saved.autoDetect = false;
-  check(els.autoDetect, "autoDetect");
   set(els.preset, "preset");
   set(els.colors, "colors");
   set(els.speckle, "speckle");
@@ -323,6 +319,22 @@ export function restoreSettings() {
   updateStencilFields();
   updateTraceFields();
   updateOutputs();
+}
+
+export function restoreSettings() {
+  let saved;
+  try {
+    saved = sanitizeSettings(JSON.parse(localStorage.getItem(SETTINGS_KEY)));
+  } catch {
+    return;
+  }
+  const defaults = JSON.stringify(snapshotSettings());
+  if (saved.profile !== undefined) els.exportProfile.value = saved.profile;
+  // Saves from before the checkbox existed: a chosen profile or preset
+  // means the user picked color settings, so keep them across images.
+  if (saved.autoDetect === undefined && (saved.profile || saved.preset)) saved.autoDetect = false;
+  if (saved.autoDetect !== undefined) els.autoDetect.checked = saved.autoDetect;
+  applySnapshot(saved);
   // Tell the user their previous session's settings are in effect, so a
   // surprising result (e.g. an old stencil threshold) is explainable.
   els.restoredNote.hidden = JSON.stringify(snapshotSettings()) === defaults;
@@ -403,4 +415,94 @@ export function resetSettings() {
   updateStencilFields();
   updateTraceFields();
   updateOutputs();
+}
+
+// -- Saved user presets: named snapshots listed under the profiles ------
+
+const PRESETS_KEY = "rastertrace-presets";
+
+/** @type {{ name: string, settings: object }[]} */
+export let userPresets = [];
+
+export function loadUserPresets() {
+  try {
+    userPresets = sanitizePresets(JSON.parse(localStorage.getItem(PRESETS_KEY) || "[]"));
+  } catch {
+    userPresets = [];
+  }
+  renderPresetOptions();
+}
+
+/** Store `presets`; false when browser storage is full or blocked. */
+function storeUserPresets(presets) {
+  try {
+    localStorage.setItem(PRESETS_KEY, JSON.stringify(presets));
+  } catch {
+    return false;
+  }
+  userPresets = presets;
+  renderPresetOptions();
+  return true;
+}
+
+/** List the presets under "My presets" in the profile select, keeping its value. */
+function renderPresetOptions() {
+  const value = els.exportProfile.value;
+  els.exportProfile.querySelector("optgroup[data-user-presets]")?.remove();
+  if (userPresets.length) {
+    const group = document.createElement("optgroup");
+    group.label = "My presets";
+    group.dataset.userPresets = "";
+    for (const { name } of userPresets) {
+      group.append(new Option(name, USER_PRESET_PREFIX + name));
+    }
+    els.exportProfile.append(group);
+  }
+  els.exportProfile.value = value;
+  // The active preset was deleted: the controls are now just custom.
+  if (els.exportProfile.value !== value) clearProfile();
+}
+
+/** Existing preset with this name (case-insensitive), or undefined. */
+export function findUserPreset(name) {
+  return userPresets.find((p) => p.name.toLowerCase() === name.toLowerCase());
+}
+
+/** Save the current controls as `name`, replacing a same-named preset. */
+export function saveUserPreset(name) {
+  const settings = sanitizePresets([{ name, settings: snapshotSettings() }])[0]?.settings;
+  if (!settings) return false;
+  const { presets } = mergePresets(userPresets, [{ name, settings }]);
+  if (!storeUserPresets(presets)) return false;
+  els.exportProfile.value = USER_PRESET_PREFIX + (findUserPreset(name)?.name ?? name);
+  updateStencilFields();
+  return true;
+}
+
+export function deleteUserPreset(name) {
+  return storeUserPresets(userPresets.filter((p) => p.name !== name));
+}
+
+/**
+ * Merge imported presets (already sanitized). Same names are replaced
+ * only with `replace`. Returns mergePresets' report, or null when the
+ * result could not be stored.
+ */
+export function importUserPresets(incoming, replace) {
+  const result = mergePresets(userPresets, incoming, { replace });
+  return storeUserPresets(result.presets) ? result : null;
+}
+
+/** Apply a saved preset like a profile: defaults first, then its values. */
+export function applyUserPreset(profileValue) {
+  const name = userPresetName(profileValue);
+  const preset = name && findUserPreset(name);
+  if (!preset) return;
+  resetSettings();
+  els.restoredNote.hidden = true;
+  applySnapshot(preset.settings);
+  // The preset chose the color settings; detection must not replace them.
+  els.autoDetect.checked = false;
+  els.exportProfile.value = profileValue;
+  updateStencilFields();
 }

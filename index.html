@@ -84,6 +84,7 @@
             <hr />
             <button type="button" data-action="preferences">Preferences</button>
             <button type="button" data-action="reset-settings">Reset settings</button>
+            <button type="button" data-action="manage-presets">Manage presets</button>
           </div>
         </details>
         <details class="app-menu">
@@ -625,6 +626,14 @@
               <option value="monoWhite">Mono stencil (white)</option>
               <option value="laser">Laser stencil (B/W)</option>
             </select>
+            <button
+              type="button"
+              id="save-preset"
+              class="button button-secondary"
+              title="Save every current setting under a name of your own"
+            >
+              Save preset
+            </button>
           </div>
 
           <!-- The stencil threshold field moves here while the Laser
@@ -1588,6 +1597,52 @@
         <p class="preference-help">Changing units preserves the current physical export size.</p>
         <div class="dialog-actions">
           <button value="cancel">Cancel</button><button value="apply">Save preferences</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="save-preset-dialog" aria-labelledby="save-preset-title">
+      <form method="dialog" class="dialog-form">
+        <div class="dialog-heading">
+          <h2 id="save-preset-title">Save preset</h2>
+          <p>
+            Saves every trace and export setting. Palette edits and cleanup stay with the image.
+          </p>
+        </div>
+        <label
+          >Preset name
+          <input
+            id="preset-name"
+            name="presetName"
+            type="text"
+            maxlength="40"
+            required
+            autocomplete="off"
+          />
+        </label>
+        <div class="dialog-actions">
+          <button value="cancel" formnovalidate>Cancel</button
+          ><button value="save">Save preset</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="presets-dialog" aria-labelledby="presets-title">
+      <form method="dialog" class="dialog-form">
+        <div class="dialog-heading">
+          <h2 id="presets-title">Manage presets</h2>
+          <p>
+            Presets are stored in this browser. Export them to use on another device or share them.
+          </p>
+        </div>
+        <ul id="preset-list" class="preset-list"></ul>
+        <p id="preset-empty" class="preference-help">No saved presets yet.</p>
+        <p id="preset-message" class="preference-help" role="status"></p>
+        <input id="preset-import-input" type="file" accept=".json,application/json" hidden />
+        <div class="dialog-actions">
+          <button type="button" id="preset-import">Import</button>
+          <button type="button" id="preset-export">Export</button>
+          <button value="close">Done</button>
         </div>
       </form>
     </dialog>
