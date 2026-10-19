@@ -1,4 +1,4 @@
-// RasterTrace service worker: the app is fully static and client-side,
+// rastertrace service worker: the app is fully static and client-side,
 // so offline is just caching. Assets are immutable (cache-busted with
 // ?v=NN), navigations and package.json are network-first so updates
 // still land on the next online load.

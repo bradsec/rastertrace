@@ -2,7 +2,7 @@
 name = "rastertrace-wasm"
 version = "1.0.0"
 edition = "2021"
-description = "WASM bindings for the RasterTrace web app"
+description = "WASM bindings for the rastertrace web app"
 license = "MIT"
 
 [lib]

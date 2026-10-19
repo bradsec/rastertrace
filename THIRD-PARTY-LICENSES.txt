@@ -1,4 +1,4 @@
-RasterTrace bundles the following third-party open-source libraries in its
+rastertrace bundles the following third-party open-source libraries in its
 WebAssembly tracing module and interface. Their license terms are reproduced
 below.
 

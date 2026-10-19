@@ -10,7 +10,7 @@ import {
   rotateBitmap,
   sniffImageSize,
   Tracer,
-} from "./pipeline.js?v=58";
+} from "./pipeline.js?v=59";
 import {
   analyzeFlatness,
   detectedColorSettings,
@@ -28,17 +28,17 @@ import {
   toHexColor,
   USER_PRESET_PREFIX,
   userPresetName,
-} from "./preprocess.js?v=58";
-import { $, els, hooks, preferences, showError, state } from "./context.js?v=28";
-import { refreshExport, setResultActions } from "./exporters.js?v=36";
+} from "./preprocess.js?v=59";
+import { $, els, hooks, preferences, showError, state } from "./context.js?v=29";
+import { refreshExport, setResultActions } from "./exporters.js?v=37";
 import {
   clearSelection,
   setBlobFill,
   setEraser,
   setSelectionTool,
   setView,
-} from "./cleanup-tools.js?v=44";
-import { afterTrace, resetPalette } from "./palette-ui.js?v=28";
+} from "./cleanup-tools.js?v=45";
+import { afterTrace, resetPalette } from "./palette-ui.js?v=29";
 import {
   applyExportProfile,
   applyMeasurementUnit,
@@ -68,12 +68,12 @@ import {
   updateTraceFields,
   updateTransparencyFields,
   userPresets,
-} from "./settings.js?v=44";
-import { actualSizeView, resetView } from "./view.js?v=44";
+} from "./settings.js?v=45";
+import { actualSizeView, resetView } from "./view.js?v=45";
 
 const EMPTY_IMAGE_SRC = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==";
 
-const tracer = new Tracer(new URL("./worker.js?v=62", import.meta.url));
+const tracer = new Tracer(new URL("./worker.js?v=63", import.meta.url));
 
 let elapsedTimer = 0;
 
@@ -178,7 +178,7 @@ hooks.scheduleRetrace = scheduleRetrace;
  * A worker that cannot even load its modules means the service worker
  * cached mismatched copies: a deploy caught mid-propagation can pin an
  * old file body under a new ?v= URL, and cache-first then serves it
- * forever. Purge RasterTrace caches and its service worker, then reload once
+ * forever. Purge rastertrace caches and its service worker, then reload once
  * (sessionStorage guards against a reload loop) to refetch clean files.
  */
 async function recoverFromStaleCache(message) {

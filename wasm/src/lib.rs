@@ -1,6 +1,6 @@
-//! WASM bindings around vtracer for the RasterTrace web app.
+//! WASM bindings around vtracer for the rastertrace web app.
 //!
-//! Mirrors the vtracer invocation used by RasterTrace:
+//! Mirrors the vtracer invocation used by rastertrace:
 //! color mode, stacked hierarchy, and the same tunable parameters.
 
 use vtracer::{Clustering, ColorImage, Config, FitMode, Hierarchical};
@@ -85,7 +85,7 @@ pub fn trace(
         max_iterations,
         splice_threshold,
         path_precision: Some(path_precision),
-        // RasterTrace groups fills and optionally minifies after line
+        // rastertrace groups fills and optionally minifies after line
         // straightening. Keep absolute M/L/C commands at this boundary so
         // those tools, the eraser, and the PDF/DXF exporters share one shape.
         optimize: 0,
