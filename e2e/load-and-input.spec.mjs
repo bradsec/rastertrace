@@ -145,3 +145,25 @@ test.describe("touch devices", () => {
     await chooser;
   });
 });
+
+test.describe("Illustrator habits", () => {
+  test.use({ viewport: { width: 1280, height: 800 } });
+
+  const resultSvg = (page) =>
+    page
+      .locator("#result-view")
+      .evaluate(async (img) => (await fetch(/** @type {HTMLImageElement} */ (img).src)).text());
+
+  test("the SVG names one group per color in Mosaic layering", async ({ page }) => {
+    await traced(page, () => page.locator("#file-input").setInputFiles(IMAGE));
+    const stacked = [...(await resultSvg(page)).matchAll(/\sid="(color-[^"]*)"/g)].map((m) => m[1]);
+    expect(stacked.length).toBeGreaterThan(0);
+    expect(new Set(stacked).size).toBe(stacked.length);
+
+    await traced(page, () => page.locator("#hierarchical").selectOption("cutout"));
+    const mosaic = [...(await resultSvg(page)).matchAll(/\sid="(color-[^"]*)"/g)].map((m) => m[1]);
+    expect(mosaic.length).toBeGreaterThan(0);
+    for (const id of mosaic) expect(id).toMatch(/^color-[0-9a-f]{6}$/);
+    expect(new Set(mosaic).size).toBe(mosaic.length);
+  });
+});

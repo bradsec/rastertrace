@@ -1,7 +1,7 @@
 // Shared DOM references and mutable app state, imported by every UI
 // module. Keeps no logic beyond tiny helpers so it can never participate
 // in an import cycle.
-import { MAX_TRACE_SIDE } from "./preprocess.js?v=56";
+import { MAX_TRACE_SIDE } from "./preprocess.js?v=57";
 
 /**
  * @template {Element} [T=HTMLElement]
@@ -179,6 +179,7 @@ export const state = {
   fileName: "image",
   sourceUrl: null,
   svgRaw: null, // worker output before export post-processing
+  svgMosaic: false, // svgRaw traced in cutout layering: shapes never overlap
   svg: null,
   downloadUrl: null,
   debounce: 0,

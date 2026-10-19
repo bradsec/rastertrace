@@ -20,9 +20,9 @@ import {
   MAX_TRACE_SIDE_ULTRA,
   parseHexColor,
   toHexColor,
-} from "./preprocess.js?v=56";
-import { $, els, hooks, preferences, showError, state } from "./context.js?v=25";
-import { refreshExport, setResultActions } from "./exporters.js?v=32";
+} from "./preprocess.js?v=57";
+import { $, els, hooks, preferences, showError, state } from "./context.js?v=26";
+import { refreshExport, setResultActions } from "./exporters.js?v=33";
 import {
   clearSelection,
   setBlobFill,
@@ -47,12 +47,12 @@ import {
   updateStencilFields,
   updateTraceFields,
   updateTransparencyFields,
-} from "./settings.js?v=39";
-import { actualSizeView, resetView } from "./view.js?v=40";
+} from "./settings.js?v=40";
+import { actualSizeView, resetView } from "./view.js?v=41";
 
 const EMPTY_IMAGE_SRC = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==";
 
-const tracer = new Tracer(new URL("./worker.js?v=59", import.meta.url));
+const tracer = new Tracer(new URL("./worker.js?v=60", import.meta.url));
 
 let elapsedTimer = 0;
 
@@ -110,6 +110,7 @@ async function retrace() {
     if (!result) return; // superseded by a newer request
     state.processedRaster = result.processed ?? null;
     state.svgRaw = result.svg;
+    state.svgMosaic = settings.hierarchical === "cutout";
     const paletteNote = afterTrace();
     const { paths } = refreshExport();
     els.statTime.textContent = `${result.ms.toLocaleString()} ms`;

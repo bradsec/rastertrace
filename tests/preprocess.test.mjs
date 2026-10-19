@@ -21,6 +21,7 @@ import {
   finalizeSvg,
   fitTraceScale,
   groupSvgFills,
+  nameColorGroups,
   isStaleModuleError,
   MAX_TRACE_SIDE,
   knockOutColor,
@@ -519,6 +520,66 @@ test("groupSvgFills leaves single paths and pathless fills alone", () => {
   assert.equal(groupSvgFills(single), single);
   const noFill = '<svg>\n<path d="M0 0"/>\n<path d="M1 1"/>\n</svg>';
   assert.equal(groupSvgFills(noFill), noFill);
+});
+
+test("nameColorGroups names groups by color and numbers repeats in stacked order", () => {
+  const svg = [
+    "<svg>",
+    '<g fill="#FFFFFF">\n<path d="M0 0"/>\n<path d="M1 1"/>\n</g>',
+    '<path d="M2 2" fill="#000000"/>',
+    '<g fill="#FFFFFF">\n<path d="M3 3"/>\n<path d="M4 4"/>\n</g>',
+    "</svg>",
+  ].join("\n");
+  const out = nameColorGroups(svg);
+  const order = [...out.matchAll(/d="(M\d \d)"/g)].map((m) => m[1]);
+  assert.deepEqual(order, ["M0 0", "M1 1", "M2 2", "M3 3", "M4 4"]);
+  const ids = [...out.matchAll(/\sid="([^"]*)"/g)].map((m) => m[1]);
+  assert.deepEqual(ids, ["color-ffffff", "color-000000", "color-ffffff-2"]);
+  assert.match(out, /<path id="color-000000" d="M2 2" fill="#000000"\/>/);
+  assert.equal(countPaths(out), 5);
+});
+
+test("nameColorGroups merges adjacent runs that palette edits made identical", () => {
+  const svg = [
+    "<svg>",
+    '<g fill="#111111">\n<path d="M0 0"/>\n<path d="M1 1"/>\n</g>',
+    '<path d="M2 2" fill="#111111"/>',
+    "</svg>",
+  ].join("\n");
+  const out = nameColorGroups(svg);
+  assert.equal(out.match(/<g\b/g)?.length, 1);
+  assert.match(out, /<g fill="#111111" id="color-111111">/);
+  assert.equal(countPaths(out), 3);
+});
+
+test("nameColorGroups gathers each color into one group in mosaic output", () => {
+  const svg = [
+    '<svg><rect width="4" height="4" fill="#000000"/>',
+    '<path d="M0 0" fill="#AA0000"/>',
+    '<path d="M1 1" fill="#00BB00"/>',
+    '<path d="M2 2" fill="#AA0000"/>',
+    '<path d="M3 3" fill="#00BB00"/>',
+    "</svg>",
+  ].join("\n");
+  const out = nameColorGroups(svg, { mosaic: true });
+  const order = [...out.matchAll(/d="(M\d \d)"/g)].map((m) => m[1]);
+  assert.deepEqual(order, ["M0 0", "M2 2", "M1 1", "M3 3"]);
+  const ids = [...out.matchAll(/\sid="([^"]*)"/g)].map((m) => m[1]);
+  assert.deepEqual(ids, ["color-aa0000", "color-00bb00"]);
+  // The stencil backing rect is paint, not a color group.
+  assert.match(out, /<rect width="4" height="4" fill="#000000"\/>/);
+});
+
+test("nameColorGroups leaves hidden and non-hex fills unnamed", () => {
+  const svg = [
+    "<svg>",
+    '<g fill="none">\n<path d="M0 0"/>\n<path d="M1 1"/>\n</g>',
+    '<path d="M2 2" fill="url(#p)"/>',
+    "</svg>",
+  ].join("\n");
+  const out = nameColorGroups(svg);
+  assert.doesNotMatch(out, /\sid=/);
+  assert.equal(countPaths(out), 3);
 });
 
 test("finalizeSvg groups same-fill paths in vtracer output", () => {

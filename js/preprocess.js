@@ -1891,6 +1891,63 @@ export function groupSvgFills(svgText) {
   return out + svgText.slice(cursor);
 }
 
+/**
+ * Regroup same-fill paths after palette edits and name each group
+ * id="color-rrggbb" so design tools list layers by color. Stacked output
+ * keeps document order (z-order), so a color drawn in several runs gets
+ * numbered ids (color-ffffff-2). Mosaic (cutout) shapes never overlap,
+ * which makes reordering safe: each color collects into one group, in
+ * order of first appearance. Hidden ("none") and non-hex fills stay
+ * unnamed.
+ * @param {string} svgText
+ * @param {{ mosaic?: boolean }} [options]
+ */
+export function nameColorGroups(svgText, { mosaic = false } = {}) {
+  // finalizeSvg groups never nest, so each <g fill> closes at the next </g>.
+  let out = svgText.replace(/<g fill="([^"]*)">([\s\S]*?)<\/g>/g, (_, fill, inner) =>
+    inner.replace(/<path\b/g, `<path fill="${fill}"`).trim(),
+  );
+  if (mosaic) {
+    const paths = [...out.matchAll(/<path\b[^>]*\/>/g)];
+    const contiguous = paths.every(
+      (m, i) =>
+        i === 0 || /^\s*$/.test(out.slice(paths[i - 1].index + paths[i - 1][0].length, m.index)),
+    );
+    if (paths.length > 1 && contiguous) {
+      /** @type {Map<string, string[]>} */
+      const byFill = new Map();
+      for (const [path] of paths) {
+        const fill = path.match(/\sfill="([^"]*)"/)?.[1] ?? "";
+        byFill.set(fill, [...(byFill.get(fill) ?? []), path]);
+      }
+      const first = paths[0];
+      const last = paths.at(-1);
+      out =
+        out.slice(0, first.index) +
+        [...byFill.values()].flat().join("\n") +
+        out.slice(last.index + last[0].length);
+    }
+  }
+  /** @type {Map<string, number>} */
+  const seen = new Map();
+  const idFor = (/** @type {string} */ fill) => {
+    const hex = fill.match(/^#([0-9a-f]{6})$/i)?.[1]?.toLowerCase();
+    if (!hex) return null;
+    const n = (seen.get(hex) ?? 0) + 1;
+    seen.set(hex, n);
+    return n === 1 ? `color-${hex}` : `color-${hex}-${n}`;
+  };
+  // After grouping, only group tags and lone paths carry a fill.
+  return groupSvgFills(out).replace(
+    /<g fill="([^"]*)">|<path\b(?=[^>]*\sfill="([^"]*)")/g,
+    (tag, groupFill, pathFill) => {
+      const id = idFor(groupFill ?? pathFill);
+      if (!id) return tag;
+      return groupFill === undefined ? `<path id="${id}"` : `<g fill="${groupFill}" id="${id}">`;
+    },
+  );
+}
+
 /** Perpendicular distance from point p to the line through a and b. */
 function distanceToChord(p, a, b) {
   const vx = b.x - a.x;

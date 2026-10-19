@@ -2,10 +2,15 @@
 // the traced SVG, drives the result stats and action buttons, and saves
 // SVG/PNG/PDF/DXF through the File System Access API or a download.
 import { applyCleanupActions } from "./eraser.js?v=11";
-import { applyExportOptions, countPaths, physicalWidthValue } from "./preprocess.js?v=56";
+import {
+  applyExportOptions,
+  countPaths,
+  nameColorGroups,
+  physicalWidthValue,
+} from "./preprocess.js?v=57";
 import { recolorSvg } from "./palette.js?v=9";
 import { parseSvgPaths, toDxf, toPdf } from "./vectorexport.js?v=43";
-import { els, preferences, showError, state } from "./context.js?v=25";
+import { els, preferences, showError, state } from "./context.js?v=26";
 
 const DISPLAY_UNITS_PER_INCH = { px: 96, in: 1, cm: 2.54, mm: 25.4 };
 
@@ -112,9 +117,14 @@ export function paletteSvg() {
 function exportedSvg() {
   const options = exportOptions();
   const source = paletteSvg();
-  const key = JSON.stringify(options);
+  const mosaic = state.svgMosaic;
+  const key = JSON.stringify([options, mosaic]);
   if (exportCache.raw !== source || exportCache.key !== key) {
-    exportCache = { raw: source, key, svg: applyExportOptions(source, options) };
+    exportCache = {
+      raw: source,
+      key,
+      svg: applyExportOptions(nameColorGroups(source, { mosaic }), options),
+    };
   }
   return exportCache.svg;
 }

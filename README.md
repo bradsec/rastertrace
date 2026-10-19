@@ -30,7 +30,7 @@ Convert raster images to clean, scalable SVG vectors entirely in your browser. [
 - EXIF orientation respected: rotated phone photos load upright without distortion
 - Invert (negative) toggle: trace the opposite regions, useful for stencils; composes with rotation and applies to the whole pipeline
 - Paste an image from the clipboard (Ctrl/Cmd+V) to load it, alongside drag-and-drop and the file picker
-- Same-fill paths grouped under shared `<g fill>` elements for smaller SVG files
+- Same-fill paths grouped under shared `<g fill>` elements for smaller SVG files, each named `id="color-rrggbb"` so Illustrator and other editors show a named group per color in the Layers panel. Mosaic layering collects each color into one group; Stacked layering keeps drawing order, so a color drawn in several runs gets numbered names (`color-ffffff-2`)
 - Upscale "Auto (fit 2048)" traces small images at the full 2048 px budget for maximum curve quality
 - Live re-trace on setting changes, Save As dialogs for SVG, PNG, PDF, and DXF, clipboard copy, and PNG export at the trace resolution. Exports default to `<source>_rt.<ext>` so saving never overwrites the original image
 - Vector PDF export (true curves, physical page size when set) for print shops and design handoff

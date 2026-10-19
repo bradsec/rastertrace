@@ -14,7 +14,7 @@ import {
   straightenPaths,
   thresholdImage,
   toGrayscale,
-} from "./preprocess.js?v=56";
+} from "./preprocess.js?v=57";
 import { rasterPalette, snapFills } from "./palette.js?v=9";
 
 // Explicit versioned URL: the glue's own wasm fetch drops the ?v= query,
