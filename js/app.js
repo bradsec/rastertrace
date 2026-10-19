@@ -10,7 +10,7 @@ import {
   rotateBitmap,
   sniffImageSize,
   Tracer,
-} from "./pipeline.js?v=57";
+} from "./pipeline.js?v=58";
 import {
   analyzeFlatness,
   detectedColorSettings,
@@ -28,21 +28,22 @@ import {
   toHexColor,
   USER_PRESET_PREFIX,
   userPresetName,
-} from "./preprocess.js?v=57";
-import { $, els, hooks, preferences, showError, state } from "./context.js?v=26";
-import { refreshExport, setResultActions } from "./exporters.js?v=34";
+} from "./preprocess.js?v=58";
+import { $, els, hooks, preferences, showError, state } from "./context.js?v=27";
+import { refreshExport, setResultActions } from "./exporters.js?v=35";
 import {
   clearSelection,
   setBlobFill,
   setEraser,
   setSelectionTool,
   setView,
-} from "./cleanup-tools.js?v=42";
-import { afterTrace, resetPalette } from "./palette-ui.js?v=26";
+} from "./cleanup-tools.js?v=43";
+import { afterTrace, resetPalette } from "./palette-ui.js?v=27";
 import {
   applyExportProfile,
   applyMeasurementUnit,
   applyPreset,
+  applySimplify,
   applyUserPreset,
   clearProfile,
   currentSettings,
@@ -66,12 +67,12 @@ import {
   updateTraceFields,
   updateTransparencyFields,
   userPresets,
-} from "./settings.js?v=42";
-import { actualSizeView, resetView } from "./view.js?v=42";
+} from "./settings.js?v=43";
+import { actualSizeView, resetView } from "./view.js?v=43";
 
 const EMPTY_IMAGE_SRC = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==";
 
-const tracer = new Tracer(new URL("./worker.js?v=61", import.meta.url));
+const tracer = new Tracer(new URL("./worker.js?v=62", import.meta.url));
 
 let elapsedTimer = 0;
 
@@ -764,6 +765,12 @@ for (const radio of document.querySelectorAll('input[name="stencil-ink"]')) {
 }
 els.hierarchical.addEventListener("change", () => {
   clearProfile();
+  scheduleRetrace();
+});
+els.simplify.addEventListener("input", () => {
+  applySimplify(Number(els.simplify.value));
+  clearProfile();
+  updateOutputs();
   scheduleRetrace();
 });
 els.cornerThreshold.addEventListener("input", () => {

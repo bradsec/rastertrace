@@ -52,6 +52,7 @@ test("key controls are visible once an image is loaded", async ({ page }) => {
     "preset",
     "color-source",
     "colors",
+    "simplify",
     "palette-pick",
     "hierarchical",
   ]) {

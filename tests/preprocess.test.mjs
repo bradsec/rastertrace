@@ -28,6 +28,8 @@ import {
   mergePresets,
   PRESETS_MAX,
   sanitizePresets,
+  SIMPLIFY_LEVELS,
+  simplifyLevel,
   nameColorGroups,
   isStaleModuleError,
   MAX_TRACE_SIDE,
@@ -700,6 +702,34 @@ test("EXPORT_PROFILES cover expected keys with sane values", () => {
   assert.equal(EXPORT_PROFILES.web.minify, true);
   assert.equal(EXPORT_PROFILES.monoBlack.stencilInk, "black");
   assert.equal(EXPORT_PROFILES.monoWhite.stencilInk, "white");
+});
+
+test("SIMPLIFY_LEVELS run from detailed to simple within the slider ranges", () => {
+  for (const [i, level] of SIMPLIFY_LEVELS.entries()) {
+    assert.ok(level.lengthThreshold >= 3.5 && level.lengthThreshold <= 10);
+    assert.ok(level.spliceThreshold >= 10 && level.spliceThreshold <= 90);
+    if (i === 0) continue;
+    const prev = SIMPLIFY_LEVELS[i - 1];
+    assert.ok(level.lengthThreshold >= prev.lengthThreshold);
+    assert.ok(level.spliceThreshold > prev.spliceThreshold);
+  }
+});
+
+test("simplifyLevel names the level for a pair, or -1 for a custom pair", () => {
+  assert.equal(
+    SIMPLIFY_LEVELS[simplifyLevel(DEFAULTS.lengthThreshold, DEFAULTS.spliceThreshold)]
+      .spliceThreshold,
+    DEFAULTS.spliceThreshold,
+  );
+  // Every export profile lands on a named level, never Custom.
+  for (const [name, p] of Object.entries(EXPORT_PROFILES)) {
+    const level = simplifyLevel(
+      DEFAULTS.lengthThreshold,
+      p.spliceThreshold ?? DEFAULTS.spliceThreshold,
+    );
+    assert.notEqual(level, -1, `${name} profile`);
+  }
+  assert.equal(simplifyLevel(9.5, 15), -1);
 });
 
 // mode "none" skips all curve/corner simplification, so a high color count

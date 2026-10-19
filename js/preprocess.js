@@ -96,6 +96,27 @@ export const PRESETS = Object.freeze({
   256: { colors: 256, speckle: 3, layerDiff: 10 },
 });
 
+// The Simplify slider, like Illustrator's Paths slider: one control over
+// both curve-fitting tolerances, from most detail to simplest. Level 3 is
+// the default pair, and the detail profiles' pairs are levels too, so a
+// profile never shows as Custom.
+export const SIMPLIFY_LEVELS = Object.freeze([
+  { lengthThreshold: 3.5, spliceThreshold: 10 },
+  { lengthThreshold: 4, spliceThreshold: 20 },
+  { lengthThreshold: 4, spliceThreshold: 30 },
+  { lengthThreshold: 4, spliceThreshold: 45 },
+  { lengthThreshold: 6, spliceThreshold: 60 },
+  { lengthThreshold: 8, spliceThreshold: 75 },
+  { lengthThreshold: 10, spliceThreshold: 90 },
+]);
+
+/** Index of the Simplify level with exactly these tolerances, or -1. */
+export function simplifyLevel(lengthThreshold, spliceThreshold) {
+  return SIMPLIFY_LEVELS.findIndex(
+    (l) => l.lengthThreshold === lengthThreshold && l.spliceThreshold === spliceThreshold,
+  );
+}
+
 /**
  * Color settings auto-detection derives from one image's analyzeFlatness
  * result. Flat art snaps colors to the detected count and takes cleanup

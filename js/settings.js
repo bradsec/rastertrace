@@ -9,13 +9,15 @@ import {
   PRESETS,
   sanitizePresets,
   sanitizeSettings,
+  SIMPLIFY_LEVELS,
+  simplifyLevel,
   toGrayscaleColor,
   USER_PRESET_PREFIX,
   userPresetName,
-} from "./preprocess.js?v=57";
-import { els, preferences } from "./context.js?v=26";
-import { refreshExport, updatePhysicalHeightOut } from "./exporters.js?v=34";
-import { setEyedropper } from "./cleanup-tools.js?v=42";
+} from "./preprocess.js?v=58";
+import { els, preferences } from "./context.js?v=27";
+import { refreshExport, updatePhysicalHeightOut } from "./exporters.js?v=35";
+import { setEyedropper } from "./cleanup-tools.js?v=43";
 
 /** @returns {HTMLInputElement} */
 const radioEl = (selector) => /** @type {HTMLInputElement} */ (document.querySelector(selector));
@@ -164,7 +166,38 @@ export function updateOutputs() {
   els.pathPrecisionOut.textContent = els.pathPrecision.value;
   els.lengthThresholdOut.textContent = els.lengthThreshold.value;
   els.spliceThresholdOut.textContent = els.spliceThreshold.value;
+  updateSimplify();
   els.stencilThresholdOut.textContent = els.stencilThreshold.value;
+}
+
+/**
+ * Simplify has no stored value of its own: it shows the level matching
+ * the Advanced curve settings, or Custom (at the nearest level) when they
+ * were set by hand.
+ */
+function updateSimplify() {
+  const length = Number(els.lengthThreshold.value);
+  const splice = Number(els.spliceThreshold.value);
+  const level = simplifyLevel(length, splice);
+  if (level === -1) {
+    const distance = (l) => Math.abs(l.spliceThreshold - splice);
+    const nearest = SIMPLIFY_LEVELS.reduce(
+      (best, l, i) => (distance(l) < distance(SIMPLIFY_LEVELS[best]) ? i : best),
+      0,
+    );
+    els.simplify.value = String(nearest);
+    els.simplifyOut.textContent = "Custom";
+  } else {
+    els.simplify.value = String(level);
+    els.simplifyOut.textContent = String(level);
+  }
+}
+
+/** Set the Advanced curve settings from a Simplify level. */
+export function applySimplify(level) {
+  const { lengthThreshold, spliceThreshold } = SIMPLIFY_LEVELS[level];
+  els.lengthThreshold.value = String(lengthThreshold);
+  els.spliceThreshold.value = String(spliceThreshold);
 }
 
 /**
@@ -181,7 +214,12 @@ export function updateTraceFields() {
   els.layerDiff.disabled = stencil;
   els.grayscale.disabled = stencil;
   const spline = radioEl('input[name="mode"]:checked').value === "spline";
-  for (const input of [els.cornerThreshold, els.lengthThreshold, els.spliceThreshold]) {
+  for (const input of [
+    els.simplify,
+    els.cornerThreshold,
+    els.lengthThreshold,
+    els.spliceThreshold,
+  ]) {
     input.disabled = !spline;
   }
 }

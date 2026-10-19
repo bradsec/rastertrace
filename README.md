@@ -19,6 +19,7 @@ Convert raster images to clean, scalable SVG vectors entirely in your browser. [
 - Stencil mode: true black/white binary tracing for laser cutting, stamps, and silhouettes, with an adjustable brightness threshold and a choice of black-on-transparent or white-on-black ink
 - SVG size export: preserve source pixels or write a custom width/height in px, mm, cm, or in, with the viewBox preserved
 - Minified output option (also compresses path data with relative commands for roughly 30% smaller SVG files), or accessible output with `role="img"` and a `<title>` from the file name
+- Simplify slider: one control for how closely paths follow the image, like Illustrator's Paths slider; sets the Advanced curve settings and shows Custom after they are edited by hand
 - Straighten lines slider: snaps slightly wobbly or bumpy traced edges to true straight lines while keeping corners and real curves
 - Advanced tracing controls: path coordinate precision, curve segment length, spline splitting
 - Color-count presets from 2 to 256: a quick way to set Colors that leaves speckle filter and layer difference as they are. Below 256, the traced SVG uses at most that many colors: each shape's fill snaps to the reduced palette, and defringe repaints only with colors already in it

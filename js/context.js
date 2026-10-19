@@ -1,7 +1,7 @@
 // Shared DOM references and mutable app state, imported by every UI
 // module. Keeps no logic beyond tiny helpers so it can never participate
 // in an import cycle.
-import { MAX_TRACE_SIDE } from "./preprocess.js?v=57";
+import { MAX_TRACE_SIDE } from "./preprocess.js?v=58";
 
 /**
  * @template {Element} [T=HTMLElement]
@@ -57,6 +57,8 @@ export const els = {
   upscale: /** @type {HTMLSelectElement} */ ($("upscale")),
   pathPrecision: /** @type {HTMLInputElement} */ ($("path-precision")),
   pathPrecisionOut: $("path-precision-out"),
+  simplify: /** @type {HTMLInputElement} */ ($("simplify")),
+  simplifyOut: $("simplify-out"),
   lengthThreshold: /** @type {HTMLInputElement} */ ($("length-threshold")),
   lengthThresholdOut: $("length-threshold-out"),
   spliceThreshold: /** @type {HTMLInputElement} */ ($("splice-threshold")),

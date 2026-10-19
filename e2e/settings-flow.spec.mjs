@@ -174,7 +174,7 @@ test("controls the trace ignores are disabled", async ({ page }) => {
   await page.evaluate(() => {
     for (const details of document.querySelectorAll("aside details")) details.open = true;
   });
-  const curves = ["#corner-threshold", "#length-threshold", "#splice-threshold"];
+  const curves = ["#simplify", "#corner-threshold", "#length-threshold", "#splice-threshold"];
   for (const id of [...curves, "#colors", "#layer-diff", "#grayscale"]) {
     await expect(page.locator(id)).toBeEnabled();
   }
@@ -188,6 +188,36 @@ test("controls the trace ignores are disabled", async ({ page }) => {
   for (const id of [...curves, "#colors", "#layer-diff", "#grayscale"]) {
     await expect(page.locator(id)).toBeEnabled();
   }
+});
+
+test("Simplify sets the curve settings and shows Custom after hand edits", async ({ page }) => {
+  const flat = await makePng(page, "flat.png", 120, 120, CREAM, [["#3c281e", 30, 30, 60, 60]]);
+  await traced(page, () => page.locator("#file-input").setInputFiles(flat));
+  await page.evaluate(() => {
+    for (const details of document.querySelectorAll("aside details")) details.open = true;
+  });
+  const out = page.locator("#simplify-out");
+  await expect(out).toHaveText("3");
+
+  await setRange(page, "#simplify", 6);
+  await expect(page.locator("#length-threshold")).toHaveValue("10");
+  await expect(page.locator("#splice-threshold")).toHaveValue("90");
+  await expect(out).toHaveText("6");
+
+  await setRange(page, "#splice-threshold", 85);
+  await expect(out).toHaveText("Custom");
+  await expect(page.locator("#length-threshold")).toHaveValue("10");
+
+  // Profiles set the curve settings, and Simplify follows them.
+  await traced(page, () => page.locator("#export-profile").selectOption("detail"));
+  await expect(out).toHaveText("2");
+
+  await page.reload();
+  await page.evaluate(() => {
+    for (const details of document.querySelectorAll("aside details")) details.open = true;
+  });
+  await expect(out).toHaveText("2");
+  await expect(page.locator("#simplify")).toHaveValue("2");
 });
 
 test("replacing an inverted image restores the knockout color", async ({ page }) => {

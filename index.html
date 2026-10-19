@@ -1082,6 +1082,18 @@
               <div class="field">
                 <div class="label-row">
                   <label
+                    for="simplify"
+                    title="How closely paths follow the image. Lower keeps more detail and anchor points; higher gives simpler, smoother paths with fewer points. Sets Segment length and Spline splitting under Advanced tracing"
+                    >Simplify</label
+                  >
+                  <output id="simplify-out" for="simplify">3</output>
+                </div>
+                <input type="range" id="simplify" min="0" max="6" step="1" value="3" />
+              </div>
+
+              <div class="field">
+                <div class="label-row">
+                  <label
                     for="corner-threshold"
                     title="Angles smoother than this many degrees trace as curves. Lower keeps text and logo corners sharp; raise for flowing curves"
                     >Corner rounding</label
@@ -1379,6 +1391,14 @@
               <dd>
                 Spline traces smooth curves (most artwork), Polygon straight segments (hard-edged
                 geometry), Pixel exact outlines (pixel art).
+              </dd>
+            </div>
+            <div>
+              <dt>Simplify</dt>
+              <dd>
+                How closely paths follow the image, like Illustrator's Paths slider in reverse.
+                Lower keeps detail; higher gives fewer, smoother points. Shows Custom when the
+                Advanced tracing curve settings were set by hand. Spline mode only.
               </dd>
             </div>
             <div>
@@ -1788,6 +1808,6 @@
         location.reload();
       };
     </script>
-    <script type="module" src="js/app.js?v=123" onerror="window.recoverRasterTraceBoot()"></script>
+    <script type="module" src="js/app.js?v=124" onerror="window.recoverRasterTraceBoot()"></script>
   </body>
 </html>
