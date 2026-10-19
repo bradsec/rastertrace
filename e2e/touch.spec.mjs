@@ -178,6 +178,26 @@ test.describe("small screens", () => {
     await expect(page.locator("#export-size")).toBeVisible();
   });
 
+  test("restored settings offer Reset and Keep beside the preview", async ({ page }) => {
+    await loadImage(page);
+    await page.locator('[data-sheet-tab="tracing"]').click();
+    await page.locator("#straighten").fill("3");
+    await page.reload();
+    await loadImage(page);
+    const note = page.locator("#restored-note");
+    await expect(note).toBeInViewport();
+    await note.getByRole("button", { name: "Keep" }).click();
+    await expect(note).toBeHidden();
+    await expect(page.locator("#straighten")).toHaveValue("3");
+
+    await page.reload();
+    await loadImage(page);
+    await note.getByRole("button", { name: "Reset to defaults" }).click();
+    await expect(note).toBeHidden();
+    await expect(page.locator("#status")).toContainText("Settings reset");
+    await expect(page.locator("#straighten")).toHaveValue("0");
+  });
+
   test("status and zoom stay on screen while settings scroll", async ({ page }) => {
     await loadImage(page);
     await page.locator('[data-sheet-tab="tracing"]').click();

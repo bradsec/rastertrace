@@ -53,7 +53,7 @@
       }
     </script>
 
-    <link rel="stylesheet" href="css/styles.css?v=113" />
+    <link rel="stylesheet" href="css/styles.css?v=114" />
   </head>
   <body>
     <header class="app-header">
@@ -632,9 +632,6 @@
             </button>
           </div>
           <div id="right-panel-body" class="rail-body">
-            <p id="restored-note" class="restored-note" hidden>
-              Using your previous settings. Press <strong>Reset</strong> for defaults.
-            </p>
             <!-- The stencil threshold field moves here while the Laser
                profile is active: it is that profile's main dial. -->
             <div id="stencil-threshold-slot" hidden></div>
@@ -1434,6 +1431,15 @@
               ><span class="visually-hidden">Restore</span>
             </button>
           </nav>
+          <!-- Over the preview, not in the settings column: phones hide the
+               column's Reset button, and a surprising result shows here. -->
+          <div id="restored-note" class="restored-note" role="status" hidden>
+            <span>Using your previous settings.</span>
+            <button type="button" class="button button-secondary" data-action="reset-settings">
+              Reset to defaults
+            </button>
+            <button type="button" id="restored-keep" class="button button-ghost">Keep</button>
+          </div>
           <div
             id="preview"
             class="preview checkerboard fitted"
@@ -1971,6 +1977,6 @@
         location.reload();
       };
     </script>
-    <script type="module" src="js/app.js?v=132" onerror="window.recoverRasterTraceBoot()"></script>
+    <script type="module" src="js/app.js?v=133" onerror="window.recoverRasterTraceBoot()"></script>
   </body>
 </html>

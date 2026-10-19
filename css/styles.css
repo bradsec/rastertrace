@@ -1415,19 +1415,30 @@ details.advanced[open] {
   box-shadow: inset 0 -2px var(--accent);
 }
 
+/* Shares the preview's cell, floating over the top of the result. */
 .restored-note {
-  margin: 0;
-  padding: 8px 10px;
+  grid-column: 2;
+  grid-row: 2;
+  z-index: 3;
+  align-self: start;
+  justify-self: center;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 6px 10px;
+  max-width: calc(100% - 16px);
+  margin-top: 8px;
+  padding: 6px 6px 6px 12px;
   font-size: var(--fs-sm);
-  color: var(--text-dim);
-  background: var(--accent-soft);
-  border: 1px solid var(--border);
+  color: var(--text);
+  background: var(--surface-2);
+  border: 1px solid var(--accent);
   border-radius: var(--r-sm);
+  box-shadow: 0 4px 12px rgb(0 0 0 / 0.3);
 }
-
-.restored-note strong {
-  color: var(--accent);
-  font-weight: 600;
+.restored-note[hidden] {
+  display: none;
 }
 
 /* ---------- Settings guide dialog ---------- */

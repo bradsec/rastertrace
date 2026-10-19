@@ -157,6 +157,7 @@ export const els = {
   download: /** @type {HTMLButtonElement} */ ($("download")),
   resetSettingsBtn: /** @type {HTMLButtonElement} */ ($("reset-settings")),
   restoredNote: $("restored-note"),
+  restoredKeep: $("restored-keep"),
   panStage: $("pan-stage"),
   zoomIn: /** @type {HTMLButtonElement} */ ($("zoom-in")),
   zoomOut: /** @type {HTMLButtonElement} */ ($("zoom-out")),
