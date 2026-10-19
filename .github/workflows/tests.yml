@@ -22,6 +22,12 @@ jobs:
       - run: npm test
       - run: npx playwright install --with-deps chromium webkit
       - run: npm run test:responsive
+      - if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-artifacts
+          path: .playwright-artifacts
+          retention-days: 7
       - run: npm run typecheck
       - run: npm run lint
       - run: npm run format:check

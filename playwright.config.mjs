@@ -7,6 +7,11 @@ export default defineConfig({
   use: {
     baseURL: "http://127.0.0.1:8137",
     screenshot: "only-on-failure",
+    trace: "retain-on-failure",
+    // A reload while the worker is still installing raced it in CI WebKit.
+    // e2e/upgrade.spec.mjs and e2e/offline.spec.mjs test it, waiting for
+    // it to be ready, and opt back in.
+    serviceWorkers: "block",
   },
   projects: [
     { name: "chromium", use: { ...devices["Desktop Chrome"] } },

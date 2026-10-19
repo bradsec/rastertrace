@@ -106,6 +106,7 @@ test("the working tree works on top of the previous release's cache", async ({ b
   test.setTimeout(180_000);
   const context = await browser.newContext({
     baseURL: `http://127.0.0.1:${port}`,
+    serviceWorkers: "allow",
     viewport: { width: 1600, height: 1000 },
   });
   const page = await context.newPage();

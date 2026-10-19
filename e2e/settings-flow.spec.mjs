@@ -271,8 +271,10 @@ test.describe("saved presets", () => {
     const flat = await makePng(page, "flat.png", 120, 120, CREAM, [["#3c281e", 30, 30, 60, 60]]);
     await traced(page, () => page.locator("#file-input").setInputFiles(flat));
     await openSettingsPanels(page);
-    await page.locator("#export-profile").selectOption("print");
-    await page.locator("#straighten").fill("3");
+    // Each change retraces; let it land so its status does not replace
+    // the saved message.
+    await traced(page, () => page.locator("#export-profile").selectOption("print"));
+    await traced(page, () => page.locator("#straighten").fill("3"));
     await page.locator("#export-size").selectOption("physical");
     await page.locator("#physical-width").fill("250");
     await savePreset(page, "Client logo");
