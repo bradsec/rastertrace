@@ -4,6 +4,7 @@ import {
   applyStencilInk,
   binarizeAlpha,
   defringeAlpha,
+  despeckleColors,
   erodeAlpha,
   fillTransparent,
   finalizeSvg,
@@ -15,8 +16,8 @@ import {
   thresholdImage,
   toGrayscale,
   tracePixels,
-} from "./preprocess.js?v=75";
-import { rasterPalette, snapFills } from "./palette.js?v=29";
+} from "./preprocess.js?v=76";
+import { rasterPalette, snapFills } from "./palette.js?v=30";
 
 // Explicit versioned URL: the glue's own wasm fetch drops the ?v= query,
 // so a rebuilt binary would otherwise be served from stale browser cache
@@ -102,6 +103,15 @@ self.onmessage = async (event) => {
       fillTransparent(img, [255, 255, 255]);
     }
 
+    // Reduced colors are exact, so specks come off here by area alone and
+    // the tracer's filter, which also drops every line about 2 px wide or
+    // thinner, stays off. Binary stencils filter by area in the tracer.
+    const speckle = tracePixels(settings.speckle, scale);
+    if (reduced && speckle > 1) {
+      stage("Removing specks…");
+      despeckleColors(img, speckle);
+    }
+
     stage("Tracing vectors…");
     const svg = trace(
       new Uint8Array(img.data.buffer),
@@ -110,7 +120,7 @@ self.onmessage = async (event) => {
       settings.mode,
       settings.hierarchical || "stacked", // stacked layers vs cutout tiles
       settings.stencil ? "binary" : "color",
-      tracePixels(settings.speckle, scale),
+      reduced ? 0 : speckle,
       8, // color_precision: colors already reduced above, like the CLI
       settings.layerDiff,
       settings.cornerThreshold ?? 60, // degrees; lower keeps corners sharper

@@ -229,6 +229,26 @@ test("the Profile section folds and names the current profile", async ({ page })
   await expect(page.locator("#profile-summary")).toHaveText("Vinyl & cutting (layers)");
 });
 
+test("thin lines survive on a large image", async ({ page }) => {
+  // 2400 px traces at 0.85x: a 2 px line is under 2 trace px wide, which
+  // the tracer's own speck filter used to drop however long it was.
+  const file = await makePng(page, "lines.png", 2400, 1800, "#ffffff", [
+    ["#000000", 150, 150, 450, 450],
+    ["#000000", 240, 1050, 1920, 2],
+  ]);
+  await traced(page, () => page.locator("#file-input").setInputFiles(file));
+  const red = await page.evaluate(async () => {
+    const view = /** @type {HTMLImageElement} */ (document.getElementById("result-view"));
+    const img = new Image();
+    img.src = view.src;
+    await img.decode();
+    const ctx = new OffscreenCanvas(2400, 1800).getContext("2d");
+    ctx.drawImage(img, 0, 0, 2400, 1800);
+    return ctx.getImageData(1200, 1051, 1, 1).data[0];
+  });
+  expect(red).toBeLessThan(128);
+});
+
 test("Pixel exact keeps lone pixels", async ({ page }) => {
   // 256 px wide: the old profile's auto upscale and speckle dropped them.
   const dots = [];

@@ -15,6 +15,7 @@ import {
   countPaths,
   defringeAlpha,
   detectBackgroundColor,
+  despeckleColors,
   detectedColorSettings,
   profileColorSettings,
   distinctColorCount,
@@ -1929,4 +1930,41 @@ test("Balanced and the detail profiles keep auto-detect on", () => {
   for (const name of ["web", "print", "vinyl", "icon", "pixelExact", "monoBlack"]) {
     assert.ok(!EXPORT_PROFILES[name].autoDetect, name);
   }
+});
+
+test("despeckleColors merges specks into the color around them", () => {
+  const img = makeImage(20, 20, [240, 240, 240, 255]);
+  setPixel(img, 5, 5, [200, 30, 30, 255]);
+  despeckleColors(img, 3);
+  assert.deepEqual(getPixel(img, 5, 5).slice(0, 3), [240, 240, 240]);
+});
+
+test("despeckleColors keeps a long thin line on one background", () => {
+  // The tracer's own filter drops any region whose perimeter reaches its
+  // area, which is every line 2 px wide or thinner, however long.
+  const img = makeImage(40, 20, [240, 240, 240, 255]);
+  for (let x = 2; x < 38; x++) setPixel(img, x, 10, [0, 0, 0, 255]);
+  despeckleColors(img, 4);
+  assert.deepEqual(getPixel(img, 20, 10).slice(0, 3), [0, 0, 0]);
+});
+
+test("despeckleColors keeps an outline between two different fills", () => {
+  const img = makeImage(40, 20, [240, 240, 240, 255]);
+  for (let y = 11; y < 20; y++) for (let x = 0; x < 40; x++) setPixel(img, x, y, [200, 30, 30, 255]);
+  for (let x = 0; x < 40; x++) setPixel(img, x, 10, [0, 0, 0, 255]);
+  despeckleColors(img, 4);
+  assert.deepEqual(getPixel(img, 20, 10).slice(0, 3), [0, 0, 0]);
+});
+
+test("despeckleColors merges a blend sliver between two fills", () => {
+  // Color reduction leaves a band of in-between color along an edge.
+  const img = makeImage(40, 20, [240, 240, 240, 255]);
+  for (let y = 11; y < 20; y++) for (let x = 0; x < 40; x++) setPixel(img, x, y, [200, 30, 30, 255]);
+  for (let x = 0; x < 40; x++) setPixel(img, x, 10, [220, 135, 135, 255]);
+  despeckleColors(img, 4);
+  const [r, g, b] = getPixel(img, 20, 10);
+  assert.ok(
+    (r === 240 && g === 240 && b === 240) || (r === 200 && g === 30 && b === 30),
+    `sliver became ${r},${g},${b}`,
+  );
 });

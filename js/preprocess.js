@@ -1529,6 +1529,153 @@ export function removeSpecks(img, size) {
   return img;
 }
 
+// despeckleColors: a thin region is kept as a line when this share of
+// its boundary touches one color; a thin region whose color lies within
+// SLIVER_DISTANCE (RGB) of the segment between its two main neighbors is
+// a blend sliver left by color reduction.
+const LINE_SIDE_SHARE = 0.8;
+const SLIVER_DISTANCE = 40;
+
+/**
+ * Speck removal on a color-reduced image, in place of the tracer's own
+ * filter. The tracer drops every region smaller than `size` x `size`
+ * pixels and also every region whose perimeter reaches its area: each
+ * line 2 px wide or thinner, however long. Here a small region merges
+ * into the color it borders most (or turns transparent when that is
+ * transparency), and a thin region goes only when it is a blend sliver
+ * between two colors; lines on one color and outlines between two fills
+ * stay. Repeats until nothing changes (at most 4 passes), since merged
+ * specks can leave new ones. 4-connected, exact colors. Mutates img.
+ */
+export function despeckleColors(img, size) {
+  const minArea = size * size;
+  if (minArea <= 1) return img;
+  const { data, width, height } = img;
+  const n = width * height;
+  const keys = new Int32Array(n);
+  for (let p = 0; p < n; p++) {
+    const i = p * 4;
+    keys[p] =
+      data[i + 3] < ALPHA_THRESHOLD ? -1 : (data[i] << 16) | (data[i + 1] << 8) | data[i + 2];
+  }
+  const label = new Int32Array(n);
+  const queue = new Int32Array(n);
+  const neighbors = [0, 0, 0, 0];
+  const around = new Map();
+  for (let pass = 0; pass < 4; pass++) {
+    label.fill(-1);
+    /** @type {{ start: number, count: number, thin: boolean }[]} */
+    const candidates = [];
+    let next = 0;
+    let end = 0;
+    for (let s = 0; s < n; s++) {
+      if (label[s] !== -1) continue;
+      const key = keys[s];
+      const start = end;
+      label[s] = next;
+      queue[end++] = s;
+      let perimeter = 0;
+      for (let head = start; head < end; head++) {
+        const p = queue[head];
+        const x = p % width;
+        let k = 0;
+        if (x > 0) neighbors[k++] = p - 1;
+        if (x < width - 1) neighbors[k++] = p + 1;
+        if (p >= width) neighbors[k++] = p - width;
+        if (p + width < n) neighbors[k++] = p + width;
+        for (let j = 0; j < k; j++) {
+          const q = neighbors[j];
+          if (keys[q] !== key) {
+            perimeter += 1;
+          } else if (label[q] === -1) {
+            label[q] = next;
+            queue[end++] = q;
+          }
+        }
+      }
+      const count = end - start;
+      if (key !== -1 && (count < minArea || perimeter >= count)) {
+        candidates.push({ start, count, thin: count >= minArea });
+      }
+      next += 1;
+    }
+    candidates.sort((a, b) => a.count - b.count);
+    let changed = false;
+    for (const { start, count, thin } of candidates) {
+      const own = keys[queue[start]];
+      around.clear();
+      let total = 0;
+      for (let m = start; m < start + count; m++) {
+        const p = queue[m];
+        const x = p % width;
+        let k = 0;
+        if (x > 0) neighbors[k++] = p - 1;
+        if (x < width - 1) neighbors[k++] = p + 1;
+        if (p >= width) neighbors[k++] = p - width;
+        if (p + width < n) neighbors[k++] = p + width;
+        for (let j = 0; j < k; j++) {
+          const other = keys[neighbors[j]];
+          if (other === own) continue;
+          around.set(other, (around.get(other) || 0) + 1);
+          total += 1;
+        }
+      }
+      if (!total) continue;
+      let fill = own;
+      let best = 0;
+      let second = own;
+      let secondBest = 0;
+      for (const [other, c] of around) {
+        if (c > best) {
+          second = fill;
+          secondBest = best;
+          fill = other;
+          best = c;
+        } else if (c > secondBest) {
+          second = other;
+          secondBest = c;
+        }
+      }
+      if (thin) {
+        if (best >= total * LINE_SIDE_SHARE) continue; // a line on one color
+        if (fill === -1 || second === -1 || secondBest === 0) continue;
+        if (!betweenColors(own, fill, second)) continue; // an outline
+      }
+      changed = true;
+      for (let m = start; m < start + count; m++) keys[queue[m]] = fill;
+    }
+    if (!changed) break;
+  }
+  for (let p = 0; p < n; p++) {
+    const i = p * 4;
+    const key = keys[p];
+    if (key === -1) {
+      data[i + 3] = 0;
+      continue;
+    }
+    data[i] = (key >> 16) & 0xff;
+    data[i + 1] = (key >> 8) & 0xff;
+    data[i + 2] = key & 0xff;
+  }
+  return img;
+}
+
+/** Whether color `c` lies near the RGB segment from `a` to `b` (blend). */
+function betweenColors(c, a, b) {
+  const rgb = (key) => [(key >> 16) & 0xff, (key >> 8) & 0xff, key & 0xff];
+  const [cr, cg, cb] = rgb(c);
+  const [ar, ag, ab] = rgb(a);
+  const [br, bg, bb] = rgb(b);
+  const dr = br - ar;
+  const dg = bg - ag;
+  const db = bb - ab;
+  const len2 = dr * dr + dg * dg + db * db;
+  if (!len2) return false;
+  const t = ((cr - ar) * dr + (cg - ag) * dg + (cb - ab) * db) / len2;
+  if (t <= 0 || t >= 1) return false;
+  return Math.hypot(cr - (ar + t * dr), cg - (ag + t * dg), cb - (ab + t * db)) < SLIVER_DISTANCE;
+}
+
 /**
  * Matte choke: peel `passes` one-pixel rings off the opaque region,
  * clearing the alpha of opaque pixels 4-adjacent to transparency. Eats

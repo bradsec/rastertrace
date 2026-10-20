@@ -10,7 +10,7 @@ import {
   rotateBitmap,
   sniffImageSize,
   Tracer,
-} from "./pipeline.js?v=75";
+} from "./pipeline.js?v=76";
 import {
   analyzeFlatness,
   detectedColorSettings,
@@ -32,17 +32,17 @@ import {
   toHexColor,
   USER_PRESET_PREFIX,
   userPresetName,
-} from "./preprocess.js?v=75";
-import { $, els, hooks, preferences, showError, state } from "./context.js?v=47";
-import { refreshExport, setResultActions } from "./exporters.js?v=56";
+} from "./preprocess.js?v=76";
+import { $, els, hooks, preferences, showError, state } from "./context.js?v=48";
+import { refreshExport, setResultActions } from "./exporters.js?v=57";
 import {
   clearSelection,
   setBlobFill,
   setEraser,
   setSelectionTool,
   setView,
-} from "./cleanup-tools.js?v=65";
-import { afterTrace, resetPalette } from "./palette-ui.js?v=49";
+} from "./cleanup-tools.js?v=66";
+import { afterTrace, resetPalette } from "./palette-ui.js?v=50";
 import {
   applyExportProfile,
   applyMeasurementUnit,
@@ -72,8 +72,8 @@ import {
   updateTraceFields,
   updateTransparencyFields,
   userPresets,
-} from "./settings.js?v=65";
-import { actualSizeView, resetView } from "./view.js?v=65";
+} from "./settings.js?v=66";
+import { actualSizeView, resetView } from "./view.js?v=66";
 
 const SAMPLE_FILES = [
   "synthwave.png",
@@ -94,7 +94,7 @@ const SAMPLE_KEY = "rastertrace:last-sample";
 
 const EMPTY_IMAGE_SRC = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==";
 
-const tracer = new Tracer(new URL("./worker.js?v=80", import.meta.url));
+const tracer = new Tracer(new URL("./worker.js?v=81", import.meta.url));
 
 let elapsedTimer = 0;
 
