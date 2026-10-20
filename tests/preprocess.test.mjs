@@ -16,6 +16,7 @@ import {
   defringeAlpha,
   detectBackgroundColor,
   detectedColorSettings,
+  distinctColorCount,
   dominantOpaqueColor,
   erodeAlpha,
   finalizeSvg,
@@ -1438,6 +1439,80 @@ test("analyzeFlatness counts colors needed for 95% coverage", () => {
   const result = analyzeFlatness(img);
   assert.equal(result.flat, true);
   assert.equal(result.colorCount, 5);
+});
+
+test("analyzeFlatness counts small solid accents past 95% coverage", () => {
+  // Four bands plus four 6x6 accent blocks (0.36% each): the accents sit
+  // in the last 5% of coverage but are real colors of the artwork.
+  const img = makeImage(100, 100);
+  const bands = [
+    [200, 40, 40, 255],
+    [40, 200, 40, 255],
+    [40, 40, 200, 255],
+    [220, 220, 40, 255],
+  ];
+  for (let y = 0; y < 100; y++) {
+    for (let x = 0; x < 100; x++) setPixel(img, x, y, bands[Math.floor(y / 25)]);
+  }
+  const accents = [
+    [255, 0, 110, 255],
+    [6, 214, 160, 255],
+    [255, 190, 11, 255],
+    [58, 134, 255, 255],
+  ];
+  accents.forEach((rgba, i) => {
+    for (let y = 10; y < 16; y++) {
+      for (let x = 10 + i * 20; x < 16 + i * 20; x++) setPixel(img, x, y, rgba);
+    }
+  });
+  const result = analyzeFlatness(img);
+  assert.equal(result.flat, true);
+  assert.equal(result.colorCount, 8);
+  assert.equal(result.solids.length, 8);
+});
+
+test("analyzeFlatness does not count a thin anti-alias blend as a color", () => {
+  // A half-row of one blend color (0.5%) along a band edge has no
+  // interior pixels: it is fringe, not a color of the artwork.
+  const img = makeImage(100, 100, [200, 40, 40, 255]);
+  for (let y = 50; y < 100; y++) {
+    for (let x = 0; x < 100; x++) setPixel(img, x, y, [40, 40, 200, 255]);
+  }
+  for (let x = 0; x < 50; x++) setPixel(img, x, 50, [120, 40, 120, 255]);
+  assert.equal(analyzeFlatness(img).colorCount, 2);
+});
+
+test("detectedColorSettings keeps Merge below the closest pair of colors", () => {
+  const solids = [
+    [0, 0, 0],
+    [20, 0, 0],
+    [255, 255, 255],
+  ];
+  // Closest pair differs by 20 (sum of channel differences): Merge 10.
+  assert.equal(detectedColorSettings({ flat: true, colorCount: 3, solids }).layerDiff, 10);
+  // Well separated colors keep the preset's Merge.
+  const far = [
+    [0, 0, 0],
+    [255, 255, 255],
+  ];
+  assert.equal(
+    detectedColorSettings({ flat: true, colorCount: 2, solids: far }).layerDiff,
+    PRESETS[2].layerDiff,
+  );
+});
+
+test("distinctColorCount merges colors within the Merge distance", () => {
+  const solids = [
+    [0, 0, 0],
+    [20, 0, 0],
+    [40, 0, 0],
+    [255, 255, 255],
+  ];
+  assert.equal(distinctColorCount(solids, 10), 4);
+  // Chained near colors merge into one group.
+  assert.equal(distinctColorCount(solids, 20), 2);
+  // Never below the Max colors minimum of 2.
+  assert.equal(distinctColorCount(solids, 1000), 2);
 });
 
 test("straightenPaths converts near-straight cubics to lines", () => {

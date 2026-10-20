@@ -40,3 +40,58 @@ test("quantize preserves eight flat colors despite rare edge blends", () => {
   quantize(repeat, 8);
   assert.deepEqual(repeat.data, data);
 });
+
+test("quantize keeps a small solid accent over anti-alias blends in flat art", () => {
+  // Navy and cream with a 2% ramp of blends between them (each blend
+  // rare) and a 0.5% red accent: the three most common colors cover
+  // 98%, so each keeps a palette slot and the blends map to them.
+  const runs = [
+    ["#F2E8CF", 6000],
+    ["#1D3557", 3550],
+    ["#E53946", 50],
+  ];
+  const width = 10_000;
+  const data = new Uint8ClampedArray(width * 4);
+  let offset = 0;
+  for (const [hex, count] of runs) {
+    const rgba = [...parseHexColor(hex), 255];
+    for (let i = 0; i < count; i++, offset += 4) data.set(rgba, offset);
+  }
+  const [r0, g0, b0] = parseHexColor("#F2E8CF");
+  const [r1, g1, b1] = parseHexColor("#1D3557");
+  for (let i = 0; i < 400; i++, offset += 4) {
+    const t = (i + 0.5) / 400;
+    data.set([r0 + (r1 - r0) * t, g0 + (g1 - g0) * t, b0 + (b1 - b0) * t, 255], offset);
+  }
+  quantize({ width, height: 1, data }, 3);
+  const output = new Set();
+  for (let i = 0; i < data.length; i += 4) output.add(toHexColor(data.subarray(i, i + 3)));
+  const palette = [...output].map((hex) => srgbToOklab(parseHexColor(hex)));
+  for (const [hex] of runs) {
+    const lab = srgbToOklab(parseHexColor(hex));
+    const distance = Math.min(...palette.map((p) => Math.hypot(...p.map((v, c) => v - lab[c]))));
+    assert.ok(distance < 0.01, `${hex} missing from palette: Oklab distance ${distance}`);
+  }
+});
+
+test("quantize gives a near-duplicate blend no slot of its own", () => {
+  // Resampling leaves a common blend one step off cream; it outnumbers
+  // the green accent but must not take the accent's slot.
+  const runs = [
+    ["#F4EFE6", 6000],
+    ["#13294B", 3500],
+    ["#F0EBE2", 400],
+    ["#06D6A0", 100],
+  ];
+  const width = runs.reduce((total, [, count]) => total + count, 0);
+  const data = new Uint8ClampedArray(width * 4);
+  let offset = 0;
+  for (const [hex, count] of runs) {
+    const rgba = [...parseHexColor(hex), 255];
+    for (let i = 0; i < count; i++, offset += 4) data.set(rgba, offset);
+  }
+  quantize({ width, height: 1, data }, 3);
+  const output = new Set();
+  for (let i = 0; i < data.length; i += 4) output.add(toHexColor(data.subarray(i, i + 3)));
+  assert.deepEqual([...output].sort(), ["#06D6A0", "#13294B", "#F4EFE6"]);
+});

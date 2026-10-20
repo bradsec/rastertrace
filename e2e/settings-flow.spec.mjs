@@ -142,6 +142,30 @@ test("auto-detect sets colors per image; manual changes carry over", async ({ pa
   await expect(colors).toHaveValue("2");
 });
 
+test("auto-detect stays on while Merge recounts Max colors", async ({ page }) => {
+  // Two browns 10 apart (sum of channel differences) on cream.
+  const file = await makePng(page, "close.png", 160, 120, CREAM, [
+    ["#3c281e", 20, 30, 50, 60],
+    ["#46281e", 90, 30, 50, 60],
+  ]);
+  const colors = page.locator("#colors");
+  const autoDetect = page.locator("#auto-detect");
+  await traced(page, () => page.locator("#file-input").setInputFiles(file));
+  await openPanels(page);
+  await expect(colors).toHaveValue("3");
+  await expect(page.locator("#layer-diff")).toHaveValue("5");
+
+  await setRange(page, "#layer-diff", 20);
+  await expect(autoDetect).toBeChecked();
+  await expect(colors).toHaveValue("2");
+
+  await setRange(page, "#layer-diff", 4);
+  await expect(colors).toHaveValue("3");
+
+  await setRange(page, "#speckle", 4);
+  await expect(autoDetect).toBeChecked();
+});
+
 test("reset settings re-detects colors for the current image", async ({ page }) => {
   const flat = await makePng(page, "flat.png", 120, 120, CREAM, [["#3c281e", 30, 30, 60, 60]]);
   const colors = page.locator("#colors");

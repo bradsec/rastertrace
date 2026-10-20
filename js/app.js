@@ -10,10 +10,11 @@ import {
   rotateBitmap,
   sniffImageSize,
   Tracer,
-} from "./pipeline.js?v=59";
+} from "./pipeline.js?v=63";
 import {
   analyzeFlatness,
   detectedColorSettings,
+  distinctColorCount,
   fitTraceScale,
   isStaleModuleError,
   MAX_TRACE_SIDE,
@@ -28,17 +29,17 @@ import {
   toHexColor,
   USER_PRESET_PREFIX,
   userPresetName,
-} from "./preprocess.js?v=59";
-import { $, els, hooks, preferences, showError, state } from "./context.js?v=31";
-import { refreshExport, setResultActions } from "./exporters.js?v=40";
+} from "./preprocess.js?v=63";
+import { $, els, hooks, preferences, showError, state } from "./context.js?v=35";
+import { refreshExport, setResultActions } from "./exporters.js?v=44";
 import {
   clearSelection,
   setBlobFill,
   setEraser,
   setSelectionTool,
   setView,
-} from "./cleanup-tools.js?v=49";
-import { afterTrace, resetPalette } from "./palette-ui.js?v=33";
+} from "./cleanup-tools.js?v=53";
+import { afterTrace, resetPalette } from "./palette-ui.js?v=37";
 import {
   applyExportProfile,
   applyMeasurementUnit,
@@ -68,8 +69,8 @@ import {
   updateTraceFields,
   updateTransparencyFields,
   userPresets,
-} from "./settings.js?v=49";
-import { actualSizeView, resetView } from "./view.js?v=49";
+} from "./settings.js?v=53";
+import { actualSizeView, resetView } from "./view.js?v=53";
 
 const SAMPLE_FILES = [
   "synthwave.png",
@@ -90,7 +91,7 @@ const SAMPLE_KEY = "rastertrace:last-sample";
 
 const EMPTY_IMAGE_SRC = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==";
 
-const tracer = new Tracer(new URL("./worker.js?v=64", import.meta.url));
+const tracer = new Tracer(new URL("./worker.js?v=68", import.meta.url));
 
 let elapsedTimer = 0;
 
@@ -229,6 +230,10 @@ async function recoverFromStaleCache(message) {
  * with it off, every setting carries over from the previous image
  * unchanged. Manual color, preset or profile changes turn it off.
  */
+// The current image's detected colors, for recounting Max colors when
+// Merge similar shades changes under auto-detect.
+let detectedSolids = null;
+
 function applyDetectedSettings(bitmap) {
   // Keep the 1x pixels for the trace that follows. Any source at or above
   // the trace cap scales to exactly 1, so this usually saves a full second
@@ -236,6 +241,7 @@ function applyDetectedSettings(bitmap) {
   const imageData = rasterize(bitmap, 1, false);
   state.raster = { scale: 1, nearest: false, imageData };
   const analysis = analyzeFlatness(imageData);
+  detectedSolids = analysis.solids ?? null;
   if (!analysis.flat) {
     // Tracing suits flat art. One-time hint.
     state.flatNote =
@@ -688,12 +694,16 @@ els.preset.addEventListener("change", () => {
 
 for (const input of [els.colors, els.speckle, els.layerDiff]) {
   input.addEventListener("input", () => {
-    // The preset only names a color count, so it follows the Colors slider.
     if (input === els.colors) {
-      const match = [...els.preset.options].some((o) => o.value === els.colors.value);
-      els.preset.value = match ? els.colors.value : "";
+      els.autoDetect.checked = false; // and keeps the value for later images
+    } else if (input === els.layerDiff && els.autoDetect.checked && detectedSolids) {
+      // Auto-detect stays on: Max colors follows how many detected colors
+      // stay separate at the new Merge value.
+      els.colors.value = String(distinctColorCount(detectedSolids, Number(els.layerDiff.value)));
     }
-    els.autoDetect.checked = false; // and keeps the value for later images
+    // The preset only names a color count, so it follows the Colors slider.
+    const match = [...els.preset.options].some((o) => o.value === els.colors.value);
+    els.preset.value = match ? els.colors.value : "";
     clearProfile();
     updateOutputs();
     scheduleRetrace();

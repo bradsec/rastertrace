@@ -123,8 +123,10 @@ export function simplifyLevel(lengthThreshold, spliceThreshold) {
  * from the nearest preset at or above it; photographic sources get the
  * defaults, so a photo loaded after flat art does not inherit its
  * reduced palette.
+ *
+ * @param {{ flat: boolean, colorCount: number, solids?: number[][] }} analysis
  */
-export function detectedColorSettings({ flat, colorCount }) {
+export function detectedColorSettings({ flat, colorCount, solids }) {
   if (!flat) {
     return { colors: DEFAULTS.colors, speckle: DEFAULTS.speckle, layerDiff: DEFAULTS.layerDiff };
   }
@@ -133,7 +135,50 @@ export function detectedColorSettings({ flat, colorCount }) {
     .sort((a, b) => a - b)
     .find((k) => k >= colorCount);
   const preset = PRESETS[key ?? 256];
-  return { colors: colorCount, speckle: preset.speckle, layerDiff: preset.layerDiff };
+  // The tracer merges neighboring layers whose colors differ by no more
+  // than Merge, so stay under half the closest pair of detected colors.
+  let layerDiff = preset.layerDiff;
+  if (solids && solids.length > 1) {
+    let closest = Infinity;
+    for (let i = 0; i < solids.length; i++) {
+      for (let j = i + 1; j < solids.length; j++) {
+        closest = Math.min(closest, colorDistance(solids[i], solids[j]));
+      }
+    }
+    layerDiff = Math.min(layerDiff, Math.max(1, Math.floor(closest / 2)));
+  }
+  return { colors: colorCount, speckle: preset.speckle, layerDiff };
+}
+
+/** The tracer's color difference: the sum of the RGB channel differences. */
+function colorDistance(a, b) {
+  return Math.abs(a[0] - b[0]) + Math.abs(a[1] - b[1]) + Math.abs(a[2] - b[2]);
+}
+
+/**
+ * How many of the detected `solids` stay separate once colors within
+ * `layerDiff` of each other merge (chained, like the tracer's layers),
+ * never below the Max colors minimum of 2.
+ */
+export function distinctColorCount(solids, layerDiff) {
+  const parent = solids.map((_, i) => i);
+  const root = (i) => {
+    while (parent[i] !== i) i = parent[i] = parent[parent[i]];
+    return i;
+  };
+  let groups = solids.length;
+  for (let i = 0; i < solids.length; i++) {
+    for (let j = i + 1; j < solids.length; j++) {
+      if (colorDistance(solids[i], solids[j]) > layerDiff) continue;
+      const a = root(i);
+      const b = root(j);
+      if (a !== b) {
+        parent[a] = b;
+        groups -= 1;
+      }
+    }
+  }
+  return Math.max(2, groups);
 }
 
 // Purpose-based export profiles (SVG_EXPORT_RESEARCH.md). Values are
@@ -1656,6 +1701,14 @@ export function toGrayscaleColor([r, g, b]) {
   return [gray, gray, gray];
 }
 
+// Solid color thresholds for analyzeFlatness. The two shares are of all
+// opaque samples; the interior share is of the color's own samples.
+// Measured on anti-aliased flat art: real colors have 29% or more interior
+// pixels (thin lines included), edge blends 6% or fewer.
+const SOLID_MIN_SHARE = 0.001;
+const SOLID_LINE_SHARE = 0.01;
+const SOLID_MIN_INTERIOR = 0.2;
+
 /**
  * Coverage-based flatness heuristic. Flat-color sources (logos, text,
  * screenshots, pixel art) concentrate almost all pixels in a handful of
@@ -1667,22 +1720,46 @@ export function toGrayscaleColor([r, g, b]) {
  * a less aggressive color budget so distressed details survive.
  * Transparent pixels are ignored; a fully
  * transparent image is not flat.
+ *
+ * Flat results also list `solids`, the colors of the artwork as [r, g, b]:
+ * every color with at least SOLID_MIN_SHARE of the samples that either
+ * fills areas (some samples have all four neighbors the same color) or is
+ * common enough to be a thin line. Anti-alias blends sit only on edges,
+ * so they rarely have interior pixels. colorCount counts the solids, so
+ * small accents past 95% coverage still get a palette slot.
  */
 export function analyzeFlatness(img) {
-  const { data } = img;
+  const { data, width } = img;
   const pixelCount = data.length / 4;
+  const height = pixelCount / width;
+  const keyAt = (i) => (data[i] << 16) | (data[i + 1] << 8) | data[i + 2];
   // Odd pixel stride so sampling does not lock to even image widths and
   // hit the same columns every row.
   let stride = Math.max(1, Math.ceil(pixelCount / 200_000));
   if (stride % 2 === 0) stride += 1;
   const counts = new Map();
+  const interior = new Map();
   let total = 0;
   for (let p = 0; p < pixelCount; p += stride) {
     const i = p * 4;
     if (data[i + 3] < ALPHA_THRESHOLD) continue;
-    const key = (data[i] << 16) | (data[i + 1] << 8) | data[i + 2];
+    const key = keyAt(i);
     counts.set(key, (counts.get(key) || 0) + 1);
     total += 1;
+    const x = p % width;
+    const y = (p - x) / width;
+    if (
+      x > 0 &&
+      x < width - 1 &&
+      y > 0 &&
+      y < height - 1 &&
+      keyAt(i - 4) === key &&
+      keyAt(i + 4) === key &&
+      keyAt(i - width * 4) === key &&
+      keyAt(i + width * 4) === key
+    ) {
+      interior.set(key, (interior.get(key) || 0) + 1);
+    }
   }
   if (total === 0) return { flat: false, colorCount: 256 };
   const sorted = [...counts.values()].sort((a, b) => b - a);
@@ -1699,8 +1776,13 @@ export function analyzeFlatness(img) {
     }
     if (counted && i >= 16) break;
   }
+  const toRgb = (key) => [(key >> 16) & 0xff, (key >> 8) & 0xff, key & 0xff];
   if (counts.size <= 32 && topCoverage < 0.9) {
-    return { flat: true, colorCount: Math.max(2, counts.size) };
+    return {
+      flat: true,
+      colorCount: Math.max(2, counts.size),
+      solids: [...counts.keys()].map(toRgb),
+    };
   }
   if (topCoverage < 0.9) {
     const clusters = new Map();
@@ -1725,10 +1807,17 @@ export function analyzeFlatness(img) {
       return { flat: true, colorCount: Math.min(32, Math.max(8, clusterColorCount * 2)) };
     }
   }
-  return {
-    flat: topCoverage >= 0.9,
-    colorCount: Math.min(32, Math.max(2, colorCount)),
-  };
+  if (topCoverage < 0.9) return { flat: false, colorCount: Math.min(32, Math.max(2, colorCount)) };
+  const solids = [...counts]
+    .filter(([key, count]) => {
+      const share = count / total;
+      if (share < SOLID_MIN_SHARE) return false;
+      return share >= SOLID_LINE_SHARE || (interior.get(key) || 0) / count >= SOLID_MIN_INTERIOR;
+    })
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 32)
+    .map(([key]) => toRgb(key));
+  return { flat: true, colorCount: Math.max(2, solids.length), solids };
 }
 
 /**
@@ -1779,11 +1868,19 @@ export function mapToPalette(img, swatches) {
 // to at most 128 colors, and cap the work at 2^18 entries.
 const QUANT_SHIFT = 2;
 const QUANT_BITS = 8 - QUANT_SHIFT;
+// Share of opaque pixels the most common colors must cover to seed quantize.
+const FLAT_SEED_COVERAGE = 0.9;
+// Oklab distance under which a common color is a near-duplicate seed: about
+// one quantize bin, so resampling blends next to a solid color merge with it.
+const FLAT_SEED_MIN_DISTANCE = 0.015;
+// Flat art seeding is for small palettes: auto-detect caps flat art at 32.
+const FLAT_SEED_MAX_COLORS = 32;
 
 /**
  * Median-cut color quantization to at most `colors` colors, refined with
- * k-means in Oklab. Images that already have at most `colors` exact
- * colors are left untouched. The palette comes from opaque pixels only:
+ * k-means in Oklab. Flat art, where the `colors` most common colors cover
+ * almost every pixel, keeps exactly those colors instead. Images that
+ * already have at most `colors` exact colors are left untouched. The palette comes from opaque pixels only:
  * hidden pixels carry garbage colors, and counting a large knocked-out
  * area as any one color would crowd small visible details out of the
  * palette. Transparent pixels are then painted with the dominant opaque
@@ -1869,7 +1966,30 @@ export function quantize(img, colors) {
   };
   const all = new Int32Array(n);
   for (let e = 0; e < n; e++) all[e] = e;
-  const boxes = [makeBox(all)];
+  // Flat art: when the most common colors already cover almost every
+  // pixel, each gets its own one-color box and the splitting below stops
+  // at once. Anti-alias blends stretch box ranges, so median cut would
+  // split them off ahead of small solid accents. Near-duplicates of a
+  // color already picked (resampling blends) count toward its coverage
+  // instead of taking a slot.
+  const common = [];
+  let commonCount = 0;
+  const candidates = colors <= FLAT_SEED_MAX_COLORS ? Array.from(all) : [];
+  for (const e of candidates.sort((a, b) => count[b] - count[a])) {
+    const near = common.some(
+      (p) =>
+        (lab[0][e] - lab[0][p]) ** 2 + (lab[1][e] - lab[1][p]) ** 2 + (lab[2][e] - lab[2][p]) ** 2 <
+        FLAT_SEED_MIN_DISTANCE ** 2,
+    );
+    if (near) commonCount += count[e];
+    else if (common.length < colors) {
+      common.push(e);
+      commonCount += count[e];
+    }
+  }
+  const opaqueCount = count.reduce((total, w) => total + w, 0);
+  const seeded = commonCount >= opaqueCount * FLAT_SEED_COVERAGE;
+  const boxes = seeded ? common.map((e) => makeBox(Int32Array.of(e))) : [makeBox(all)];
   while (boxes.length < colors) {
     let boxIndex = -1;
     for (let i = 0; i < boxes.length; i++) {
@@ -1915,7 +2035,7 @@ export function quantize(img, colors) {
   const assign = new Int32Array(n).fill(-1);
   const sums = new Float64Array(k * 4);
   const errors = new Float64Array(n);
-  const minPopulation = count.reduce((total, w) => total + w, 0) * 0.001;
+  const minPopulation = opaqueCount * 0.001;
   for (let iter = 0; iter < 10; iter++) {
     let changed = false;
     for (let e = 0; e < n; e++) {
@@ -1940,6 +2060,9 @@ export function quantize(img, colors) {
         changed = true;
       }
     }
+    // Seeded flat colors are the artwork's own: keep them exact rather
+    // than letting the blends assigned to them pull them off.
+    if (seeded) break;
     sums.fill(0);
     for (let e = 0; e < n; e++) {
       const p = assign[e] * 4;
