@@ -2000,6 +2000,82 @@ body:has(.tool-rail .rail-tool[aria-pressed="true"]) .rotate-group {
   -webkit-user-drag: none;
 }
 
+/* Compare stacks both images in the stage's one cell at the same size,
+   so they line up; view.js clips each to its side of the divider. */
+.preview.comparing .pan-stage img {
+  grid-area: 1 / 1;
+  width: 100%;
+  height: 100%;
+}
+
+.compare-divider {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  z-index: 3;
+  width: 24px;
+  transform: translateX(-50%);
+  cursor: ew-resize;
+  touch-action: none;
+}
+.compare-divider[hidden] {
+  display: none;
+}
+.compare-divider::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 2px;
+  transform: translateX(-50%);
+  background: #fff;
+  box-shadow: 0 0 0 1px rgb(0 0 0 / 0.45);
+}
+.compare-handle {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 44px;
+  height: 44px;
+  transform: translate(-50%, -50%);
+  border: 2px solid #fff;
+  border-radius: 50%;
+  background: rgb(0 0 0 / 0.55);
+  box-shadow: var(--shadow-1);
+  touch-action: none;
+}
+.compare-handle::before,
+.compare-handle::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  border: 6px solid transparent;
+  transform: translateY(-50%);
+}
+.compare-handle::before {
+  left: 5px;
+  border-right-color: #fff;
+}
+.compare-handle::after {
+  right: 5px;
+  border-left-color: #fff;
+}
+.compare-handle:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+/* Touch hits only the handle: one finger on the line still scrolls the
+   page past a fitted preview, or pans a zoomed one. */
+@media (pointer: coarse) {
+  .compare-divider {
+    pointer-events: none;
+  }
+  .compare-handle {
+    pointer-events: auto;
+  }
+}
+
 .zoom-controls {
   display: inline-flex;
   flex: 0 0 auto;

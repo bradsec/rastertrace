@@ -135,6 +135,7 @@ export const els = {
   minify: /** @type {HTMLInputElement} */ ($("minify")),
   showResult: /** @type {HTMLButtonElement} */ ($("show-result")),
   showSource: /** @type {HTMLButtonElement} */ ($("show-source")),
+  showCompare: /** @type {HTMLButtonElement} */ ($("show-compare")),
   greenScreen: /** @type {HTMLButtonElement} */ ($("green-screen")),
   whiteScreen: /** @type {HTMLButtonElement} */ ($("white-screen")),
   blackScreen: /** @type {HTMLButtonElement} */ ($("black-screen")),
@@ -142,6 +143,8 @@ export const els = {
   preview: $("preview"),
   resultView: /** @type {HTMLImageElement} */ ($("result-view")),
   sourceView: /** @type {HTMLImageElement} */ ($("source-view")),
+  compareDivider: /** @type {HTMLDivElement} */ ($("compare-divider")),
+  compareHandle: /** @type {HTMLDivElement} */ ($("compare-handle")),
   tracingVeil: $("tracing-veil"),
   veilStage: $("veil-stage"),
   veilElapsed: $("veil-elapsed"),
@@ -246,6 +249,8 @@ export const hooks = {
    * @type {(first: { id: number, x: number, y: number }, second: PointerEvent) => void}
    */
   startPinch: () => {},
+  /** Re-clip the Compare layers after a view switch (set by view.js). */
+  updateCompare: () => {},
 };
 
 export function showError(message) {

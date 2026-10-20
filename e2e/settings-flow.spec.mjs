@@ -264,11 +264,12 @@ test("Pixel exact keeps lone pixels", async ({ page }) => {
   expect((svg.match(/<path/g) || []).length).toBe(dots.length + 1);
 });
 
-test("white stencil ink exports one color and previews on black", async ({ page }) => {
+test("white stencil ink exports one color and leaves the backdrop alone", async ({ page }) => {
   const file = await makePng(page, "mark.png", 160, 120, CREAM, [["#3c281e", 40, 30, 80, 60]]);
   await traced(page, () => page.locator("#file-input").setInputFiles(file));
   await traced(page, () => page.locator("#export-profile").selectOption("monoWhite"));
-  await expect(page.locator("#black-screen")).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator("#black-screen")).toHaveAttribute("aria-pressed", "false");
+  await expect(page.locator("#preview")).toHaveClass(/checkerboard/);
   const svg = await page.evaluate(async () => {
     const view = /** @type {HTMLImageElement} */ (document.getElementById("result-view"));
     return (await fetch(view.src)).text();

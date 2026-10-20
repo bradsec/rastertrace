@@ -20,8 +20,8 @@
     "sha": "6486ec188e8134f3f19111232f03848b04d5592262022c311946bbfcdfc25c45"
   },
   "css/styles.css": {
-    "v": 115,
-    "sha": "d1489dcc22c7f55b1acf1732546c6dfe54752497e24860dfacdf5008a92566f0"
+    "v": 116,
+    "sha": "7209eccf6fcc3a3c05738fbb55d9e492873b0882e6b618050f304f0e76709fcc"
   },
   "favicon-16x16.png": {
     "v": 2,
@@ -36,32 +36,32 @@
     "sha": "c791ac290668f1933993695c39260283c51955aad4524eed259bbfb501e43f72"
   },
   "js/app.js": {
-    "v": 154,
-    "sha": "fe1853487a65822149b46d90a710fde7a8b90bbffd475ce5172f1dad118ec3e6"
+    "v": 156,
+    "sha": "2195bfc9ec0264ebf6d61419207734dabd1b4a4afae046233580edfc0274cb10"
   },
   "js/cleanup-tools.js": {
-    "v": 66,
-    "sha": "4137a18a7637ee2d84ebc0d53591145b512bd49393f23c8ed981eb5a5f3899d9"
+    "v": 67,
+    "sha": "610f183bd51b25f504b5b44270d1597fd2166652155673fa07632baa93d3fc02"
   },
   "js/context.js": {
-    "v": 48,
-    "sha": "353ea557e453c3c4e8d32663fc09711f823b761fa75dffcebd690e2b6c54a61d"
+    "v": 49,
+    "sha": "870055bb5d3b3bdc65ccb0836bf9ef0887155c8c1c0546f5bbedda1f490d7723"
   },
   "js/eraser.js": {
     "v": 11,
     "sha": "712c9839c5391bbad6769e6534f8317204f9303f9232e209dadcf5ac4e190c3f"
   },
   "js/exporters.js": {
-    "v": 57,
-    "sha": "f15d788cacfab65694e2fbb6500bea8a4827dba4b9fc64a6e06abe5b035037e7"
+    "v": 58,
+    "sha": "413201d4009a9004caa44febacbfc458c8d5a4abd5d622bb3760b4e9b183a8cd"
   },
   "js/magicwand.js": {
     "v": 28,
     "sha": "7fb159fc6cd671c863edd80738a48f76d77b1530e37cfa07e7cb473996728724"
   },
   "js/palette-ui.js": {
-    "v": 50,
-    "sha": "9b6832667188335655259f31c376956be406228e0dfe0e71436008b583a6f54d"
+    "v": 51,
+    "sha": "4eba0a4f34bc65ee4595dfbaf8b3fb2f3a40b62ebc4c21dc16109c1266cbd57f"
   },
   "js/palette.js": {
     "v": 30,
@@ -76,16 +76,16 @@
     "sha": "1d5c939d70c7b0d140ada27c4e83cabd99513c3936594c54d982a1754fabf2b5"
   },
   "js/settings.js": {
-    "v": 66,
-    "sha": "56cff21eebbfa55cc56a0fd715993a5a994edf0c91e1d3083539e156abea26f4"
+    "v": 67,
+    "sha": "1faba139872bcbb2949f43838fe677b649a7670321b8ae10c02f64c050d33c17"
   },
   "js/vectorexport.js": {
     "v": 44,
     "sha": "e759f7e132447b570670c436fec90c3727c42e6f33a3ad6ec490e650aca62fce"
   },
   "js/view.js": {
-    "v": 66,
-    "sha": "4a6ec367114b22b5170896d199f41b6cc63a69df80b70f03a7d23c69b70890c5"
+    "v": 67,
+    "sha": "3d6c10361908015690f1e49c97b49ce315e8aa77e18e8fca4972f712f4016723"
   },
   "js/worker.js": {
     "v": 81,

@@ -5,22 +5,26 @@
 // module first.
 import { brushSizeForShortcut, snapPointToAngle, svgViewBox } from "./eraser.js?v=11";
 import { parseHexColor, sampleRasterColor, toHexColor, tracePixels } from "./preprocess.js?v=76";
-import { els, hooks, state } from "./context.js?v=48";
+import { els, hooks, state } from "./context.js?v=49";
 import { floodRegion, growMask, maskLoops, unionMasks } from "./magicwand.js?v=28";
-import { refreshExport } from "./exporters.js?v=57";
+import { refreshExport } from "./exporters.js?v=58";
 
+/** @param {"result" | "source" | "compare"} view */
 export function setView(view) {
-  const showResult = view === "result";
-  if (!showResult) {
+  if (view !== "result") {
     if (state.erasing) setEraser(false);
     if (state.blobFilling) setBlobFill(false);
     clearSelection();
     setSelectionTool(null);
   }
-  els.showResult.setAttribute("aria-pressed", String(showResult));
-  els.showSource.setAttribute("aria-pressed", String(!showResult));
-  els.resultView.hidden = !showResult;
-  els.sourceView.hidden = showResult;
+  els.showResult.setAttribute("aria-pressed", String(view === "result"));
+  els.showSource.setAttribute("aria-pressed", String(view === "source"));
+  els.showCompare.setAttribute("aria-pressed", String(view === "compare"));
+  els.resultView.hidden = view === "source";
+  els.sourceView.hidden = view === "result";
+  els.compareDivider.hidden = view !== "compare";
+  els.preview.classList.toggle("comparing", view === "compare");
+  hooks.updateCompare();
 }
 
 // -- Eyedropper: arm, click the source image to sample, Esc cancels ----

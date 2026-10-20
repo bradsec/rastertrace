@@ -53,7 +53,7 @@
       }
     </script>
 
-    <link rel="stylesheet" href="css/styles.css?v=115" />
+    <link rel="stylesheet" href="css/styles.css?v=116" />
   </head>
   <body>
     <header class="app-header">
@@ -93,6 +93,7 @@
           <div class="menu-popover">
             <button type="button" data-action="show-result">Show result</button>
             <button type="button" data-action="show-source">Show source</button>
+            <button type="button" data-action="show-compare">Compare</button>
             <button type="button" data-action="rotate-left">Rotate left</button>
             <button type="button" data-action="rotate-right">Rotate right</button>
             <button type="button" data-action="invert-image">Invert colors</button>
@@ -1207,6 +1208,15 @@
               >
                 Source
               </button>
+              <button
+                type="button"
+                id="show-compare"
+                class="toggle"
+                aria-pressed="false"
+                title="Show the original and the traced SVG side by side, split by a draggable divider"
+              >
+                Compare
+              </button>
             </div>
             <div class="backdrop-row" role="group" aria-label="Preview background">
               <span class="backdrop-label" aria-hidden="true">Backdrop</span>
@@ -1471,6 +1481,20 @@
                 draggable="false"
                 hidden
               />
+            </div>
+            <div id="compare-divider" class="compare-divider" hidden>
+              <div
+                id="compare-handle"
+                class="compare-handle"
+                role="slider"
+                tabindex="0"
+                aria-label="Compare divider"
+                aria-valuemin="0"
+                aria-valuemax="100"
+                aria-valuenow="50"
+                aria-valuetext="50% source, 50% result"
+                title="Drag or use arrow keys to move the divider"
+              ></div>
             </div>
             <div id="tracing-veil" class="tracing-veil" hidden>
               <p>
@@ -1992,6 +2016,6 @@
         location.reload();
       };
     </script>
-    <script type="module" src="js/app.js?v=154" onerror="window.recoverRasterTraceBoot()"></script>
+    <script type="module" src="js/app.js?v=156" onerror="window.recoverRasterTraceBoot()"></script>
   </body>
 </html>
