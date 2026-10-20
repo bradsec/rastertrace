@@ -2,7 +2,7 @@
 // that picks a traced color to edit. Edits recolor fills only; they
 // only retrace when switching layering.
 import { els, hooks, state } from "./context.js?v=49";
-import { deactivateCleanupTools, setView } from "./cleanup-tools.js?v=67";
+import { deactivateCleanupTools, setView, showResultOverSource } from "./cleanup-tools.js?v=68";
 import { refreshExport } from "./exporters.js?v=58";
 import {
   mergeEdits,
@@ -84,6 +84,7 @@ function syncEditor() {
 // The native color input fires `input` continuously while dragging, and
 // each refresh is a full string pass over the trace: one per frame.
 function scheduleRefresh() {
+  showResultOverSource();
   if (refreshFrame) return;
   refreshFrame = requestAnimationFrame(() => {
     refreshFrame = 0;

@@ -4,7 +4,7 @@
 // (which stop propagation while a tool is active), so app.js imports
 // this module last.
 import { els, hooks, state } from "./context.js?v=49";
-import { renderSelection } from "./cleanup-tools.js?v=67";
+import { renderSelection } from "./cleanup-tools.js?v=68";
 
 const view = { scale: 1, tx: 0, ty: 0 };
 const ZOOM_MIN = 0.001;
@@ -303,6 +303,7 @@ hooks.updateCompare = updateCompare;
 /** @param {number} value percent of the preview width */
 function setSplit(value, persist) {
   split = Math.min(100, Math.max(0, value));
+  els.preview.style.setProperty("--compare-split", `${split}%`);
   const now = Math.round(split);
   els.compareHandle.setAttribute("aria-valuenow", String(now));
   els.compareHandle.setAttribute("aria-valuetext", `${now}% source, ${100 - now}% result`);

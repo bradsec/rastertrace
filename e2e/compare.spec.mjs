@@ -132,3 +132,56 @@ test("phones keep one-finger page scroll outside the handle", async ({ page }) =
   await expect(page.locator("#compare-handle")).toBeInViewport();
   expect(handle.width).toBeGreaterThanOrEqual(44);
 });
+
+test("the preview labels which image it shows", async ({ page }) => {
+  const sourceLabel = page.locator("#view-label-source");
+  const resultLabel = page.locator("#view-label-result");
+  await expect(sourceLabel).toBeHidden();
+  await expect(resultLabel).toBeHidden();
+
+  await page.locator("#show-source").click();
+  await expect(sourceLabel).toBeVisible();
+  await expect(sourceLabel).toHaveText("Source (original)");
+  await expect(resultLabel).toBeHidden();
+
+  await page.locator("#show-compare").click();
+  await expect(sourceLabel).toHaveText("Source", { useInnerText: true });
+  await expect(resultLabel).toBeVisible();
+  const handle = await page.locator("#compare-handle").boundingBox();
+  const source = await sourceLabel.boundingBox();
+  const result = await resultLabel.boundingBox();
+  expect(source.x + source.width).toBeLessThan(handle.x + handle.width / 2);
+  expect(result.x).toBeGreaterThan(handle.x + handle.width / 2);
+
+  await page.locator("#show-result").click();
+  await expect(sourceLabel).toBeHidden();
+  await expect(resultLabel).toBeHidden();
+});
+
+test("changing a setting on Source shows the result once it traces", async ({ page }) => {
+  await page.locator("#show-source").click();
+  await page.locator("#simplify").fill("5");
+  await expect(page.locator("#show-result")).toHaveAttribute("aria-pressed", "true", {
+    timeout: 60_000,
+  });
+  await expect(page.locator("#source-view")).toBeHidden();
+});
+
+test("Compare stays put when a setting changes", async ({ page }) => {
+  await page.locator("#show-compare").click();
+  await page.locator("#simplify").fill("5");
+  await expect(page.locator("#status")).toContainText(/Traced \d/, { timeout: 60_000 });
+  await expect(page.locator("#tracing-veil")).toBeHidden();
+  await expect(page.locator("#show-compare")).toHaveAttribute("aria-pressed", "true");
+});
+
+test("editing a palette color on Source shows the result", async ({ page }) => {
+  // The left panel's fold state is chosen at load from the window width.
+  await page.setViewportSize({ width: 1600, height: 1000 });
+  await page.reload();
+  await loadImage(page);
+  await page.locator("#show-source").click();
+  await page.locator("#palette-grid .swatch").first().click();
+  await page.locator("#palette-hex").fill("#336699");
+  await expect(page.locator("#show-result")).toHaveAttribute("aria-pressed", "true");
+});

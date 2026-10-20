@@ -24,7 +24,17 @@ export function setView(view) {
   els.sourceView.hidden = view === "result";
   els.compareDivider.hidden = view !== "compare";
   els.preview.classList.toggle("comparing", view === "compare");
+  els.preview.classList.toggle("showing-source", view === "source");
   hooks.updateCompare();
+}
+
+/**
+ * After an edit, swap Source for Result so the change shows: on the
+ * original it would look like nothing happened. Compare already shows the
+ * result, and the eyedropper needs the source.
+ */
+export function showResultOverSource() {
+  if (els.resultView.hidden && !state.picking) setView("result");
 }
 
 // -- Eyedropper: arm, click the source image to sample, Esc cancels ----

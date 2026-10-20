@@ -2008,6 +2008,41 @@ body:has(.tool-rail .rail-tool[aria-pressed="true"]) .rotate-group {
   height: 100%;
 }
 
+/* Names the image on screen whenever it is not the plain result, so
+   Source is not mistaken for the trace. In Compare each name sits on
+   its side of the divider. */
+.view-label {
+  position: absolute;
+  top: 8px;
+  z-index: 3;
+  display: none;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: rgb(0 0 0 / 0.7);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 18px;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.preview.showing-source #view-label-source {
+  display: block;
+  left: 50%;
+  transform: translateX(-50%);
+}
+.preview.comparing #view-label-source {
+  display: block;
+  right: calc(100% - var(--compare-split, 50%) + 10px);
+}
+.preview.comparing #view-label-result {
+  display: block;
+  left: calc(var(--compare-split, 50%) + 10px);
+}
+.preview.comparing .view-label-detail {
+  display: none;
+}
+
 .compare-divider {
   position: absolute;
   top: 0;

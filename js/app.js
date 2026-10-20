@@ -41,8 +41,9 @@ import {
   setEraser,
   setSelectionTool,
   setView,
-} from "./cleanup-tools.js?v=67";
-import { afterTrace, resetPalette } from "./palette-ui.js?v=51";
+  showResultOverSource,
+} from "./cleanup-tools.js?v=68";
+import { afterTrace, resetPalette } from "./palette-ui.js?v=52";
 import {
   applyExportProfile,
   applyMeasurementUnit,
@@ -72,8 +73,8 @@ import {
   updateTraceFields,
   updateTransparencyFields,
   userPresets,
-} from "./settings.js?v=67";
-import { actualSizeView, resetView } from "./view.js?v=67";
+} from "./settings.js?v=68";
+import { actualSizeView, resetView } from "./view.js?v=68";
 
 const SAMPLE_FILES = [
   "synthwave.png",
@@ -189,6 +190,10 @@ async function retrace() {
     }
     els.status.textContent = statusText;
     setBusy(false);
+    if (resultAfterTrace) {
+      resultAfterTrace = false;
+      showResultOverSource();
+    }
   } catch (err) {
     setBusy(false);
     if (await recoverFromStaleCache(err.message)) return;
@@ -198,7 +203,13 @@ async function retrace() {
   }
 }
 
+// Set when a setting changes while Source is showing; the next finished
+// trace switches to Result. Rotate and invert retrace directly, so they
+// leave the view alone.
+let resultAfterTrace = false;
+
 function scheduleRetrace() {
+  if (els.resultView.hidden) resultAfterTrace = true;
   clearTimeout(state.debounce);
   state.debounce = setTimeout(retrace, 350);
 }
