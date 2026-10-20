@@ -53,7 +53,7 @@
       }
     </script>
 
-    <link rel="stylesheet" href="css/styles.css?v=117" />
+    <link rel="stylesheet" href="css/styles.css?v=118" />
   </head>
   <body>
     <header class="app-header">
@@ -1338,6 +1338,30 @@
             >
               <span class="material-icon icon-brush" aria-hidden="true"></span>
             </button>
+            <button
+              type="button"
+              id="smooth-tool"
+              class="rail-tool"
+              aria-label="Smooth brush"
+              aria-pressed="false"
+              disabled
+              title="Brush over rough or stepped edges to smooth them (S)"
+            >
+              <svg
+                class="cleanup-tool-icon"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+                focusable="false"
+              >
+                <path d="M3 20v-3h3v-3h3v-2" />
+                <path d="M9 12c2-4 6-7 12-8" />
+              </svg>
+            </button>
             <span class="rail-divider" aria-hidden="true"></span>
             <button
               type="button"
@@ -1517,6 +1541,13 @@
               <rect class="selection-ants-dark" vector-effect="non-scaling-stroke" />
               <rect class="selection-ants-light" vector-effect="non-scaling-stroke" />
             </svg>
+            <svg
+              id="smooth-overlay"
+              class="smooth-overlay"
+              preserveAspectRatio="none"
+              aria-hidden="true"
+              hidden
+            ></svg>
           </div>
           <div
             id="selection-actions"
@@ -1691,11 +1722,11 @@
           <div class="dialog-heading">
             <h2 id="cleanup-guide-title" tabindex="-1" autofocus>Vector cleanup</h2>
             <p>
-              Erase unwanted areas or paint fills, then the image is traced again with your edits,
-              so the profile and settings apply to them too. The tools sit on the left edge of the
-              preview, and the chosen tool's options show in the strip above it. On phones the rail
-              shows the chosen tool; the grid button opens every tool, and its options open in a
-              panel at the bottom of the screen.
+              Erase unwanted areas, paint fills or smooth rough edges, then the image is traced
+              again with your edits, so the profile and settings apply to them too. The tools sit on
+              the left edge of the preview, and the chosen tool's options show in the strip above
+              it. On phones the rail shows the chosen tool; the grid button opens every tool, and
+              its options open in a panel at the bottom of the screen.
             </p>
           </div>
           <dl class="help-settings">
@@ -1714,6 +1745,16 @@
                 Press B or select the brush icon, choose or enter a fill color, then paint over the
                 vector result. Use the eyedropper to sample from the active traced palette after
                 color reduction and preprocessing. The eraser and blob brush share the Size control.
+              </dd>
+            </div>
+            <div>
+              <dt>Smooth brush</dt>
+              <dd>
+                Press S or select the smooth icon, then brush over rough, notched or stair-stepped
+                edges. Inside the stroke each pixel takes the color most of its surroundings have,
+                so bumps and steps up to about a quarter of the brush size flatten while longer
+                edges stay put; a bigger brush smooths more. No new colors appear. It shares the
+                Size control and shows as a tinted stroke until the retrace applies it.
               </dd>
             </div>
             <div>
@@ -1770,10 +1811,11 @@
             <div>
               <dt>Exporting cleanup</dt>
               <dd>
-                Each edit shows at once over the result while the image retraces in the background.
-                Fills and erases are part of the trace, so every export keeps them: a fill takes the
-                profile's colors (black in Mono stencil) and an erase is a hole. PDF and DXF wait
-                for that retrace to finish.
+                Fills and erases show at once over the result, and smooth strokes as a tinted
+                outline, while the image retraces in the background. Every edit is part of the
+                trace, so every export keeps it: a fill takes the profile's colors (black in Mono
+                stencil), an erase is a hole, and smoothing follows the traced colors. PDF and DXF
+                wait for that retrace to finish.
               </dd>
             </div>
           </dl>
@@ -2042,6 +2084,6 @@
         location.reload();
       };
     </script>
-    <script type="module" src="js/app.js?v=166" onerror="window.recoverRasterTraceBoot()"></script>
+    <script type="module" src="js/app.js?v=169" onerror="window.recoverRasterTraceBoot()"></script>
   </body>
 </html>

@@ -12,12 +12,13 @@ import {
   reduceAndRemoveBackground,
   removeSpecks,
   smoothAlpha,
+  smoothLabels,
   straightenPaths,
   thresholdImage,
   toGrayscale,
   tracePixels,
-} from "./preprocess.js?v=82";
-import { rasterPalette, snapFills } from "./palette.js?v=36";
+} from "./preprocess.js?v=84";
+import { rasterPalette, snapFills } from "./palette.js?v=38";
 
 // Explicit versioned URL: the glue's own wasm fetch drops the ?v= query,
 // so a rebuilt binary would otherwise be served from stale browser cache
@@ -101,6 +102,13 @@ self.onmessage = async (event) => {
     if (settings.stencil) {
       thresholdImage(img, settings.stencilThreshold ?? 128);
       fillTransparent(img, [255, 255, 255]);
+    }
+
+    // Smooth brush strokes vote among the final colors (and transparency),
+    // so they work on whatever the settings above produced.
+    if (settings.smooth?.length) {
+      stage("Smoothing edges…");
+      smoothLabels(img, settings.smooth);
     }
 
     // Reduced colors are exact, so specks come off here by area alone and

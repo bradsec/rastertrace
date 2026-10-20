@@ -1,10 +1,12 @@
 // Paints cleanup actions (fills and erases) into the raster before it
 // is traced, so profiles and settings apply to them like the rest of the
-// artwork: a fill is traced in its color, an erase leaves a hole.
-import { cleanupMaskSvg } from "./eraser.js?v=12";
-import { parseHexColor } from "./preprocess.js?v=82";
+// artwork: a fill is traced in its color, an erase leaves a hole. Smooth
+// strokes act on the reduced colors instead, so they leave as masks for
+// the worker.
+import { cleanupMaskSvg } from "./eraser.js?v=13";
+import { parseHexColor } from "./preprocess.js?v=84";
 
-/** @typedef {{ mode?: string, color?: string, points?: unknown[], type?: string }} CleanupAction */
+/** @typedef {{ mode?: string, color?: string, diameter?: number, points?: unknown[], type?: string }} CleanupAction */
 
 /**
  * Coverage per action, cropped to its bounding box: { key, x, y, width,
@@ -65,7 +67,8 @@ async function coverage(action, width, height, pixelExact) {
 
 /**
  * A copy of `imageData` with `actions` painted in order: a fill sets its
- * color fully opaque, an erase clears alpha. `pixelExact` draws strokes
+ * color fully opaque, an erase clears alpha, a smooth stroke is skipped
+ * (see smoothRegions). `pixelExact` draws strokes
  * on the pixel grid, matching how Pixel exact traces.
  * @param {ImageData} imageData
  * @param {CleanupAction[]} actions
@@ -74,6 +77,7 @@ export async function bakeCleanup(imageData, actions, { pixelExact = false } = {
   const { width, height } = imageData;
   const data = new Uint8ClampedArray(imageData.data);
   for (const action of actions) {
+    if (action.mode === "smooth") continue;
     const mask = await coverage(action, width, height, pixelExact);
     const color = action.mode === "fill" ? parseHexColor(action.color) : null;
     for (let y = 0; y < mask.height; y++) {
@@ -92,4 +96,25 @@ export async function bakeCleanup(imageData, actions, { pixelExact = false } = {
     }
   }
   return new ImageData(data, width, height);
+}
+
+// A smooth stroke flattens bumps up to about this share of its diameter.
+const SMOOTH_SHARE = 1 / 4;
+
+/**
+ * The smooth strokes among `actions` as smoothLabels regions of an image
+ * `width` by `height`, in drawing order.
+ * @param {CleanupAction[]} actions
+ */
+export async function smoothRegions(actions, width, height, { pixelExact = false } = {}) {
+  const regions = [];
+  for (const action of actions) {
+    if (action.mode !== "smooth") continue;
+    const mask = await coverage(action, width, height, pixelExact);
+    if (!mask.width || !mask.height) continue;
+    const { x, y, bits } = mask;
+    const radius = (action.diameter ?? 0) * Math.min(width, height) * SMOOTH_SHARE;
+    regions.push({ x, y, width: mask.width, height: mask.height, bits, radius });
+  }
+  return regions;
 }

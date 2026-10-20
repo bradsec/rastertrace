@@ -1,7 +1,7 @@
 // Shared DOM references and mutable app state, imported by every UI
 // module. Keeps no logic beyond tiny helpers so it can never participate
 // in an import cycle.
-import { MAX_TRACE_SIDE } from "./preprocess.js?v=82";
+import { MAX_TRACE_SIDE } from "./preprocess.js?v=84";
 
 /**
  * @template {Element} [T=HTMLElement]
@@ -174,6 +174,7 @@ export const els = {
   eraserClear: /** @type {HTMLButtonElement} */ ($("eraser-clear")),
   eraserCursor: $("eraser-cursor"),
   blobFillTool: /** @type {HTMLButtonElement} */ ($("blob-fill-tool")),
+  smoothTool: /** @type {HTMLButtonElement} */ ($("smooth-tool")),
   blobFillColor: /** @type {HTMLInputElement} */ ($("blob-fill-color")),
   blobFillHex: /** @type {HTMLInputElement} */ ($("blob-fill-hex")),
   blobFillPick: /** @type {HTMLButtonElement} */ ($("blob-fill-pick")),
@@ -191,6 +192,7 @@ export const els = {
   wandSmooth: /** @type {HTMLInputElement} */ ($("wand-smooth")),
   wandSmoothOut: /** @type {HTMLOutputElement} */ ($("wand-smooth-out")),
   selectionOverlay: $("selection-overlay"),
+  smoothOverlay: $("smooth-overlay"),
   selectionActions: /** @type {HTMLElement} */ ($("selection-actions")),
   selectionClose: /** @type {HTMLButtonElement} */ ($("selection-close")),
   selectionErase: /** @type {HTMLButtonElement} */ ($("selection-erase")),
@@ -229,6 +231,7 @@ export const state = {
   erasing: false,
   blobFilling: false,
   blobPicking: false,
+  smoothing: false,
   eraseStrokes: [], // ordered cleanup actions, normalized so retracing preserves placement
   eraseRedo: [],
   /** Cleanup actions painted into the current trace; the rest are drawn on top until it reruns. */
@@ -253,6 +256,8 @@ export const hooks = {
   startPinch: () => {},
   /** Re-clip the Compare layers after a view switch (set by view.js). */
   updateCompare: () => {},
+  /** Redraw the outline of smooth strokes awaiting a trace (set by cleanup-tools.js). */
+  renderSmoothPreview: () => {},
 };
 
 export function showError(message) {

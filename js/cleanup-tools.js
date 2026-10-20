@@ -3,17 +3,18 @@
 // Listener order matters: the selection and eraser pointer handlers must
 // register before the pan handlers in view.js, so app.js imports this
 // module first.
-import { brushSizeForShortcut, snapPointToAngle, svgViewBox } from "./eraser.js?v=12";
-import { parseHexColor, sampleRasterColor, toHexColor, tracePixels } from "./preprocess.js?v=82";
-import { els, hooks, state } from "./context.js?v=56";
-import { floodRegion, growMask, maskLoops, unionMasks } from "./magicwand.js?v=34";
-import { refreshExport } from "./exporters.js?v=66";
+import { brushSizeForShortcut, snapPointToAngle, svgViewBox } from "./eraser.js?v=13";
+import { parseHexColor, sampleRasterColor, toHexColor, tracePixels } from "./preprocess.js?v=84";
+import { els, hooks, state } from "./context.js?v=58";
+import { floodRegion, growMask, maskLoops, unionMasks } from "./magicwand.js?v=36";
+import { refreshExport } from "./exporters.js?v=68";
 
 /** @param {"result" | "source" | "compare"} view */
 export function setView(view) {
   if (view !== "result") {
     if (state.erasing) setEraser(false);
     if (state.blobFilling) setBlobFill(false);
+    if (state.smoothing) setSmooth(false);
     clearSelection();
     setSelectionTool(null);
   }
@@ -26,6 +27,7 @@ export function setView(view) {
   els.preview.classList.toggle("comparing", view === "compare");
   els.preview.classList.toggle("showing-source", view === "source");
   hooks.updateCompare();
+  renderSmoothPreview();
 }
 
 /**
@@ -99,6 +101,7 @@ export function deactivateCleanupTools() {
     state.erasing ||
     state.blobFilling ||
     state.blobPicking ||
+    state.smoothing ||
     state.selection ||
     state.selectionTool;
   if (!active) return;
@@ -106,6 +109,7 @@ export function deactivateCleanupTools() {
   hooks.cancelPalettePick();
   setEraser(false);
   setBlobFill(false);
+  setSmooth(false);
   clearSelection();
   setSelectionTool(null);
   els.status.textContent = "";
@@ -137,7 +141,7 @@ document.addEventListener("keydown", (event) => {
   const rangeFocused = target instanceof HTMLInputElement && target.type === "range";
   if (
     bracketDirection &&
-    (state.erasing || state.blobFilling) &&
+    (state.erasing || state.blobFilling || state.smoothing) &&
     (!(target instanceof HTMLElement) ||
       rangeFocused ||
       !(/^(INPUT|SELECT|TEXTAREA)$/.test(target.tagName) || target.isContentEditable))
@@ -167,6 +171,9 @@ document.addEventListener("keydown", (event) => {
   } else if (!event.ctrlKey && !event.metaKey && !event.altKey && key === "b" && state.svg) {
     event.preventDefault();
     setBlobFill(!state.blobFilling);
+  } else if (!event.ctrlKey && !event.metaKey && !event.altKey && key === "s" && state.svg) {
+    event.preventDefault();
+    setSmooth(!state.smoothing);
   } else if (!event.ctrlKey && !event.metaKey && !event.altKey && key === "m" && state.svg) {
     event.preventDefault();
     const tool = event.shiftKey
@@ -189,9 +196,13 @@ document.addEventListener("keydown", (event) => {
   } else if (event.key === "Enter" && state.selection?.type === "polygon") {
     event.preventDefault();
     finishPolygon();
-  } else if (event.key === "Escape" && (state.erasing || state.blobFilling || state.blobPicking)) {
+  } else if (
+    event.key === "Escape" &&
+    (state.erasing || state.blobFilling || state.blobPicking || state.smoothing)
+  ) {
     setEraser(false);
     setBlobFill(false);
+    setSmooth(false);
   } else if (
     (event.key === "Escape" || (event.key === "Backspace" && !event.ctrlKey && !event.metaKey)) &&
     state.selection?.type === "polygon" &&
@@ -299,10 +310,12 @@ export function setSelectionTool(tool) {
     state.erasing = false;
     state.blobFilling = false;
     state.blobPicking = false;
+    state.smoothing = false;
     els.eraserTool.setAttribute("aria-pressed", "false");
     els.blobFillTool.setAttribute("aria-pressed", "false");
     els.blobFillPick.setAttribute("aria-pressed", "false");
-    els.preview.classList.remove("erasing");
+    els.smoothTool.setAttribute("aria-pressed", "false");
+    els.preview.classList.remove("erasing", "smoothing");
     els.preview.classList.remove("blob-filling", "blob-picking");
     els.eraserCursor.hidden = true;
     setView("result");
@@ -487,6 +500,42 @@ export function renderSelection() {
   els.selectionOverlay.replaceChildren(...selectionNodes);
   els.selectionOverlay.removeAttribute("hidden");
 }
+
+/**
+ * Outline the smooth strokes the current trace does not include yet:
+ * smoothing needs the traced colors, so unlike a fill or an erase it
+ * cannot be drawn into the result until the retrace lands.
+ */
+export function renderSmoothPreview() {
+  const pending = state.eraseStrokes.filter(
+    (action) => action.mode === "smooth" && !state.bakedActions.has(action),
+  );
+  if (!pending.length || els.resultView.hidden) {
+    els.smoothOverlay.setAttribute("hidden", "");
+    return;
+  }
+  const imageRect = els.resultView.getBoundingClientRect();
+  const previewRect = els.preview.getBoundingClientRect();
+  els.smoothOverlay.style.left = `${imageRect.left - previewRect.left}px`;
+  els.smoothOverlay.style.top = `${imageRect.top - previewRect.top}px`;
+  els.smoothOverlay.style.width = `${imageRect.width}px`;
+  els.smoothOverlay.style.height = `${imageRect.height}px`;
+  els.smoothOverlay.setAttribute("viewBox", `0 0 ${imageRect.width} ${imageRect.height}`);
+  const scale = Math.min(imageRect.width, imageRect.height);
+  const strokes = pending.map((action) => {
+    const path = document.createElementNS(SVG_NS, "path");
+    const points = action.points.map(
+      (point) => `${point.x * imageRect.width},${point.y * imageRect.height}`,
+    );
+    // A lone point still needs a segment for the round cap to draw.
+    path.setAttribute("d", `M${points.join("L")}${points.length === 1 ? `L${points[0]}` : ""}`);
+    path.setAttribute("stroke-width", String(action.diameter * scale));
+    return path;
+  });
+  els.smoothOverlay.replaceChildren(...strokes);
+  els.smoothOverlay.removeAttribute("hidden");
+}
+hooks.renderSmoothPreview = renderSmoothPreview;
 
 let renderFrame = 0;
 
@@ -1098,9 +1147,11 @@ export function setEraser(active) {
     hooks.cancelPalettePick();
     state.blobFilling = false;
     state.blobPicking = false;
+    state.smoothing = false;
     els.blobFillTool.setAttribute("aria-pressed", "false");
     els.blobFillPick.setAttribute("aria-pressed", "false");
-    els.preview.classList.remove("blob-filling", "blob-picking");
+    els.smoothTool.setAttribute("aria-pressed", "false");
+    els.preview.classList.remove("blob-filling", "blob-picking", "smoothing");
     clearSelection();
     setSelectionTool(null);
   }
@@ -1120,8 +1171,10 @@ export function setBlobFill(active) {
   if (state.blobFilling) {
     hooks.cancelPalettePick();
     state.erasing = false;
+    state.smoothing = false;
     els.eraserTool.setAttribute("aria-pressed", "false");
-    els.preview.classList.remove("erasing");
+    els.smoothTool.setAttribute("aria-pressed", "false");
+    els.preview.classList.remove("erasing", "smoothing");
     clearSelection();
     setSelectionTool(null);
   }
@@ -1134,6 +1187,30 @@ export function setBlobFill(active) {
     setView("result");
     els.status.textContent =
       "Drag over the vector to paint. [ and ] change the diameter. B or Esc exits.";
+  }
+}
+
+export function setSmooth(active) {
+  state.smoothing = active && Boolean(state.svg);
+  if (state.smoothing) {
+    hooks.cancelPalettePick();
+    state.erasing = false;
+    state.blobFilling = false;
+    state.blobPicking = false;
+    els.eraserTool.setAttribute("aria-pressed", "false");
+    els.blobFillTool.setAttribute("aria-pressed", "false");
+    els.blobFillPick.setAttribute("aria-pressed", "false");
+    els.preview.classList.remove("erasing", "blob-filling", "blob-picking");
+    clearSelection();
+    setSelectionTool(null);
+  }
+  els.smoothTool.setAttribute("aria-pressed", String(state.smoothing));
+  els.preview.classList.toggle("smoothing", state.smoothing);
+  els.eraserCursor.hidden = true;
+  if (state.smoothing) {
+    setView("result");
+    els.status.textContent =
+      "Brush over rough or stepped edges to smooth them. [ and ] change the diameter. S or Esc exits.";
   }
 }
 
@@ -1154,7 +1231,7 @@ let cursorHovering = false;
 let sizePreviewTimer = 0;
 
 function previewBrushSize() {
-  if (!state.erasing && !state.blobFilling) return;
+  if (!state.erasing && !state.blobFilling && !state.smoothing) return;
   const rect = els.resultView.getBoundingClientRect();
   if (!rect.width || !rect.height) return;
   if (!cursorHovering) {
@@ -1181,6 +1258,7 @@ function sizeCleanupCursor(rect) {
 
 els.eraserTool.addEventListener("click", () => setEraser(!state.erasing));
 els.blobFillTool.addEventListener("click", () => setBlobFill(!state.blobFilling));
+els.smoothTool.addEventListener("click", () => setSmooth(!state.smoothing));
 els.eraserSize.addEventListener("input", () => setEraserSize(Number(els.eraserSize.value)));
 
 function setBlobColor(value) {
@@ -1252,7 +1330,7 @@ function cleanupPoint(event) {
 }
 
 function moveCleanupCursor(event) {
-  if (!state.erasing && !state.blobFilling && !state.blobPicking) return;
+  if (!state.erasing && !state.blobFilling && !state.blobPicking && !state.smoothing) return;
   const point = cleanupPoint(event);
   cursorHovering = Boolean(point) && event.pointerType !== "touch";
   els.eraserCursor.hidden = !point;
@@ -1301,7 +1379,12 @@ els.preview.addEventListener("pointermove", (event) => {
 els.preview.addEventListener(
   "pointerdown",
   (event) => {
-    if (state.blobPicking || (!state.erasing && !state.blobFilling) || event.button !== 0) return;
+    if (
+      state.blobPicking ||
+      (!state.erasing && !state.blobFilling && !state.smoothing) ||
+      event.button !== 0
+    )
+      return;
     event.preventDefault();
     event.stopImmediatePropagation();
     const point = cleanupPoint(event);
@@ -1311,7 +1394,7 @@ els.preview.addEventListener(
     const redo = state.eraseRedo;
     state.eraseRedo = [];
     eraseStroke = {
-      mode: state.blobFilling ? "fill" : "erase",
+      mode: state.blobFilling ? "fill" : state.smoothing ? "smooth" : "erase",
       ...(state.blobFilling ? { color: els.blobFillColor.value } : {}),
       diameter: Number(els.eraserSize.value) / Math.min(box.width, box.height),
       points: [{ x: point.x, y: point.y }],

@@ -1,16 +1,16 @@
 // Export pipeline and save handlers: applies export post-processing to
 // the traced SVG, drives the result stats and action buttons, and saves
 // SVG/PNG/PDF/DXF through the File System Access API or a download.
-import { applyCleanupActions } from "./eraser.js?v=12";
+import { applyCleanupActions } from "./eraser.js?v=13";
 import {
   applyExportOptions,
   countPaths,
   nameColorGroups,
   physicalWidthValue,
-} from "./preprocess.js?v=82";
-import { recolorSvg } from "./palette.js?v=36";
+} from "./preprocess.js?v=84";
+import { recolorSvg } from "./palette.js?v=38";
 import { parseSvgPaths, toDxf, toPdf } from "./vectorexport.js?v=44";
-import { els, preferences, showError, state } from "./context.js?v=56";
+import { els, hooks, preferences, showError, state } from "./context.js?v=58";
 
 const DISPLAY_UNITS_PER_INCH = { px: 96, in: 1, cm: 2.54, mm: 25.4 };
 
@@ -38,6 +38,7 @@ export function setResultActions(enabled) {
   els.eraserTool.disabled = !enabled;
   els.eraserSize.disabled = !enabled;
   els.blobFillTool.disabled = !enabled;
+  els.smoothTool.disabled = !enabled;
   els.blobFillColor.disabled = !enabled;
   els.blobFillHex.disabled = !enabled;
   els.blobFillPick.disabled = !enabled;
@@ -153,6 +154,7 @@ export function refreshExport() {
   // until the retrace that includes them lands.
   const pending = state.eraseStrokes.filter((a) => !state.bakedActions.has(a));
   state.svg = applyCleanupActions(exportedSvg(), pending, { pixelExact });
+  hooks.renderSmoothPreview();
 
   // Rendered via <img> + blob URL: sandboxes the generated markup and
   // avoids inflating the DOM with thousands of inline path nodes.

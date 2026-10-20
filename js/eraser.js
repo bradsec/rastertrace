@@ -179,6 +179,7 @@ export function applyEraserMask(svg, strokes, { pixelExact = false } = {}) {
  * Apply ordered eraser and fill strokes to an SVG. An eraser wraps all
  * artwork produced before it, while a later fill remains visible above
  * that mask. This mirrors the order in which cleanup actions were drawn.
+ * Smooth strokes are skipped.
  */
 export function applyCleanupActions(svg, actions, { pixelExact = false } = {}) {
   if (!actions.length) return svg;
@@ -190,6 +191,8 @@ export function applyCleanupActions(svg, actions, { pixelExact = false } = {}) {
   let defs = "";
   let maskIndex = 0;
   for (const action of actions) {
+    // Smoothing needs the traced colors, so it only shows once traced.
+    if (action.mode === "smooth") continue;
     if (action.mode === "fill" && action.type === "composite") {
       // Subtracted parts must stay unpainted, so the color is masked
       // rather than drawn as recolored shapes.

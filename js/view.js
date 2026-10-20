@@ -3,8 +3,8 @@
 // register after the selection and eraser handlers in cleanup-tools.js
 // (which stop propagation while a tool is active), so app.js imports
 // this module last.
-import { els, hooks, state } from "./context.js?v=56";
-import { renderSelection } from "./cleanup-tools.js?v=76";
+import { els, hooks, state } from "./context.js?v=58";
+import { renderSelection, renderSmoothPreview } from "./cleanup-tools.js?v=78";
 
 const view = { scale: 1, tx: 0, ty: 0 };
 const ZOOM_MIN = 0.001;
@@ -38,6 +38,7 @@ function applyView() {
   // At Fit there is nothing to pan, so phones let one finger scroll the page.
   els.preview.classList.toggle("fitted", fitted);
   renderSelection();
+  renderSmoothPreview();
   updateCompare();
 }
 
@@ -153,6 +154,7 @@ els.preview.addEventListener("pointerdown", (e) => {
     state.erasing ||
     state.blobFilling ||
     state.blobPicking ||
+    state.smoothing ||
     e.button !== 0
   )
     return;

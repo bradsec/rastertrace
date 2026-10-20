@@ -1576,7 +1576,8 @@ details.advanced[open] {
 
 .preview.erasing,
 .preview.blob-filling,
-.preview.blob-picking {
+.preview.blob-picking,
+.preview.smoothing {
   cursor: none;
 }
 .preview.selecting {
@@ -1702,7 +1703,11 @@ details.advanced[open] {
   align-items: center;
 }
 /* Each tool shows only its own options. */
-body:has(#eraser-tool[aria-pressed="true"], #blob-fill-tool[aria-pressed="true"])
+body:has(
+    #eraser-tool[aria-pressed="true"],
+    #blob-fill-tool[aria-pressed="true"],
+    #smooth-tool[aria-pressed="true"]
+  )
   .tool-options
   > .eraser-size,
 body:has(#blob-fill-tool[aria-pressed="true"], #blob-fill-pick[aria-pressed="true"])
@@ -1917,6 +1922,24 @@ body:has(.tool-rail .rail-tool[aria-pressed="true"]) .rotate-group {
   z-index: 10;
   overflow: visible;
   pointer-events: none;
+}
+
+/* Smooth strokes waiting for the trace that applies them. */
+.smooth-overlay {
+  position: absolute;
+  z-index: 9;
+  overflow: hidden;
+  pointer-events: none;
+}
+.smooth-overlay path {
+  fill: none;
+  stroke: var(--accent);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0.35;
+}
+.preview.smoothing .eraser-cursor {
+  border-style: dashed;
 }
 
 .selection-ants-dark,
@@ -2509,7 +2532,7 @@ dialog::backdrop {
   }
   /* A fitted preview has nothing to pan: let one finger scroll the page
      past it. Two-finger pinches still reach view.js. */
-  .preview.fitted:not(.erasing, .blob-filling, .blob-picking, .selecting) {
+  .preview.fitted:not(.erasing, .blob-filling, .blob-picking, .smoothing, .selecting) {
     touch-action: pan-y;
   }
 }

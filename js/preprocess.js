@@ -1906,6 +1906,38 @@ export function erodeAlpha(img, passes) {
 }
 
 /**
+ * Two passes of a separable running-sum box blur with a (2r+1) window,
+ * in place. Values past the edges repeat the nearest edge value.
+ * @param {Float32Array} values
+ */
+function boxBlur(values, width, height, radius) {
+  const window = 2 * radius + 1;
+  // One line at a time, padded by `radius` repeats of each end so the
+  // running sum needs no bounds checks (slow in WebKit).
+  const line = new Float32Array(Math.max(width, height) + 2 * radius + 1);
+  const blur = (length, count, stride, step) => {
+    for (let l = 0; l < count; l++) {
+      const base = l * stride;
+      const first = values[base];
+      const last = values[base + (length - 1) * step];
+      for (let k = 0; k < radius; k++) line[k] = first;
+      for (let i = 0; i < length; i++) line[radius + i] = values[base + i * step];
+      for (let k = radius + length; k <= length + 2 * radius; k++) line[k] = last;
+      let sum = 0;
+      for (let k = 0; k <= 2 * radius; k++) sum += line[k];
+      for (let i = 0; i < length; i++) {
+        values[base + i * step] = sum / window;
+        sum += line[i + 2 * radius + 1] - line[i];
+      }
+    }
+  };
+  for (let pass = 0; pass < 2; pass++) {
+    blur(width, height, width, 1);
+    blur(height, width, 1, width);
+  }
+}
+
+/**
  * Matte smoothing: box-blur the opaque mask twice with a (2r+1) window and
  * threshold it at half, so bumps and notches narrower than about `radius`
  * flatten while straight edges stay put; corners round by about `radius`
@@ -1917,28 +1949,9 @@ export function smoothAlpha(img, radius) {
   if (radius <= 0) return img;
   const { data, width, height } = img;
   const n = width * height;
-  let mask = new Float32Array(n);
+  const mask = new Float32Array(n);
   for (let p = 0; p < n; p++) mask[p] = data[p * 4 + 3] >= ALPHA_THRESHOLD ? 1 : 0;
-  const window = 2 * radius + 1;
-  // Separable running-sum box blur with edge replication.
-  const blur = (src, length, count, stride, step) => {
-    const out = new Float32Array(n);
-    for (let line = 0; line < count; line++) {
-      const base = line * stride;
-      const at = (i) => src[base + Math.min(length - 1, Math.max(0, i)) * step];
-      let sum = 0;
-      for (let i = -radius; i <= radius; i++) sum += at(i);
-      for (let i = 0; i < length; i++) {
-        out[base + i * step] = sum / window;
-        sum += at(i + radius + 1) - at(i - radius);
-      }
-    }
-    return out;
-  };
-  for (let pass = 0; pass < 2; pass++) {
-    mask = blur(mask, width, height, width, 1);
-    mask = blur(mask, height, width, 1, width);
-  }
+  boxBlur(mask, width, height, radius);
 
   /** @type {number[]} newly opaque pixels still waiting for a color */
   let pending = [];
@@ -1973,6 +1986,145 @@ export function smoothAlpha(img, radius) {
       colored[p] = 1;
     }
     pending = next;
+  }
+  return img;
+}
+
+/**
+ * Distance in pixels from each set bit of a mask to the nearest unset bit
+ * or the mask's edge (chamfer 3-4, so diagonals cost about √2). Unset
+ * bits are 0.
+ * @param {Uint8Array} bits
+ */
+function maskDepth(bits, width, height) {
+  const far = 3 * (width + height);
+  const depth = new Int32Array(width * height);
+  for (let p = 0; p < depth.length; p++) depth[p] = bits[p] ? far : 0;
+  const at = (x, y) => (x < 0 || y < 0 || x >= width || y >= height ? 0 : depth[y * width + x]);
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const p = y * width + x;
+      if (!depth[p]) continue;
+      depth[p] = Math.min(
+        depth[p],
+        at(x - 1, y) + 3,
+        at(x, y - 1) + 3,
+        at(x - 1, y - 1) + 4,
+        at(x + 1, y - 1) + 4,
+      );
+    }
+  }
+  for (let y = height - 1; y >= 0; y--) {
+    for (let x = width - 1; x >= 0; x--) {
+      const p = y * width + x;
+      if (!depth[p]) continue;
+      depth[p] = Math.min(
+        depth[p],
+        at(x + 1, y) + 3,
+        at(x, y + 1) + 3,
+        at(x + 1, y + 1) + 4,
+        at(x - 1, y + 1) + 4,
+      );
+    }
+  }
+  return Float32Array.from(depth, (d) => d / 3);
+}
+
+// smoothLabels: colors that take part in a stroke's vote, most common
+// first. Reduced images have a handful; an unreduced photo has thousands,
+// and its rare shades would only add cost.
+const SMOOTH_COLORS = 16;
+const SMOOTH_PASSES = 3;
+
+/**
+ * Smooth brush: inside each stroke, every pixel takes the color that most
+ * of its surroundings have, so bumps, notches and stair steps narrower
+ * than about `radius` flatten while longer edges stay put. Each color's
+ * mask is box-blurred twice (as smoothAlpha does for the matte) over the
+ * stroke's box grown by the blur's reach, the strongest color wins, and
+ * the vote repeats SMOOTH_PASSES times.
+ * Transparency counts as a color, so erased edges smooth too, and no new
+ * colors appear. `regions` hold a stroke's mask in image pixels: { x, y,
+ * width, height, bits (1 inside), radius }. Mutates img in place.
+ * @param {{ x: number, y: number, width: number, height: number, bits: Uint8Array, radius: number }[]} regions
+ */
+export function smoothLabels(img, regions) {
+  const { data, width, height } = img;
+  for (const region of regions) {
+    const radius = Math.max(1, Math.round(region.radius));
+    const reach = 2 * radius;
+    const x0 = Math.max(0, region.x - reach);
+    const y0 = Math.max(0, region.y - reach);
+    const x1 = Math.min(width, region.x + region.width + reach);
+    const y1 = Math.min(height, region.y + region.height + reach);
+    const boxWidth = x1 - x0;
+    const boxHeight = y1 - y0;
+    if (boxWidth <= 0 || boxHeight <= 0) continue;
+    const area = boxWidth * boxHeight;
+    const depth = maskDepth(region.bits, region.width, region.height);
+    const keys = new Int32Array(area);
+    const best = new Float32Array(area);
+    const winner = new Int32Array(area);
+    const own = new Float32Array(area);
+    const weight = new Float32Array(area);
+    // One vote moves edges but keeps each color's area, so a notch only
+    // spreads into a shallow dip; repeating it flattens the dip, as
+    // curvature flow does.
+    for (let pass = 0; pass < SMOOTH_PASSES; pass++) {
+      // Color key per box pixel; -1 is transparent.
+      const counts = new Map();
+      for (let y = 0; y < boxHeight; y++) {
+        for (let x = 0; x < boxWidth; x++) {
+          const i = ((y + y0) * width + x + x0) * 4;
+          const key =
+            data[i + 3] < ALPHA_THRESHOLD ? -1 : (data[i] << 16) | (data[i + 1] << 8) | data[i + 2];
+          keys[y * boxWidth + x] = key;
+          counts.set(key, (counts.get(key) || 0) + 1);
+        }
+      }
+      const colors = [...counts]
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, SMOOTH_COLORS)
+        .map(([key]) => key);
+      if (colors.length < 2) break;
+      best.fill(-1);
+      own.fill(0);
+      for (const key of colors) {
+        for (let p = 0; p < area; p++) weight[p] = keys[p] === key ? 1 : 0;
+        boxBlur(weight, boxWidth, boxHeight, radius);
+        for (let p = 0; p < area; p++) {
+          if (keys[p] === key) own[p] = weight[p];
+          if (weight[p] > best[p]) {
+            best[p] = weight[p];
+            winner[p] = key;
+          }
+        }
+      }
+      for (let y = 0; y < region.height; y++) {
+        const by = y + region.y - y0;
+        if (by < 0 || by >= boxHeight) continue;
+        for (let x = 0; x < region.width; x++) {
+          const bx = x + region.x - x0;
+          if (bx < 0 || bx >= boxWidth || !region.bits[y * region.width + x]) continue;
+          const p = by * boxWidth + bx;
+          const key = winner[p];
+          if (key === keys[p]) continue;
+          // Fade in from the stroke's edge, so the edges it moves meet
+          // the untouched ones outside without a step.
+          const strength = Math.min(1, depth[y * region.width + x] / radius);
+          if (strength * best[p] <= strength * own[p] + (1 - strength)) continue;
+          const i = ((by + y0) * width + bx + x0) * 4;
+          if (key === -1) {
+            data[i + 3] = 0;
+          } else {
+            data[i] = (key >> 16) & 0xff;
+            data[i + 1] = (key >> 8) & 0xff;
+            data[i + 2] = key & 0xff;
+            data[i + 3] = 255;
+          }
+        }
+      }
+    }
   }
   return img;
 }
