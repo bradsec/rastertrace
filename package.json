@@ -1,6 +1,6 @@
 {
   "name": "rastertrace-webapp",
-  "version": "1.4.5",
+  "version": "1.4.6",
   "private": true,
   "description": "rastertrace browser-based raster to SVG converter",
   "license": "MIT",
