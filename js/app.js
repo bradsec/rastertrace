@@ -1214,6 +1214,8 @@ els.restoredKeep.addEventListener("click", () => {
 els.resetSettingsBtn.addEventListener("click", () => {
   resetSettings();
   els.restoredNote.hidden = true;
+  // Defaults turn auto-detect on; apply it to the image already loaded.
+  if (els.autoDetect.checked && state.bitmap) applyDetectedSettings(state.bitmap);
   saveSettings();
   scheduleRetrace();
   els.status.textContent = "Settings reset to defaults.";

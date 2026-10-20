@@ -142,6 +142,19 @@ test("auto-detect sets colors per image; manual changes carry over", async ({ pa
   await expect(colors).toHaveValue("2");
 });
 
+test("reset settings re-detects colors for the current image", async ({ page }) => {
+  const flat = await makePng(page, "flat.png", 120, 120, CREAM, [["#3c281e", 30, 30, 60, 60]]);
+  const colors = page.locator("#colors");
+  await traced(page, () => page.locator("#file-input").setInputFiles(flat));
+  await openPanels(page);
+  await setRange(page, "#colors", 8);
+  await expect(page.locator("#auto-detect")).not.toBeChecked();
+
+  await traced(page, () => page.locator("#reset-settings").click());
+  await expect(page.locator("#auto-detect")).toBeChecked();
+  await expect(colors).toHaveValue("2");
+});
+
 test("reset settings keeps the preferred measurement unit", async ({ page }) => {
   const flat = await makePng(page, "flat.png", 120, 120, CREAM, [["#3c281e", 30, 30, 60, 60]]);
   await traced(page, () => page.locator("#file-input").setInputFiles(flat));
