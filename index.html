@@ -1545,10 +1545,21 @@
           </div>
           <dl class="help-settings">
             <div>
+              <dt>Result, Source &amp; Compare</dt>
+              <dd>
+                Result shows the trace and Source the original image; a label on the preview names
+                the one showing, and changing a setting switches back to Result. Compare puts both
+                side by side with a divider: drag it, or focus it and use the arrow keys (Shift for
+                bigger steps).
+              </dd>
+            </div>
+            <div>
               <dt>Color presets &amp; Max colors</dt>
               <dd>
                 Maximum colors in the output. Fewer colors means simpler, cleaner, smaller SVGs. A
-                preset is a quick way to pick a color count and changes nothing else.
+                preset is a quick way to pick a color count and changes nothing else. On flat
+                artwork, soft or blurred edges between two colors split between them instead of
+                becoming a third color.
               </dd>
             </div>
             <div>
@@ -1672,10 +1683,11 @@
           <div class="dialog-heading">
             <h2 id="cleanup-guide-title" tabindex="-1" autofocus>Vector cleanup</h2>
             <p>
-              Remove unwanted areas from the traced vector result. The tools sit on the left edge of
-              the preview, and the chosen tool's options show in the strip above it. On phones the
-              rail shows the chosen tool; the grid button opens every tool, and its options open in
-              a panel at the bottom of the screen.
+              Erase unwanted areas or paint fills, then the image is traced again with your edits,
+              so the profile and settings apply to them too. The tools sit on the left edge of the
+              preview, and the chosen tool's options show in the strip above it. On phones the rail
+              shows the chosen tool; the grid button opens every tool, and its options open in a
+              panel at the bottom of the screen.
             </p>
           </div>
           <dl class="help-settings">
@@ -1750,8 +1762,10 @@
             <div>
               <dt>Exporting cleanup</dt>
               <dd>
-                Manual cleanup is preserved in SVG and PNG exports. PDF and DXF are unavailable
-                while cleanup masks are present.
+                Each edit shows at once over the result while the image retraces in the background.
+                Fills and erases are part of the trace, so every export keeps them: a fill takes the
+                profile's colors (black in Mono stencil) and an erase is a hole. PDF and DXF wait
+                for that retrace to finish.
               </dd>
             </div>
           </dl>
