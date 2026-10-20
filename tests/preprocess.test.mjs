@@ -16,6 +16,7 @@ import {
   defringeAlpha,
   detectBackgroundColor,
   detectedColorSettings,
+  profileColorSettings,
   distinctColorCount,
   dominantOpaqueColor,
   erodeAlpha,
@@ -1892,4 +1893,40 @@ test("tracePixels keeps pixel settings tuned at 2x the same size at any scale", 
   // A set value never rounds away to nothing; 0 stays off.
   assert.equal(tracePixels(1, 0.5), 1);
   assert.equal(tracePixels(0, 4), 0);
+});
+
+test("profileColorSettings follows flat art's colors within the profile", () => {
+  const profile = EXPORT_PROFILES.detail;
+  const solids = [
+    [0, 0, 0],
+    [20, 0, 0],
+    [255, 255, 255],
+  ];
+  // Flat art: its own color count, Merge kept below its closest pair,
+  // the profile's Smallest shape.
+  assert.deepEqual(profileColorSettings(profile, { flat: true, colorCount: 3, solids }), {
+    colors: 3,
+    speckle: profile.speckle,
+    layerDiff: Math.min(profile.layerDiff, 10),
+  });
+  // Never above the profile's own color count.
+  assert.equal(
+    profileColorSettings(profile, { flat: true, colorCount: 500, solids }).colors,
+    profile.colors,
+  );
+  // Photos keep the profile's values.
+  assert.deepEqual(profileColorSettings(profile, { flat: false, colorCount: 256 }), {
+    colors: profile.colors,
+    speckle: profile.speckle,
+    layerDiff: profile.layerDiff,
+  });
+});
+
+test("Balanced and the detail profiles keep auto-detect on", () => {
+  for (const name of ["balanced", "detail", "maxDetail"]) {
+    assert.equal(EXPORT_PROFILES[name].autoDetect, true, name);
+  }
+  for (const name of ["web", "print", "vinyl", "icon", "pixelExact", "monoBlack"]) {
+    assert.ok(!EXPORT_PROFILES[name].autoDetect, name);
+  }
 });

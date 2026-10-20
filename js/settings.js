@@ -14,10 +14,10 @@ import {
   toGrayscaleColor,
   USER_PRESET_PREFIX,
   userPresetName,
-} from "./preprocess.js?v=74";
-import { els, preferences } from "./context.js?v=46";
-import { refreshExport, updatePhysicalHeightOut } from "./exporters.js?v=55";
-import { setEyedropper } from "./cleanup-tools.js?v=64";
+} from "./preprocess.js?v=75";
+import { els, preferences } from "./context.js?v=47";
+import { refreshExport, updatePhysicalHeightOut } from "./exporters.js?v=56";
+import { setEyedropper } from "./cleanup-tools.js?v=65";
 
 /** @returns {HTMLInputElement} */
 const radioEl = (selector) => /** @type {HTMLInputElement} */ (document.querySelector(selector));
@@ -291,8 +291,9 @@ export function applyExportProfile(name) {
   els.denoise.checked = Boolean(profile.denoise);
   els.minify.checked = profile.minify;
   els.preset.value = "";
-  // The profile chose the color settings; detection must not replace them.
-  els.autoDetect.checked = false;
+  // Most profiles choose the color settings, so detection must not replace
+  // them; autoDetect profiles let flat art keep its own colors.
+  els.autoDetect.checked = Boolean(profile.autoDetect);
   els.exportProfile.value = name; // resetSettings cleared the select
   updateStencilFields(); // after the select: Laser moves the threshold up top
   updateTraceFields();

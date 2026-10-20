@@ -164,6 +164,27 @@ export function detectedColorSettings({ flat, colorCount, solids }) {
   return { colors: colorCount, speckle: preset.speckle, layerDiff };
 }
 
+/**
+ * Color settings for an auto-detect profile on one image: flat art keeps
+ * its own color count (never above the profile's) with Merge below its
+ * closest pair of colors; photos keep the profile's values. Smallest
+ * shape is always the profile's, as it sets the profile's detail level.
+ *
+ * @param {{ colors: number, speckle: number, layerDiff: number }} profile
+ * @param {{ flat: boolean, colorCount: number, solids?: number[][] }} analysis
+ */
+export function profileColorSettings(profile, analysis) {
+  if (!analysis.flat) {
+    return { colors: profile.colors, speckle: profile.speckle, layerDiff: profile.layerDiff };
+  }
+  const detected = detectedColorSettings(analysis);
+  return {
+    colors: Math.min(detected.colors, profile.colors),
+    speckle: profile.speckle,
+    layerDiff: Math.min(detected.layerDiff, profile.layerDiff),
+  };
+}
+
 /** The tracer's color difference: the sum of the RGB channel differences. */
 function colorDistance(a, b) {
   return Math.abs(a[0] - b[0]) + Math.abs(a[1] - b[1]) + Math.abs(a[2] - b[2]);
@@ -188,7 +209,9 @@ export function distinctColors(solids, layerDiff) {
   return kept;
 }
 
-// Purpose-based export profiles (SVG_EXPORT_RESEARCH.md). Values are
+// Purpose-based export profiles (SVG_EXPORT_RESEARCH.md). `autoDetect`
+// profiles keep color auto-detection on: flat art takes its own colors
+// within the profile (profileColorSettings), photos the profile's values. Values are
 // applied to the visible controls like PRESETS: users can edit them
 // afterwards. pathPrecision/spliceThreshold feed the tracer directly;
 // minify/stencil toggle post-processing and binary color mode.
@@ -218,6 +241,7 @@ export const EXPORT_PROFILES = Object.freeze({
     straighten: 0.5,
     minify: false,
     stencil: false,
+    autoDetect: true,
   },
   detail: {
     colors: 64,
@@ -232,6 +256,7 @@ export const EXPORT_PROFILES = Object.freeze({
     straighten: 0,
     minify: false,
     stencil: false,
+    autoDetect: true,
   },
   maxDetail: {
     colors: 128,
@@ -246,6 +271,7 @@ export const EXPORT_PROFILES = Object.freeze({
     straighten: 0,
     minify: false,
     stencil: false,
+    autoDetect: true,
   },
   // mode "none" (below) skips all curve/corner simplification, so colors
   // are the only lever bounding path count. Speckle must be 0: at any other

@@ -10,12 +10,13 @@ import {
   rotateBitmap,
   sniffImageSize,
   Tracer,
-} from "./pipeline.js?v=74";
+} from "./pipeline.js?v=75";
 import {
   analyzeFlatness,
   detectedColorSettings,
   distinctColorCount,
   distinctColors,
+  EXPORT_PROFILES,
   fitTraceScale,
   isStaleModuleError,
   MAX_TRACE_SIDE,
@@ -25,22 +26,23 @@ import {
   parseSwatchText,
   presetName,
   PRESETS_MAX,
+  profileColorSettings,
   sanitizePresets,
   SWATCHES_MAX,
   toHexColor,
   USER_PRESET_PREFIX,
   userPresetName,
-} from "./preprocess.js?v=74";
-import { $, els, hooks, preferences, showError, state } from "./context.js?v=46";
-import { refreshExport, setResultActions } from "./exporters.js?v=55";
+} from "./preprocess.js?v=75";
+import { $, els, hooks, preferences, showError, state } from "./context.js?v=47";
+import { refreshExport, setResultActions } from "./exporters.js?v=56";
 import {
   clearSelection,
   setBlobFill,
   setEraser,
   setSelectionTool,
   setView,
-} from "./cleanup-tools.js?v=64";
-import { afterTrace, resetPalette } from "./palette-ui.js?v=48";
+} from "./cleanup-tools.js?v=65";
+import { afterTrace, resetPalette } from "./palette-ui.js?v=49";
 import {
   applyExportProfile,
   applyMeasurementUnit,
@@ -70,8 +72,8 @@ import {
   updateTraceFields,
   updateTransparencyFields,
   userPresets,
-} from "./settings.js?v=64";
-import { actualSizeView, resetView } from "./view.js?v=64";
+} from "./settings.js?v=65";
+import { actualSizeView, resetView } from "./view.js?v=65";
 
 const SAMPLE_FILES = [
   "synthwave.png",
@@ -92,7 +94,7 @@ const SAMPLE_KEY = "rastertrace:last-sample";
 
 const EMPTY_IMAGE_SRC = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==";
 
-const tracer = new Tracer(new URL("./worker.js?v=79", import.meta.url));
+const tracer = new Tracer(new URL("./worker.js?v=80", import.meta.url));
 
 let elapsedTimer = 0;
 
@@ -264,12 +266,16 @@ function applyDetectedSettings(bitmap) {
       "Photographic image: tracing works best on flat art. Try the Print profile or fewer colors; for engraving photos, a raster PNG usually works better.";
   }
   if (!els.autoDetect.checked) return;
-  const detected = detectedColorSettings(analysis);
+  // An auto-detect profile stays selected and bounds what detection sets.
+  const profile = EXPORT_PROFILES[els.exportProfile.value];
+  const detected = profile?.autoDetect
+    ? profileColorSettings(profile, analysis)
+    : detectedColorSettings(analysis);
   els.colors.value = String(detected.colors);
   els.speckle.value = String(detected.speckle);
   els.layerDiff.value = String(detected.layerDiff);
   els.preset.value = "";
-  clearProfile();
+  if (!profile?.autoDetect) clearProfile();
   updateOutputs();
   saveSettings();
   if (analysis.flat) {
@@ -873,6 +879,7 @@ els.exportProfile.addEventListener("change", async () => {
   if (!name) return;
   if (name.startsWith(USER_PRESET_PREFIX)) applyUserPreset(name);
   else applyExportProfile(name);
+  if (els.autoDetect.checked && state.bitmap) applyDetectedSettings(state.bitmap);
   showInkBackdrop();
   if (els.upscale.value === "ultra") await ensureUltraBitmap();
   refreshExport(); // minify may have changed; applies without waiting

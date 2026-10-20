@@ -195,6 +195,24 @@ test("auto-detect stays on while Merge recounts Max colors", async ({ page }) =>
   await expect(autoDetect).toBeChecked();
 });
 
+test("Balanced keeps auto-detect on and stays selected across images", async ({ page }) => {
+  const three = await makePng(page, "three.png", 160, 120, CREAM, [
+    ["#3c281e", 20, 30, 50, 60],
+    ["#2a9d8f", 90, 30, 50, 60],
+  ]);
+  const two = await makePng(page, "two.png", 160, 120, CREAM, [["#3c281e", 40, 30, 80, 60]]);
+  await traced(page, () => page.locator("#file-input").setInputFiles(three));
+  await openPanels(page);
+  await traced(page, () => page.locator("#export-profile").selectOption("balanced"));
+  await expect(page.locator("#auto-detect")).toBeChecked();
+  // Flat art keeps its own colors instead of the profile's 256.
+  await expect(page.locator("#colors")).toHaveValue("3");
+
+  await traced(page, () => page.locator("#file-input").setInputFiles(two));
+  await expect(page.locator("#export-profile")).toHaveValue("balanced");
+  await expect(page.locator("#colors")).toHaveValue("2");
+});
+
 test("the Profile section folds and names the current profile", async ({ page }) => {
   const file = await makePng(page, "mark.png", 160, 120, CREAM, [["#3c281e", 40, 30, 80, 60]]);
   await traced(page, () => page.locator("#file-input").setInputFiles(file));
