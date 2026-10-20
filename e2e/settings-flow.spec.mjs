@@ -166,6 +166,51 @@ test("auto-detect stays on while Merge recounts Max colors", async ({ page }) =>
   await expect(autoDetect).toBeChecked();
 });
 
+test("the Profile section folds and names the current profile", async ({ page }) => {
+  const file = await makePng(page, "mark.png", 160, 120, CREAM, [["#3c281e", 40, 30, 80, 60]]);
+  await traced(page, () => page.locator("#file-input").setInputFiles(file));
+  const summary = page.locator('details[data-panel-key="profile"] > summary');
+  await expect(page.locator("#profile-summary")).toHaveText("Custom");
+  await traced(page, () => page.locator("#export-profile").selectOption("vinyl"));
+  await expect(page.locator("#profile-summary")).toHaveText("Vinyl & cutting (layers)");
+  await expect(page.locator("#hierarchical")).toHaveValue("cutout");
+
+  await summary.click();
+  await expect(page.locator("#export-profile")).toBeHidden();
+  await page.reload();
+  await expect(page.locator("#export-profile")).toBeHidden();
+  await expect(page.locator("#profile-summary")).toHaveText("Vinyl & cutting (layers)");
+});
+
+test("Pixel exact keeps lone pixels", async ({ page }) => {
+  // 256 px wide: the old profile's auto upscale and speckle dropped them.
+  const dots = [];
+  for (let y = 4; y < 256; y += 16)
+    for (let x = 4; x < 256; x += 16) dots.push(["#ff4060", x, y, 1, 1]);
+  const file = await makePng(page, "dots.png", 256, 256, "#203040", dots);
+  await traced(page, () => page.locator("#file-input").setInputFiles(file));
+  await traced(page, () => page.locator("#export-profile").selectOption("pixelExact"));
+  const svg = await page.evaluate(async () => {
+    const view = /** @type {HTMLImageElement} */ (document.getElementById("result-view"));
+    return (await fetch(view.src)).text();
+  });
+  expect((svg.match(/<path/g) || []).length).toBe(dots.length + 1);
+});
+
+test("white stencil ink exports one color and previews on black", async ({ page }) => {
+  const file = await makePng(page, "mark.png", 160, 120, CREAM, [["#3c281e", 40, 30, 80, 60]]);
+  await traced(page, () => page.locator("#file-input").setInputFiles(file));
+  await traced(page, () => page.locator("#export-profile").selectOption("monoWhite"));
+  await expect(page.locator("#black-screen")).toHaveAttribute("aria-pressed", "true");
+  const svg = await page.evaluate(async () => {
+    const view = /** @type {HTMLImageElement} */ (document.getElementById("result-view"));
+    return (await fetch(view.src)).text();
+  });
+  expect(svg).not.toContain("<rect");
+  const fills = new Set([...svg.matchAll(/fill="([^"]*)"/g)].map((m) => m[1].toLowerCase()));
+  expect([...fills]).toEqual(["#ffffff"]);
+});
+
 test("reset settings re-detects colors for the current image", async ({ page }) => {
   const flat = await makePng(page, "flat.png", 120, 120, CREAM, [["#3c281e", 30, 30, 60, 60]]);
   const colors = page.locator("#colors");
@@ -298,7 +343,7 @@ test.describe("saved presets", () => {
     await page.locator("#save-preset").click();
     await page.locator("#preset-name").fill(name);
     await page.locator("#save-preset-dialog button[value='save']").click();
-    await expect(page.locator("#status")).toContainText(`Preset "${name}" saved.`);
+    await expect(page.locator("#status")).toContainText(`Profile "${name}" saved.`);
   }
 
   test("a saved preset restores its settings and survives a reload", async ({ page }) => {
@@ -327,7 +372,7 @@ test.describe("saved presets", () => {
       .toContain('"profile":"user:Client logo"');
     await page.reload();
     await expect(page.locator("#export-profile")).toHaveValue("user:Client logo");
-    await expect(page.locator('#export-profile optgroup[label="My presets"] option')).toHaveText([
+    await expect(page.locator('#export-profile optgroup[label="My profiles"] option')).toHaveText([
       "Client logo",
     ]);
   });
@@ -346,13 +391,13 @@ test.describe("saved presets", () => {
     ]);
     const file = await download.path();
 
-    await page.getByRole("button", { name: "Delete preset Laser job" }).click();
+    await page.getByRole("button", { name: "Delete profile Laser job" }).click();
     await expect(page.locator("#preset-list li")).toHaveCount(0);
     await expect(page.locator("#preset-empty")).toBeVisible();
     await expect(page.locator("#export-profile")).toHaveValue("");
 
     await page.locator("#preset-import-input").setInputFiles(file);
-    await expect(page.locator("#preset-message")).toHaveText("Imported 1 preset.");
+    await expect(page.locator("#preset-message")).toHaveText("Imported 1 profile.");
     await expect(page.locator("#preset-list li")).toHaveText(["Laser jobDelete"]);
 
     await page.locator("#preset-import-input").setInputFiles({
@@ -361,7 +406,7 @@ test.describe("saved presets", () => {
       buffer: Buffer.from("{not json"),
     });
     await expect(page.locator("#preset-message")).toHaveText(
-      "No rastertrace presets found in that file.",
+      "No rastertrace profiles found in that file.",
     );
   });
 });

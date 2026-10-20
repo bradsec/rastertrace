@@ -120,3 +120,20 @@ test("quantize skips flat colors the tracer would merge into a kept one", () => 
   for (let i = 0; i < data.length; i += 4) output.add(toHexColor(data.subarray(i, i + 3)));
   assert.deepEqual([...output].sort(), ["#0B1F1A", "#2A3644", "#2FD39A", "#C9D1D9"]);
 });
+
+test("quantize leaves spare slots empty instead of keeping rare blends", () => {
+  // Two flat colors and 20 one-pixel blends (more exact colors than the
+  // 8 slots, so quantize runs): the blends map to the flat colors rather
+  // than becoming colors of their own.
+  const width = 10_000;
+  const data = new Uint8ClampedArray(width * 4);
+  for (let i = 0; i < width; i++) {
+    const rgba = i < 6000 ? [242, 232, 207, 255] : [29, 53, 87, 255];
+    data.set(rgba, i * 4);
+  }
+  for (let i = 0; i < 20; i++) data.set([60 + i * 8, 80 + i * 6, 100 + i * 5, 255], (6000 + i) * 4);
+  quantize({ width, height: 1, data }, 8);
+  const output = new Set();
+  for (let i = 0; i < data.length; i += 4) output.add(toHexColor(data.subarray(i, i + 3)));
+  assert.deepEqual([...output].sort(), ["#1D3557", "#F2E8CF"]);
+});

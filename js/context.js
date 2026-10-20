@@ -1,7 +1,7 @@
 // Shared DOM references and mutable app state, imported by every UI
 // module. Keeps no logic beyond tiny helpers so it can never participate
 // in an import cycle.
-import { MAX_TRACE_SIDE } from "./preprocess.js?v=64";
+import { MAX_TRACE_SIDE } from "./preprocess.js?v=69";
 
 /**
  * @template {Element} [T=HTMLElement]
@@ -72,6 +72,7 @@ export const els = {
   transparent: /** @type {HTMLSelectElement} */ ($("transparent")),
   backgroundSummary: $("background-summary"),
   colorsSummary: $("colors-summary"),
+  profileSummary: $("profile-summary"),
   tracingSummary: $("tracing-summary"),
   exportSummary: $("export-summary"),
   toolRail: $("tool-rail"),

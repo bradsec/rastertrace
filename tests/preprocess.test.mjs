@@ -576,7 +576,7 @@ test("nameColorGroups gathers each color into one group in mosaic output", () =>
   assert.deepEqual(order, ["M0 0", "M2 2", "M1 1", "M3 3"]);
   const ids = [...out.matchAll(/\sid="([^"]*)"/g)].map((m) => m[1]);
   assert.deepEqual(ids, ["color-aa0000", "color-00bb00"]);
-  // The stencil backing rect is paint, not a color group.
+  // A rect is paint, not a color group.
   assert.match(out, /<rect width="4" height="4" fill="#000000"\/>/);
 });
 
@@ -612,14 +612,15 @@ test("applyStencilInk leaves black ink unchanged", () => {
   assert.equal(applyStencilInk(svg, "black"), svg);
 });
 
-test("applyStencilInk recolors to white and backs with black, sized to the viewBox", () => {
-  // width/height (10x10) differ from viewBox (40x40) to catch upscale cases.
+test("applyStencilInk recolors to white with nothing behind it", () => {
+  // One ink only: no backing rect, so the export is white on transparency.
   const svg =
     '<svg width="10" height="10" viewBox="0 0 40 40">\n<path d="M0 0" fill="#000000"/>\n</svg>';
   const out = applyStencilInk(svg, "white");
-  assert.match(out, /<svg[^>]*><rect width="40" height="40" fill="#000000"\/>/);
-  assert.match(out, /<path d="M0 0" fill="#ffffff"\/>/);
-  assert.equal(countPaths(out), 1);
+  assert.equal(
+    out,
+    '<svg width="10" height="10" viewBox="0 0 40 40">\n<path d="M0 0" fill="#ffffff"/>\n</svg>',
+  );
 });
 
 test("applyStencilInk recolors grouped fills too", () => {
@@ -693,6 +694,9 @@ test("EXPORT_PROFILES cover expected keys with sane values", () => {
     "monoBlack",
     "monoWhite",
     "laser",
+    "vinyl",
+    "lineArt",
+    "icon",
   ]) {
     const p = EXPORT_PROFILES[name];
     assert.ok(p, `${name} profile exists`);
@@ -703,6 +707,12 @@ test("EXPORT_PROFILES cover expected keys with sane values", () => {
   assert.equal(EXPORT_PROFILES.web.minify, true);
   assert.equal(EXPORT_PROFILES.monoBlack.stencilInk, "black");
   assert.equal(EXPORT_PROFILES.monoWhite.stencilInk, "white");
+  // Vinyl colors are separate pieces; print keeps stacked layers (no gaps).
+  assert.equal(EXPORT_PROFILES.vinyl.hierarchical, "cutout");
+  assert.equal(EXPORT_PROFILES.print.hierarchical, "stacked");
+  assert.equal(EXPORT_PROFILES.lineArt.stencil, true);
+  assert.equal(EXPORT_PROFILES.lineArt.denoise, true);
+  assert.equal(EXPORT_PROFILES.icon.minify, true);
 });
 
 test("SIMPLIFY_LEVELS run from detailed to simple within the slider ranges", () => {
@@ -725,7 +735,7 @@ test("simplifyLevel names the level for a pair, or -1 for a custom pair", () => 
   // Every export profile lands on a named level, never Custom.
   for (const [name, p] of Object.entries(EXPORT_PROFILES)) {
     const level = simplifyLevel(
-      DEFAULTS.lengthThreshold,
+      p.lengthThreshold ?? DEFAULTS.lengthThreshold,
       p.spliceThreshold ?? DEFAULTS.spliceThreshold,
     );
     assert.notEqual(level, -1, `${name} profile`);
@@ -738,6 +748,11 @@ test("simplifyLevel names the level for a pair, or -1 for a custom pair", () => 
 // trace: colors:64 measured at 134,243 paths / 34.5 MB / 52s on a 1.92 MP
 // noisy source, versus 2,972 paths / 6.6 MB / 9.8s at colors:8. Guard the
 // profile default against silently regressing back to an unsafe value.
+test("pixelExact keeps lone pixels: no speckle filter, no upscale", () => {
+  assert.equal(EXPORT_PROFILES.pixelExact.speckle, 0);
+  assert.equal(EXPORT_PROFILES.pixelExact.upscale, 1);
+});
+
 test("pixelExact keeps colors low to bound mode:none path explosion", () => {
   assert.equal(EXPORT_PROFILES.pixelExact.mode, "none");
   assert.ok(
@@ -1152,6 +1167,25 @@ test("knockOutConnected keeps enclosed areas above the maximum area", async () =
   assert.equal(getPixel(img, 0, 0)[3], 0); // border-connected background still removed
   assert.equal(getPixel(img, 9, 9)[3], 0); // small enclosed region removed
   assert.equal(getPixel(img, 5, 5)[3], 255); // large enclosed region kept
+});
+
+test("reduceAndRemoveBackground keeps single pixels when no colors were reduced", () => {
+  // Pixel art within the color budget: quantize leaves it untouched, so
+  // there is no dither for the majority filter to clean, and lone pixels
+  // are real detail.
+  const img = makeImage(9, 9, [32, 48, 64, 255]);
+  setPixel(img, 4, 4, [255, 64, 96, 255]);
+  reduceAndRemoveBackground(img, 8, { transparent: "" });
+  assert.deepEqual(getPixel(img, 4, 4).slice(0, 3), [255, 64, 96]);
+});
+
+test("reduceAndRemoveBackground still cleans dither after reducing colors", () => {
+  const img = makeImage(9, 9, [32, 48, 64, 255]);
+  setPixel(img, 4, 4, [255, 64, 96, 255]);
+  setPixel(img, 0, 0, [250, 250, 250, 255]);
+  setPixel(img, 8, 8, [0, 200, 0, 255]);
+  reduceAndRemoveBackground(img, 2, { transparent: "" });
+  assert.deepEqual(getPixel(img, 4, 4).slice(0, 3), [32, 48, 64]);
 });
 
 test("reduceAndRemoveBackground sizes the enclosed maximum in source pixels", () => {

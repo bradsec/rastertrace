@@ -265,7 +265,7 @@ test.describe("side panels", () => {
     await expect(page.locator("#colors")).toBeVisible();
   });
 
-  test("narrow desktops start with the presets folded", async ({ page }) => {
+  test("narrow desktops start with the profiles folded", async ({ page }) => {
     await page.setViewportSize({ width: 1100, height: 800 });
     await page.reload();
     await traced(page, () => page.locator("#file-input").setInputFiles(IMAGE));

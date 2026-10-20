@@ -10,7 +10,7 @@ import {
   rotateBitmap,
   sniffImageSize,
   Tracer,
-} from "./pipeline.js?v=64";
+} from "./pipeline.js?v=69";
 import {
   analyzeFlatness,
   detectedColorSettings,
@@ -29,17 +29,17 @@ import {
   toHexColor,
   USER_PRESET_PREFIX,
   userPresetName,
-} from "./preprocess.js?v=64";
-import { $, els, hooks, preferences, showError, state } from "./context.js?v=36";
-import { refreshExport, setResultActions } from "./exporters.js?v=45";
+} from "./preprocess.js?v=69";
+import { $, els, hooks, preferences, showError, state } from "./context.js?v=41";
+import { refreshExport, setResultActions } from "./exporters.js?v=50";
 import {
   clearSelection,
   setBlobFill,
   setEraser,
   setSelectionTool,
   setView,
-} from "./cleanup-tools.js?v=54";
-import { afterTrace, resetPalette } from "./palette-ui.js?v=38";
+} from "./cleanup-tools.js?v=59";
+import { afterTrace, resetPalette } from "./palette-ui.js?v=43";
 import {
   applyExportProfile,
   applyMeasurementUnit,
@@ -69,8 +69,8 @@ import {
   updateTraceFields,
   updateTransparencyFields,
   userPresets,
-} from "./settings.js?v=54";
-import { actualSizeView, resetView } from "./view.js?v=54";
+} from "./settings.js?v=59";
+import { actualSizeView, resetView } from "./view.js?v=59";
 
 const SAMPLE_FILES = [
   "synthwave.png",
@@ -91,7 +91,7 @@ const SAMPLE_KEY = "rastertrace:last-sample";
 
 const EMPTY_IMAGE_SRC = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==";
 
-const tracer = new Tracer(new URL("./worker.js?v=69", import.meta.url));
+const tracer = new Tracer(new URL("./worker.js?v=74", import.meta.url));
 
 let elapsedTimer = 0;
 
@@ -810,6 +810,7 @@ els.stencil.addEventListener("change", () => {
   clearProfile();
   updateStencilFields();
   updateTraceFields();
+  showInkBackdrop();
   scheduleRetrace();
 });
 els.stencilThreshold.addEventListener("input", () => {
@@ -819,6 +820,7 @@ els.stencilThreshold.addEventListener("input", () => {
 for (const radio of document.querySelectorAll('input[name="stencil-ink"]')) {
   radio.addEventListener("change", () => {
     clearProfile();
+    showInkBackdrop();
     scheduleRetrace();
   });
 }
@@ -855,6 +857,7 @@ els.exportProfile.addEventListener("change", async () => {
   if (!name) return;
   if (name.startsWith(USER_PRESET_PREFIX)) applyUserPreset(name);
   else applyExportProfile(name);
+  showInkBackdrop();
   if (els.upscale.value === "ultra") await ensureUltraBitmap();
   refreshExport(); // minify may have changed; applies without waiting
   scheduleRetrace();
@@ -955,7 +958,7 @@ els.swatchFile.addEventListener("change", async () => {
 
 // -- Saved presets -------------------------------------------------------
 
-const PRESET_STORAGE_ERROR = "Presets could not be saved: browser storage is full or blocked.";
+const PRESET_STORAGE_ERROR = "Profiles could not be saved: browser storage is full or blocked.";
 
 els.savePreset.addEventListener("click", () => {
   els.savePresetDialog.returnValue = "";
@@ -967,13 +970,13 @@ els.savePresetDialog.addEventListener("close", () => {
   if (els.savePresetDialog.returnValue !== "save") return;
   const name = presetName(els.presetName.value);
   if (!name) {
-    els.status.textContent = "Preset not saved: enter a name.";
+    els.status.textContent = "Profile not saved: enter a name.";
     return;
   }
   const existing = findUserPreset(name);
-  if (existing && !window.confirm(`Replace the preset "${existing.name}"?`)) return;
+  if (existing && !window.confirm(`Replace the profile "${existing.name}"?`)) return;
   if (!existing && userPresets.length >= PRESETS_MAX) {
-    showError(`You can save up to ${PRESETS_MAX} presets. Delete one in File > Manage presets.`);
+    showError(`You can save up to ${PRESETS_MAX} profiles. Delete one in File > Manage profiles.`);
     return;
   }
   if (!saveUserPreset(name)) {
@@ -981,7 +984,7 @@ els.savePresetDialog.addEventListener("close", () => {
     return;
   }
   saveSettings();
-  els.status.textContent = `Preset "${name}" saved.`;
+  els.status.textContent = `Profile "${name}" saved.`;
 });
 
 function renderPresetList() {
@@ -994,9 +997,9 @@ function renderPresetList() {
       remove.type = "button";
       remove.className = "button button-secondary";
       remove.textContent = "Delete";
-      remove.setAttribute("aria-label", `Delete preset ${name}`);
+      remove.setAttribute("aria-label", `Delete profile ${name}`);
       remove.addEventListener("click", () => {
-        if (!window.confirm(`Delete the preset "${name}"?`)) return;
+        if (!window.confirm(`Delete the profile "${name}"?`)) return;
         if (!deleteUserPreset(name)) {
           els.presetMessage.textContent = PRESET_STORAGE_ERROR;
           return;
@@ -1026,11 +1029,11 @@ els.presetExport.addEventListener("click", () => {
   const url = URL.createObjectURL(new Blob([file], { type: "application/json" }));
   const link = document.createElement("a");
   link.href = url;
-  link.download = "rastertrace-presets.json";
+  link.download = "rastertrace-profiles.json";
   link.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
   const count = userPresets.length;
-  els.presetMessage.textContent = `Exported ${count} preset${count === 1 ? "" : "s"}.`;
+  els.presetMessage.textContent = `Exported ${count} profile${count === 1 ? "" : "s"}.`;
 });
 
 // Preset files are small JSON; anything far larger is not one.
@@ -1049,7 +1052,7 @@ els.presetImportInput.addEventListener("change", async () => {
     // Not JSON: reported below like a file with no presets.
   }
   if (!incoming.length) {
-    els.presetMessage.textContent = "No rastertrace presets found in that file.";
+    els.presetMessage.textContent = "No rastertrace profiles found in that file.";
     return;
   }
   const conflicts = incoming.filter((p) => findUserPreset(p.name));
@@ -1057,8 +1060,8 @@ els.presetImportInput.addEventListener("change", async () => {
     conflicts.length > 0 &&
     window.confirm(
       conflicts.length === 1
-        ? `Replace the existing preset "${conflicts[0].name}"?`
-        : `Replace ${conflicts.length} existing presets that have the same names?`,
+        ? `Replace the existing profile "${conflicts[0].name}"?`
+        : `Replace ${conflicts.length} existing profiles that have the same names?`,
     );
   const result = importUserPresets(incoming, replace);
   if (!result) {
@@ -1070,9 +1073,9 @@ els.presetImportInput.addEventListener("change", async () => {
   const imported = result.added.length + result.replaced.length;
   const skipped = result.skipped.length;
   els.presetMessage.textContent =
-    `Imported ${imported} preset${imported === 1 ? "" : "s"}.` +
+    `Imported ${imported} profile${imported === 1 ? "" : "s"}.` +
     (skipped
-      ? ` Skipped ${skipped}: same name kept or the ${PRESETS_MAX}-preset limit reached.`
+      ? ` Skipped ${skipped}: same name kept or the ${PRESETS_MAX}-profile limit reached.`
       : "");
 });
 
@@ -1208,6 +1211,15 @@ for (const button of backdropButtons) {
     }
     els.preview.classList.toggle("checkerboard", !enabled);
   });
+}
+
+/** White stencil ink is invisible on light backdrops: show it on black. */
+function showInkBackdrop() {
+  const ink = /** @type {HTMLInputElement} */ (
+    document.querySelector('input[name="stencil-ink"]:checked')
+  );
+  if (!els.stencil.checked || ink.value !== "white") return;
+  if (els.blackScreen.getAttribute("aria-pressed") !== "true") els.blackScreen.click();
 }
 
 // Turning auto-detect back on applies it to the current image right away.

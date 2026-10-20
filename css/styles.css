@@ -589,12 +589,8 @@ main:has(> #empty-state:not([hidden])) {
   }
 }
 
-.field.profile-field {
-  padding: 12px var(--rail-pad) 16px;
-  border-bottom: 1px solid var(--border);
-}
 /* The profile list is a listbox: every profile shows at once, like a
-   presets panel, and My presets join it as an option group. */
+   presets panel, and My profiles join it as an option group. */
 #export-profile {
   height: auto;
   max-height: 340px;

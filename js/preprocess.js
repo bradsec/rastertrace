@@ -229,24 +229,24 @@ export const EXPORT_PROFILES = Object.freeze({
     stencil: false,
   },
   // mode "none" (below) skips all curve/corner simplification, so colors
-  // and speckle are the only levers bounding path count. 64 colors let a
-  // photographic/noisy source explode into 100k+ paths and 50+ second
-  // traces (observed: a 1.92 MP noisy source hit 134,243 paths, 34.5 MB,
-  // 52s at colors:64/speckle:1; 8/12 tamed the same source to 1,719
-  // paths, 5.9 MB, 9.9s) risking a browser tab crash, especially when the
-  // slow in-flight trace gets killed and restarted by a further settings
-  // change (js/pipeline.js Tracer.cancelPending). 8/12 mirrors the
-  // print profile's proven low-color-count pairing.
+  // are the only lever bounding path count. Speckle must be 0: at any other
+  // value the tracer drops every region whose perimeter is at least its
+  // area, which is every lone pixel and block up to 4x4, the very detail
+  // pixel art is made of. Upscale 1: pixel edges need no resampling, and
+  // each source pixel stays one trace pixel. 16 colors covers most pixel
+  // art palettes; a photographic source still explodes (measured: a
+  // 1.92 MP noisy source gave 154,902 paths / 17 MB in 3.8s at 16 colors)
+  // but stays traceable, where 64 colors risked a tab crash.
   pixelExact: {
-    colors: 8,
-    speckle: 12,
+    colors: 16,
+    speckle: 0,
     layerDiff: 6,
     mode: "none",
     cornerThreshold: 60,
     hierarchical: "stacked",
     pathPrecision: 4,
     spliceThreshold: 45,
-    upscale: "auto",
+    upscale: 1,
     straighten: 0,
     minify: false,
     stencil: false,
@@ -304,6 +304,57 @@ export const EXPORT_PROFILES = Object.freeze({
     straighten: 1.5,
     minify: false,
     stencil: true,
+  },
+  // Multi-color vinyl (Cricut, Silhouette, plotters): Cutout layering
+  // makes each color its own pieces with no overlap, so layers weed and
+  // stack cleanly; strong despeckle spares tiny pieces nobody can weed.
+  vinyl: {
+    colors: 6,
+    speckle: 16,
+    layerDiff: 28,
+    mode: "spline",
+    cornerThreshold: 45,
+    hierarchical: "cutout",
+    pathPrecision: 3,
+    upscale: "auto",
+    straighten: 1.5,
+    minify: false,
+    stencil: false,
+  },
+  // Scanned sketches and ink drawings: denoise clears paper grain before
+  // the threshold, and a lighter threshold than 128 keeps pencil strokes.
+  lineArt: {
+    colors: 2,
+    speckle: 8,
+    layerDiff: 48,
+    mode: "spline",
+    cornerThreshold: 45,
+    hierarchical: "stacked",
+    pathPrecision: 3,
+    upscale: "auto",
+    straighten: 0.5,
+    minify: false,
+    stencil: true,
+    stencilInk: "black",
+    stencilThreshold: 180,
+    denoise: true,
+  },
+  // Logos and icons: flat colors, crisp corners, long straight runs and
+  // few nodes, minified for the smallest file.
+  icon: {
+    colors: 8,
+    speckle: 10,
+    layerDiff: 24,
+    mode: "spline",
+    cornerThreshold: 45,
+    hierarchical: "stacked",
+    pathPrecision: 1,
+    lengthThreshold: 6,
+    spliceThreshold: 60,
+    upscale: "auto",
+    straighten: 2,
+    minify: true,
+    stencil: false,
   },
 });
 
@@ -561,18 +612,14 @@ export function fillTransparent(img, [r, g, b]) {
 }
 
 /**
- * Recolor a binary stencil trace for white-ink output: swap the shape
- * fill to white and add an opaque black backing rect sized to the
- * trace's viewBox (not the root width/height, which can differ from it
- * under upscale). Binary stencil traces have exactly one fill value in
+ * Recolor a binary stencil trace for white-ink output: the shapes turn
+ * white on transparency, one ink like the black stencil, so nothing extra
+ * prints or cuts. Binary stencil traces have exactly one fill value in
  * the whole document, so a blanket replace is safe. No-op for "black".
  */
 export function applyStencilInk(svgText, ink) {
   if (ink !== "white") return svgText;
-  const recolored = svgText.replace(/fill="#000000"/g, 'fill="#ffffff"');
-  const [, w, h] = recolored.match(/viewBox="0 0 ([\d.]+) ([\d.]+)"/) || [];
-  if (!w || !h) return recolored;
-  return recolored.replace(/(<svg[^>]*>)/, `$1<rect width="${w}" height="${h}" fill="#000000"/>`);
+  return svgText.replace(/fill="#000000"/g, 'fill="#ffffff"');
 }
 
 // Validators for persisted settings. localStorage is untrusted input:
@@ -1341,7 +1388,8 @@ export function reduceAndRemoveBackground(img, colors, background, stage = () =>
       mapToPalette(img, swatches);
     } else {
       stage(`Reducing to ${colors} colors…`);
-      quantize(img, colors, { layerDiff });
+      // Nothing remapped means no dither to clean: lone pixels are detail.
+      if (!quantize(img, colors, { layerDiff })) return;
     }
     modeFilter(img);
   };
@@ -1862,6 +1910,8 @@ const FLAT_SEED_COVERAGE = 0.9;
 // Oklab distance under which a common color is a near-duplicate seed: about
 // one quantize bin, so resampling blends next to a solid color merge with it.
 const FLAT_SEED_MIN_DISTANCE = 0.015;
+// Least share of opaque pixels a flat color needs to take a palette slot.
+const FLAT_SEED_MIN_SHARE = 0.001;
 // Flat art seeding is for small palettes: auto-detect caps flat art at 32.
 const FLAT_SEED_MAX_COLORS = 32;
 
@@ -1871,11 +1921,12 @@ const FLAT_SEED_MAX_COLORS = 32;
  * almost every pixel, keeps exactly those colors instead. Images that
  * already have at most `colors` exact colors are left untouched. A flat
  * color within `layerDiff` (the tracer's Merge) of a more common one gets
- * no slot, since the tracer would merge it away. The palette comes from opaque pixels only:
- * hidden pixels carry garbage colors, and counting a large knocked-out
- * area as any one color would crowd small visible details out of the
- * palette. Transparent pixels are then painted with the dominant opaque
- * color's palette entry; alpha is untouched. Mutates img in place.
+ * no slot, since the tracer would merge it away. The palette comes from
+ * opaque pixels only: hidden pixels carry garbage colors, and counting a
+ * large knocked-out area as any one color would crowd small visible
+ * details out of the palette. Transparent pixels are then painted with the dominant opaque
+ * color's palette entry; alpha is untouched. Mutates img in place and
+ * returns whether it remapped any colors.
  */
 export function quantize(img, colors, { layerDiff = 0 } = {}) {
   const { data } = img;
@@ -1884,7 +1935,7 @@ export function quantize(img, colors, { layerDiff = 0 } = {}) {
     if (data[i + 3] < ALPHA_THRESHOLD) continue;
     exact.add((data[i] << 16) | (data[i + 1] << 8) | data[i + 2]);
   }
-  if (exact.size <= colors) return img;
+  if (exact.size <= colors) return false;
   const backfill = dominantOpaqueColor(img);
 
   const binOf = (r, g, b) =>
@@ -1961,6 +2012,9 @@ export function quantize(img, colors, { layerDiff = 0 } = {}) {
   // split them off ahead of small solid accents. Near-duplicates of a
   // color already picked (resampling blends), and colors the tracer would
   // merge into it, count toward its coverage instead of taking a slot.
+  // Rare colors take no slot either: when Max colors exceeds the art's
+  // real colors, spare slots would go to edge blends and add fills.
+  const opaqueCount = count.reduce((total, w) => total + w, 0);
   const common = [];
   let commonCount = 0;
   const candidates = colors <= FLAT_SEED_MAX_COLORS ? Array.from(all) : [];
@@ -1971,12 +2025,11 @@ export function quantize(img, colors, { layerDiff = 0 } = {}) {
           FLAT_SEED_MIN_DISTANCE ** 2 || colorDistance(means[e], means[p]) <= layerDiff,
     );
     if (near) commonCount += count[e];
-    else if (common.length < colors) {
+    else if (common.length < colors && count[e] >= opaqueCount * FLAT_SEED_MIN_SHARE) {
       common.push(e);
       commonCount += count[e];
     }
   }
-  const opaqueCount = count.reduce((total, w) => total + w, 0);
   const seeded = commonCount >= opaqueCount * FLAT_SEED_COVERAGE;
   const boxes = seeded ? common.map((e) => makeBox(Int32Array.of(e))) : [makeBox(all)];
   while (boxes.length < colors) {
@@ -2107,7 +2160,7 @@ export function quantize(img, colors, { layerDiff = 0 } = {}) {
     data[i + 1] = rgb[p + 1];
     data[i + 2] = rgb[p + 2];
   }
-  return img;
+  return true;
 }
 
 /**

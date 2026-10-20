@@ -1,6 +1,6 @@
 // Palette editing: read the traced colors out of the SVG and swap fill
 // values. Edits recolor existing shapes only; geometry never changes.
-import { ALPHA_THRESHOLD, parseHexColor, srgbToOklab, toHexColor } from "./preprocess.js?v=64";
+import { ALPHA_THRESHOLD, parseHexColor, srgbToOklab, toHexColor } from "./preprocess.js?v=69";
 
 /** Largest palette the swatch grid lists; above this, pick from the result. */
 export const PALETTE_GRID_MAX = 32;
@@ -15,7 +15,7 @@ function normalizeFill(value) {
 
 /**
  * Distinct hex fills in the SVG, most used first. Counts fill attributes
- * (on paths, groups and backing rects), not painted area.
+ * (on paths, groups and rects), not painted area.
  * @param {string} svgText
  * @returns {{ fill: string, count: number }[]}
  */
@@ -154,18 +154,18 @@ export function pickColor(imageData, nx, ny) {
 
 /**
  * Fill under a stencil raster sample. The worker's stencil raster is
- * black ink on white whatever the ink; white ink only swaps fills in the
- * SVG (shapes #FFFFFF over a #000000 backing rect), so nearestFill on the
- * raw sample would open the inverse color. Black ink has no background
- * fill, so white samples pick nothing.
+ * black ink on white whatever the ink; white ink only swaps the shape fill
+ * in the SVG to #FFFFFF, so nearestFill on the raw sample would open the
+ * inverse color. Neither ink has a background fill, so white samples pick
+ * nothing.
  * @param {[number, number, number]} rgb
  * @param {string} ink "black" or "white"
  * @returns {string | null}
  */
 export function stencilFill([r], ink) {
   const dark = r < 128;
-  if (ink === "white") return dark ? "#FFFFFF" : "#000000";
-  return dark ? "#000000" : null;
+  if (!dark) return null;
+  return ink === "white" ? "#FFFFFF" : "#000000";
 }
 
 /**

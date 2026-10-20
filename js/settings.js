@@ -14,10 +14,10 @@ import {
   toGrayscaleColor,
   USER_PRESET_PREFIX,
   userPresetName,
-} from "./preprocess.js?v=64";
-import { els, preferences } from "./context.js?v=36";
-import { refreshExport, updatePhysicalHeightOut } from "./exporters.js?v=45";
-import { setEyedropper } from "./cleanup-tools.js?v=54";
+} from "./preprocess.js?v=69";
+import { els, preferences } from "./context.js?v=41";
+import { refreshExport, updatePhysicalHeightOut } from "./exporters.js?v=50";
+import { setEyedropper } from "./cleanup-tools.js?v=59";
 
 /** @returns {HTMLInputElement} */
 const radioEl = (selector) => /** @type {HTMLInputElement} */ (document.querySelector(selector));
@@ -173,6 +173,8 @@ export function updateOutputs() {
 
 /** The current value each settings section shows while it is folded. */
 export function updatePanelSummaries() {
+  const profile = els.exportProfile.selectedOptions[0];
+  els.profileSummary.textContent = profile && profile.value ? profile.textContent : "Custom";
   const colors = Number(els.colors.value);
   const swatches = currentSwatches().length;
   els.colorsSummary.textContent = els.stencil.checked
@@ -284,6 +286,9 @@ export function applyExportProfile(name) {
   radioEl(`input[name="stencil-ink"][value="${profile.stencilInk || "black"}"]`).checked = true;
   els.pathPrecision.value = String(profile.pathPrecision);
   if (profile.spliceThreshold) els.spliceThreshold.value = String(profile.spliceThreshold);
+  if (profile.lengthThreshold) els.lengthThreshold.value = String(profile.lengthThreshold);
+  if (profile.stencilThreshold) els.stencilThreshold.value = String(profile.stencilThreshold);
+  els.denoise.checked = Boolean(profile.denoise);
   els.minify.checked = profile.minify;
   els.preset.value = "";
   // The profile chose the color settings; detection must not replace them.
@@ -297,6 +302,7 @@ export function applyExportProfile(name) {
 export function clearProfile() {
   els.exportProfile.value = "";
   updateStencilFields(); // threshold slides back into the Tracing panel
+  updatePanelSummaries();
 }
 
 // -- Settings persistence: survive reloads, keep tuned values ----------
@@ -556,13 +562,13 @@ function storeUserPresets(presets) {
   return true;
 }
 
-/** List the presets under "My presets" in the profile select, keeping its value. */
+/** List the saved profiles under "My profiles" in the profile select, keeping its value. */
 function renderPresetOptions() {
   const value = els.exportProfile.value;
   els.exportProfile.querySelector("optgroup[data-user-presets]")?.remove();
   if (userPresets.length) {
     const group = document.createElement("optgroup");
-    group.label = "My presets";
+    group.label = "My profiles";
     group.dataset.userPresets = "";
     for (const { name } of userPresets) {
       group.append(new Option(name, USER_PRESET_PREFIX + name));
