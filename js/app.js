@@ -71,6 +71,23 @@ import {
 } from "./settings.js?v=49";
 import { actualSizeView, resetView } from "./view.js?v=49";
 
+const SAMPLE_FILES = [
+  "synthwave.png",
+  "chip.png",
+  "rocket.png",
+  "planet.png",
+  "robot.png",
+  "cubes.png",
+  "controller.png",
+  "fox.png",
+  "bauhaus.png",
+  "satellite.png",
+  "terminal.png",
+  "aperture.png",
+];
+// The last sample shown, so the next one (even after a reload) differs.
+const SAMPLE_KEY = "rastertrace:last-sample";
+
 const EMPTY_IMAGE_SRC = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==";
 
 const tracer = new Tracer(new URL("./worker.js?v=64", import.meta.url));
@@ -358,17 +375,38 @@ function resetForNewImage() {
 // -- Events ------------------------------------------------------------
 
 els.pickFile.addEventListener("click", () => els.fileInput.click());
-document.getElementById("try-sample").addEventListener("click", async () => {
+async function openSample() {
+  let previousSample = "";
   try {
-    const response = await fetch("assets/samples/sample-landscape.png");
-    if (!response.ok) throw new Error("Sample image request failed.");
-    const blob = await response.blob();
-    const file = new File([blob], "sample-landscape.png", { type: "image/png" });
-    await loadFile(file);
-  } catch {
-    showError("Could not load the sample image.");
+    previousSample = localStorage.getItem(SAMPLE_KEY) ?? "";
+  } catch {}
+  const samples = SAMPLE_FILES.filter((name) => name !== previousSample);
+  for (let i = samples.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [samples[i], samples[j]] = [samples[j], samples[i]];
   }
-});
+  if (SAMPLE_FILES.includes(previousSample)) samples.push(previousSample);
+  // Offline, the cache-first service worker only has samples fetched before.
+  for (const name of samples) {
+    try {
+      const response = await fetch(`assets/samples/${name}`);
+      if (!response.ok) continue;
+      const blob = await response.blob();
+      await loadFile(new File([blob], name, { type: "image/png" }));
+      try {
+        localStorage.setItem(SAMPLE_KEY, name);
+      } catch {}
+      return;
+    } catch {
+      continue;
+    }
+  }
+  showError("Could not load the sample image.");
+}
+document.getElementById("try-sample").addEventListener("click", openSample);
+for (const button of document.querySelectorAll('[data-action="open-sample"]')) {
+  button.addEventListener("click", openSample);
+}
 els.errorDismiss.addEventListener("click", () => showError(""));
 // The whole drop zone opens the picker: phones cannot drop files.
 els.dropzone.addEventListener("click", (event) => {

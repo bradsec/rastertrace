@@ -13,7 +13,7 @@ Convert raster images to clean, scalable SVG vectors entirely in your browser. [
 
 ## Features
 
-- Try a sample image button in the empty state loads a built-in landscape for tracing.
+- Try a sample image (empty state, or File > Open sample image) loads one of 12 built-in samples at random, never the one shown last; three feature the rastertrace wordmark for testing text tracing.
 - PNG, JPEG, WebP, GIF, and BMP input, up to 50 MB and 100 megapixels
 - Premultiplied-alpha upscaling (no edge halos), binary alpha (no fringe fragmentation)
 - Median-cut + k-means color quantization in perceptual Oklab space with transparent-area backfill; clusters below 0.1% of opaque pixels are reseeded toward the largest population-weighted color error so edge blends do not waste palette slots
@@ -62,7 +62,7 @@ index.html          app shell
 sw.js               service worker: offline cache for the static app
 css/styles.css      design tokens + layout
 assets/icons/       locally bundled Material SVG icons
-assets/samples/     built-in sample images
+assets/samples/     built-in sample images (PNG) and their SVG sources
 js/preprocess.js    pure pixel/string ops (Node-testable, no browser APIs)
 js/vectorexport.js  DXF and PDF writers from traced SVG (Node-testable)
 js/eraser.js        eraser mask geometry (Node-testable)

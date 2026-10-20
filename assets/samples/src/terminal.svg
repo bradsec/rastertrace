@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="480" viewBox="0 0 640 480">
+  <rect width="640" height="480" fill="#22223b"/>
+  <circle cx="110" cy="390" r="120" fill="#4a4e69"/><circle cx="560" cy="80" r="90" fill="#4a4e69"/>
+  <rect x="40" y="90" width="560" height="300" rx="20" fill="#0d1117"/>
+  <path d="M40 110 A20 20 0 0 1 60 90 H580 A20 20 0 0 1 600 110 V140 H40Z" fill="#30363d"/>
+  <circle cx="130" cy="115" r="9" fill="#ff5f56"/><circle cx="160" cy="115" r="9" fill="#ffbd2e"/><circle cx="190" cy="115" r="9" fill="#27c93f"/>
+  <text x="80" y="210" font-family="DejaVu Sans Mono, monospace" font-weight="700" font-size="40" fill="#3fb950">$ rastertrace</text>
+  <path d="M84 246 L108 266 L84 286" stroke="#58a6ff" stroke-width="8" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="128" y="278" width="48" height="8" rx="4" fill="#3fb950"/>
+  <g fill="#8b949e"><rect x="80" y="318" width="240" height="12" rx="6"/><rect x="80" y="348" width="140" height="12" rx="6"/></g>
+</svg>

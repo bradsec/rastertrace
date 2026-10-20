@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="480" viewBox="0 0 640 480">
+  <rect width="640" height="480" fill="#0d1321"/>
+  <g fill="#e0e1dd"><circle cx="60" cy="60" r="2"/><circle cx="580" cy="80" r="2.5"/><circle cx="120" cy="400" r="2"/><circle cx="540" cy="420" r="2"/><circle cx="300" cy="40" r="1.6"/><circle cx="460" cy="40" r="1.6"/><circle cx="40" cy="250" r="1.6"/><circle cx="610" cy="300" r="1.6"/></g>
+  <circle cx="110" cy="130" r="34" fill="#748cab"/><circle cx="100" cy="120" r="7" fill="#3e5c76"/><circle cx="124" cy="146" r="5" fill="#3e5c76"/>
+  <defs>
+    <clipPath id="p"><circle cx="330" cy="240" r="130"/></clipPath>
+    <clipPath id="front"><rect x="0" y="240" width="640" height="300" transform="rotate(-15 330 240)"/></clipPath>
+  </defs>
+  <g transform="rotate(-15 330 240)"><ellipse cx="330" cy="240" rx="235" ry="58" fill="none" stroke="#e9c46a" stroke-width="22"/></g>
+  <g clip-path="url(#p)">
+    <rect x="180" y="100" width="300" height="300" fill="#e76f51"/>
+    <path d="M180 165 Q330 140 480 170 V200 Q330 172 180 198Z" fill="#f4a261"/>
+    <path d="M180 245 Q330 222 480 250 V276 Q330 250 180 280Z" fill="#9c3d28"/>
+    <path d="M180 320 Q330 300 480 325 V390 H180Z" fill="#f4a261"/>
+    <circle cx="385" cy="300" r="24" fill="#9c3d28"/>
+  </g>
+  <g clip-path="url(#front)"><g transform="rotate(-15 330 240)"><ellipse cx="330" cy="240" rx="235" ry="58" fill="none" stroke="#e9c46a" stroke-width="22"/></g></g>
+</svg>

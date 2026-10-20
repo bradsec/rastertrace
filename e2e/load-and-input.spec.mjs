@@ -45,6 +45,29 @@ test("sample image loads and traces", async ({ page }) => {
   await expect(page.locator("#status")).toContainText(/Traced \d/, { timeout: 60_000 });
 });
 
+test("each sample click loads a different sample image", async ({ page }) => {
+  const samples = [];
+  page.on("request", (request) => {
+    const { pathname } = new URL(request.url());
+    if (pathname.startsWith("/assets/samples/")) samples.push(pathname);
+  });
+  await page.goto("/");
+  for (let i = 0; i < 3; i++) {
+    await page.evaluate(() => (document.getElementById("status").textContent = ""));
+    if (i === 0) {
+      await page.locator("#try-sample").click();
+    } else {
+      // After the first image the empty-state button is gone; File offers it.
+      await page.locator(".app-menu summary", { hasText: "File" }).click();
+      await page.locator('[data-action="open-sample"]').click();
+    }
+    await expect(page.locator("#status")).toContainText(/Traced \d/, { timeout: 60_000 });
+  }
+  expect(samples).toHaveLength(3);
+  expect(samples[1]).not.toBe(samples[0]);
+  expect(samples[2]).not.toBe(samples[1]);
+});
+
 test.describe("opening files", () => {
   test.use({ viewport: { width: 1280, height: 800 } });
 

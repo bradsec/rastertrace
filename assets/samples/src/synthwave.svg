@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="480" viewBox="0 0 640 480">
+  <rect width="640" height="480" fill="#1a1033"/>
+  <rect y="0" width="640" height="90" fill="#140c2b"/>
+  <rect y="90" width="640" height="70" fill="#24124a"/>
+  <rect y="160" width="640" height="60" fill="#3a1660"/>
+  <rect y="220" width="640" height="60" fill="#5a1a72"/>
+  <g fill="#fff6d5"><circle cx="70" cy="50" r="2"/><circle cx="160" cy="110" r="1.6"/><circle cx="520" cy="40" r="2"/><circle cx="590" cy="120" r="1.6"/><circle cx="420" cy="70" r="1.4"/><circle cx="250" cy="30" r="1.6"/></g>
+  <text x="320" y="105" text-anchor="middle" font-family="DejaVu Sans, sans-serif" font-weight="700" font-size="72" fill="#fff6d5">rastertrace</text>
+  <defs><clipPath id="sun"><circle cx="320" cy="250" r="120"/></clipPath></defs>
+  <g clip-path="url(#sun)">
+    <rect x="200" y="130" width="240" height="60" fill="#ffd23f"/>
+    <rect x="200" y="190" width="240" height="40" fill="#ff9f43"/>
+    <rect x="200" y="230" width="240" height="40" fill="#ff5e7e"/>
+    <rect x="200" y="270" width="240" height="40" fill="#e0399a"/>
+    <g fill="#5a1a72"><rect x="200" y="214" width="240" height="5"/><rect x="200" y="246" width="240" height="8"/><rect x="200" y="278" width="240" height="11"/></g>
+  </g>
+  <path d="M0 290 L70 240 L120 265 L190 225 L240 270 L400 270 L450 230 L520 262 L580 235 L640 262 L640 290 Z" fill="#2b0f4c"/>
+  <rect y="290" width="640" height="190" fill="#120a24"/>
+  <g stroke="#ff3fa4" stroke-width="3" fill="none">
+    <line x1="0" y1="292" x2="640" y2="292"/>
+    <line x1="0" y1="306" x2="640" y2="306"/><line x1="0" y1="326" x2="640" y2="326"/>
+    <line x1="0" y1="354" x2="640" y2="354"/><line x1="0" y1="394" x2="640" y2="394"/><line x1="0" y1="450" x2="640" y2="450"/>
+    <line x1="320" y1="292" x2="320" y2="480"/>
+    <line x1="280" y1="292" x2="180" y2="480"/><line x1="360" y1="292" x2="460" y2="480"/>
+    <line x1="240" y1="292" x2="40" y2="480"/><line x1="400" y1="292" x2="600" y2="480"/>
+    <line x1="200" y1="292" x2="-100" y2="480"/><line x1="440" y1="292" x2="740" y2="480"/>
+  </g>
+</svg>
