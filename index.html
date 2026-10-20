@@ -91,12 +91,24 @@
         <details class="app-menu">
           <summary>View</summary>
           <div class="menu-popover">
-            <button type="button" data-action="show-result">Show result</button>
-            <button type="button" data-action="show-source">Show source</button>
-            <button type="button" data-action="show-compare">Compare</button>
-            <button type="button" data-action="rotate-left">Rotate left</button>
-            <button type="button" data-action="rotate-right">Rotate right</button>
-            <button type="button" data-action="invert-image">Invert colors</button>
+            <button type="button" data-action="show-result" data-result-action disabled>
+              Show result
+            </button>
+            <button type="button" data-action="show-source" data-result-action disabled>
+              Show source
+            </button>
+            <button type="button" data-action="show-compare" data-result-action disabled>
+              Compare
+            </button>
+            <button type="button" data-action="rotate-left" data-result-action disabled>
+              Rotate left
+            </button>
+            <button type="button" data-action="rotate-right" data-result-action disabled>
+              Rotate right
+            </button>
+            <button type="button" data-action="invert-image" data-result-action disabled>
+              Invert colors
+            </button>
             <hr />
             <button type="button" data-action="toggle-left-panel">
               Profile &amp; colors panel
@@ -106,12 +118,18 @@
               Hide or show both<span>Ctrl+\</span>
             </button>
             <hr />
-            <button type="button" data-action="zoom-fit">Fit preview<span>Ctrl+0</span></button>
-            <button type="button" data-action="zoom-actual">
+            <button type="button" data-action="zoom-fit" data-result-action disabled>
+              Fit preview<span>Ctrl+0</span>
+            </button>
+            <button type="button" data-action="zoom-actual" data-result-action disabled>
               Actual size (1:1)<span>Ctrl+1</span>
             </button>
-            <button type="button" data-action="zoom-in">Zoom in<span>+</span></button>
-            <button type="button" data-action="zoom-out">Zoom out<span>-</span></button>
+            <button type="button" data-action="zoom-in" data-result-action disabled>
+              Zoom in<span>+</span>
+            </button>
+            <button type="button" data-action="zoom-out" data-result-action disabled>
+              Zoom out<span>-</span>
+            </button>
           </div>
         </details>
         <details class="app-menu">
@@ -2084,6 +2102,6 @@
         location.reload();
       };
     </script>
-    <script type="module" src="js/app.js?v=169" onerror="window.recoverRasterTraceBoot()"></script>
+    <script type="module" src="js/app.js?v=170" onerror="window.recoverRasterTraceBoot()"></script>
   </body>
 </html>

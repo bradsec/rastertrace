@@ -1192,11 +1192,27 @@ if (phoneSheet.matches) openSheet(els.workspace.dataset.sheet);
 // Lightroom's panel toggles, so the preview can take the room.
 const FOLD_KEY = "rastertrace:folded";
 const foldButtons = { left: els.foldLeft, right: els.foldRight };
+const foldMenuButtons = {
+  left: /** @type {HTMLButtonElement} */ (
+    document.querySelector('[data-action="toggle-left-panel"]')
+  ),
+  right: /** @type {HTMLButtonElement} */ (
+    document.querySelector('[data-action="toggle-right-panel"]')
+  ),
+};
+const foldingLayout = window.matchMedia("(min-width: 901px)");
 const foldLabels = { left: "profile, colors and palette", right: "settings" };
 
 function isFolded(side) {
   return els.workspace.classList.contains(`${side}-folded`);
 }
+
+function syncFoldMenu() {
+  for (const side of /** @type {const} */ (["left", "right"])) {
+    foldMenuButtons[side].disabled = !foldingLayout.matches || !isFolded(side);
+  }
+}
+foldingLayout.addEventListener("change", syncFoldMenu);
 
 function setFolded(side, folded) {
   els.workspace.classList.toggle(`${side}-folded`, folded);
@@ -1204,6 +1220,7 @@ function setFolded(side, folded) {
   foldButtons[side].setAttribute("aria-expanded", String(!folded));
   foldButtons[side].setAttribute("aria-label", `${action} ${foldLabels[side]}`);
   foldButtons[side].title = `${action} panel (Ctrl+\\ for both)`;
+  syncFoldMenu();
 }
 
 function saveFolds() {
@@ -1241,13 +1258,11 @@ for (const side of /** @type {const} */ (["left", "right"])) {
     setFolded(side, !isFolded(side));
     saveFolds();
   });
+  foldMenuButtons[side].addEventListener("click", () => {
+    setFolded(side, false);
+    saveFolds();
+  });
 }
-document
-  .querySelector('[data-action="toggle-left-panel"]')
-  .addEventListener("click", () => els.foldLeft.click());
-document
-  .querySelector('[data-action="toggle-right-panel"]')
-  .addEventListener("click", () => els.foldRight.click());
 document.querySelector('[data-action="toggle-panels"]').addEventListener("click", toggleBothPanels);
 
 els.showResult.addEventListener("click", () => setView("result"));

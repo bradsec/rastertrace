@@ -45,6 +45,72 @@ test("sample image loads and traces", async ({ page }) => {
   await expect(page.locator("#status")).toContainText(/Traced \d/, { timeout: 60_000 });
 });
 
+test("View image actions require a loaded sample while panel actions follow folding", async ({
+  page,
+}) => {
+  const menu = page.locator(".app-menu").filter({ has: page.getByText("View", { exact: true }) });
+  const imageActions = [
+    "show-result",
+    "show-source",
+    "show-compare",
+    "rotate-left",
+    "rotate-right",
+    "invert-image",
+    "zoom-fit",
+    "zoom-actual",
+    "zoom-in",
+    "zoom-out",
+  ];
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.reload();
+  const left = menu.locator('[data-action="toggle-left-panel"]');
+  const right = menu.locator('[data-action="toggle-right-panel"]');
+  const both = menu.locator('[data-action="toggle-panels"]');
+
+  await menu.locator("summary").click();
+  for (const action of imageActions) {
+    await expect(menu.locator(`[data-action="${action}"]`)).toBeDisabled();
+  }
+  await expect(left).toBeDisabled();
+  await expect(right).toBeDisabled();
+  await expect(both).toBeEnabled();
+  await page.keyboard.press("Escape");
+  const initialTransform = await transform(page);
+  for (const key of ["Control+0", "Control+1", "Meta+0", "Meta+1", "+", "-"]) {
+    await page.keyboard.press(key);
+  }
+  expect(await transform(page)).toBe(initialTransform);
+  await expect(page.locator("#empty-state")).toBeVisible();
+
+  await traced(page, () => page.locator("#try-sample").click());
+  await menu.locator("summary").click();
+  for (const action of imageActions) {
+    await expect(menu.locator(`[data-action="${action}"]`)).toBeEnabled();
+  }
+  await expect(left).toBeDisabled();
+  await expect(right).toBeDisabled();
+  await expect(both).toBeEnabled();
+  await page.keyboard.press("Escape");
+  await page.locator("#fold-left").click();
+  await menu.locator("summary").click();
+  await expect(left).toBeEnabled();
+  await expect(right).toBeDisabled();
+  await left.click();
+  await expect(left).toBeDisabled();
+  await expect(page.locator("#fold-left")).toHaveAttribute("aria-expanded", "true");
+  await page.keyboard.press("Control+\\");
+  await expect(left).toBeEnabled();
+  await expect(right).toBeEnabled();
+  await expect(both).toBeEnabled();
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(left).toBeDisabled();
+  await expect(right).toBeDisabled();
+  await expect(both).toBeEnabled();
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await expect(left).toBeEnabled();
+  await expect(right).toBeEnabled();
+});
+
 test("each sample click loads a different sample image", async ({ page }) => {
   const samples = [];
   page.on("request", (request) => {
