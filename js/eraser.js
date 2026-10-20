@@ -132,6 +132,23 @@ function fillMarkup(stroke, box, pixelExact) {
     .replace(/stroke="#000"/g, `stroke="${stroke.color}"`);
 }
 
+/**
+ * Standalone SVG of one cleanup action's area, white on black, sized
+ * `width` x `height`: the coverage mask for painting the action into a
+ * raster before tracing. A combined selection's subtracted parts are
+ * black, so they stay unpainted.
+ */
+export function cleanupMaskSvg(action, width, height, { pixelExact = false } = {}) {
+  const box = { x: 0, y: 0, width, height };
+  const marks =
+    action.type === "composite"
+      ? compositeMarkup(action.parts, box, "#fff", "#000")
+      : erasureMarkup(action, box, pixelExact)
+          .replace(/fill="#000"/g, 'fill="#fff"')
+          .replace(/stroke="#000"/g, 'stroke="#fff"');
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}"><rect width="${width}" height="${height}" fill="#000"/>${marks}</svg>`;
+}
+
 function svgParts(svg) {
   const rootStart = svg.search(/<svg\b/i);
   const openEnd = rootStart < 0 ? -1 : svg.indexOf(">", rootStart);

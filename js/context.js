@@ -1,7 +1,7 @@
 // Shared DOM references and mutable app state, imported by every UI
 // module. Keeps no logic beyond tiny helpers so it can never participate
 // in an import cycle.
-import { MAX_TRACE_SIDE } from "./preprocess.js?v=78";
+import { MAX_TRACE_SIDE } from "./preprocess.js?v=79";
 
 /**
  * @template {Element} [T=HTMLElement]
@@ -231,6 +231,8 @@ export const state = {
   blobPicking: false,
   eraseStrokes: [], // ordered cleanup actions, normalized so retracing preserves placement
   eraseRedo: [],
+  /** Cleanup actions painted into the current trace; the rest are drawn on top until it reruns. */
+  bakedActions: /** @type {Set<object>} */ (new Set()),
   selectionTool: null,
   selection: null,
 };

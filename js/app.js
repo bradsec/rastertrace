@@ -10,7 +10,7 @@ import {
   rotateBitmap,
   sniffImageSize,
   Tracer,
-} from "./pipeline.js?v=78";
+} from "./pipeline.js?v=79";
 import {
   analyzeFlatness,
   detectedColorSettings,
@@ -32,9 +32,10 @@ import {
   toHexColor,
   USER_PRESET_PREFIX,
   userPresetName,
-} from "./preprocess.js?v=78";
-import { $, els, hooks, preferences, showError, state } from "./context.js?v=51";
-import { refreshExport, setResultActions } from "./exporters.js?v=60";
+} from "./preprocess.js?v=79";
+import { $, els, hooks, preferences, showError, state } from "./context.js?v=53";
+import { bakeCleanup } from "./bake.js?v=3";
+import { refreshExport, setResultActions } from "./exporters.js?v=63";
 import {
   clearSelection,
   setBlobFill,
@@ -42,8 +43,8 @@ import {
   setSelectionTool,
   setView,
   showResultOverSource,
-} from "./cleanup-tools.js?v=70";
-import { afterTrace, resetPalette } from "./palette-ui.js?v=54";
+} from "./cleanup-tools.js?v=73";
+import { afterTrace, resetPalette } from "./palette-ui.js?v=57";
 import {
   applyExportProfile,
   applyMeasurementUnit,
@@ -73,8 +74,8 @@ import {
   updateTraceFields,
   updateTransparencyFields,
   userPresets,
-} from "./settings.js?v=70";
-import { actualSizeView, resetView } from "./view.js?v=70";
+} from "./settings.js?v=73";
+import { actualSizeView, resetView } from "./view.js?v=73";
 
 const SAMPLE_FILES = [
   "synthwave.png",
@@ -95,7 +96,7 @@ const SAMPLE_KEY = "rastertrace:last-sample";
 
 const EMPTY_IMAGE_SRC = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==";
 
-const tracer = new Tracer(new URL("./worker.js?v=83", import.meta.url));
+const tracer = new Tracer(new URL("./worker.js?v=84", import.meta.url));
 
 let elapsedTimer = 0;
 
@@ -123,6 +124,8 @@ tracer.onProgress = (label) => {
   els.veilStage.textContent = label;
   els.status.textContent = label;
 };
+
+let retraceRun = 0;
 
 async function retrace() {
   if (!state.bitmap) return;
@@ -154,15 +157,24 @@ async function retrace() {
     if (!state.raster || state.raster.scale !== scale || state.raster.nearest !== nearest) {
       state.raster = { scale, nearest, imageData: rasterize(state.bitmap, scale, nearest) };
     }
-    const result = await tracer.trace(
-      state.raster.imageData,
-      settings,
-      state.sourceWidth,
-      state.sourceHeight,
-    );
+    // Cleanup edits are traced with the image, so settings apply to them.
+    // Fill colors keep a palette slot unless the colors are fixed anyway
+    // (stencil ink, My colors).
+    const actions = state.eraseStrokes.slice();
+    const run = ++retraceRun;
+    const imageData = actions.length
+      ? await bakeCleanup(state.raster.imageData, actions, { pixelExact: nearest })
+      : state.raster.imageData;
+    if (run !== retraceRun) return; // a newer edit or setting is on its way
+    if (!settings.stencil && !settings.swatches) {
+      const colors = new Set(actions.filter((a) => a.mode === "fill").map((a) => a.color));
+      if (colors.size) settings.keep = [...colors].map(parseHexColor);
+    }
+    const result = await tracer.trace(imageData, settings, state.sourceWidth, state.sourceHeight);
     if (!result) return; // superseded by a newer request
     state.processedRaster = result.processed ?? null;
     state.svgRaw = result.svg;
+    state.bakedActions = new Set(actions);
     state.svgMosaic = settings.hierarchical === "cutout";
     const paletteNote = afterTrace();
     const { paths } = refreshExport();
@@ -349,6 +361,7 @@ async function loadFile(file) {
     state.sourceHeight = sourceHeight;
     state.raster = null;
     state.eraseStrokes = [];
+    state.bakedActions = new Set();
     state.eraseRedo = [];
     clearSelection();
     setSelectionTool(null);
@@ -392,6 +405,7 @@ function resetForNewImage() {
   state.raster = null;
   state.processedRaster = null;
   state.eraseStrokes = [];
+  state.bakedActions = new Set();
   state.eraseRedo = [];
   state.flatNote = null;
   resetPalette();

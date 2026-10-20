@@ -14,10 +14,10 @@ import {
   toGrayscaleColor,
   USER_PRESET_PREFIX,
   userPresetName,
-} from "./preprocess.js?v=78";
-import { els, preferences } from "./context.js?v=51";
-import { refreshExport, updatePhysicalHeightOut } from "./exporters.js?v=60";
-import { setEyedropper } from "./cleanup-tools.js?v=70";
+} from "./preprocess.js?v=79";
+import { els, preferences } from "./context.js?v=53";
+import { refreshExport, updatePhysicalHeightOut } from "./exporters.js?v=63";
+import { setEyedropper } from "./cleanup-tools.js?v=73";
 
 /** @returns {HTMLInputElement} */
 const radioEl = (selector) => /** @type {HTMLInputElement} */ (document.querySelector(selector));

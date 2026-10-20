@@ -158,3 +158,43 @@ test("quantize uses given seeds as the palette, for compressed flat art", () => 
   for (let i = 0; i < data.length; i += 4) output.add(toHexColor(data.subarray(i, i + 3)));
   assert.deepEqual([...output].sort(), ["#1D3557", "#E63946", "#F2E8CF"]);
 });
+
+/** One row of hex runs: [hex, pixel count]. */
+function runsImage(runs) {
+  const width = runs.reduce((total, [, count]) => total + count, 0);
+  const data = new Uint8ClampedArray(width * 4);
+  let offset = 0;
+  for (const [hex, count] of runs) {
+    const rgba = [...parseHexColor(hex), 255];
+    for (let i = 0; i < count; i++, offset += 4) data.set(rgba, offset);
+  }
+  return { width, height: 1, data };
+}
+
+function colorsOf({ data }) {
+  const output = new Set();
+  for (let i = 0; i < data.length; i += 4) output.add(toHexColor(data.subarray(i, i + 3)));
+  return [...output].sort();
+}
+
+test("quantize keeps a painted fill color on top of the seeded palette", () => {
+  const img = runsImage([
+    ["#F2E8CF", 4000],
+    ["#1D3557", 3000],
+    ["#00FF00", 500],
+    ["#808080", 20],
+  ]);
+  const seeds = [parseHexColor("#F2E8CF"), parseHexColor("#1D3557")];
+  quantize(img, 2, { seeds, keep: [parseHexColor("#00FF00")] });
+  assert.deepEqual(colorsOf(img), ["#00FF00", "#1D3557", "#F2E8CF"]);
+});
+
+test("quantize keeps a painted fill color on a clustered palette", () => {
+  const runs = [["#00FF00", 300]];
+  for (let v = 0; v < 256; v += 4) runs.push([toHexColor([v, v, 255 - v]), 200]);
+  const img = runsImage(runs);
+  quantize(img, 4, { keep: [parseHexColor("#00FF00")] });
+  const colors = colorsOf(img);
+  assert.ok(colors.includes("#00FF00"), colors.join(" "));
+  assert.equal(colors.length, 5);
+});

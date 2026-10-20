@@ -1418,6 +1418,7 @@ export function reduceAndRemoveBackground(img, colors, background, stage = () =>
     swatches = null,
     layerDiff = 0,
     seeds = null,
+    keep = null,
   } = background;
   const options = {
     contiguous,
@@ -1438,7 +1439,7 @@ export function reduceAndRemoveBackground(img, colors, background, stage = () =>
       mapToPalette(img, swatches);
     } else {
       stage(`Reducing to ${colors} colors…`);
-      const result = quantize(img, colors, { layerDiff, seeds });
+      const result = quantize(img, colors, { layerDiff, seeds, keep });
       // Nothing remapped means no dither to clean: lone pixels are detail.
       if (!result) return;
       flat = result === "flat";
@@ -2406,19 +2407,21 @@ const FLAT_SEED_MAX_COLORS = 32;
  * opaque pixels only: hidden pixels carry garbage colors, and counting a
  * large knocked-out area as any one color would crowd small visible
  * details out of the palette. Transparent pixels are then painted with the dominant opaque
- * color's palette entry; alpha is untouched. Mutates img in place and
- * returns false when it remapped nothing, "flat" when the palette is the
- * art's own flat colors (seeded), otherwise "clustered".
+ * color's palette entry; alpha is untouched. `keep` ([r, g, b], painted
+ * fill colors) join the palette exactly, on top of `colors`. Mutates img
+ * in place and returns false when it remapped nothing, "flat" when the
+ * palette is the art's own flat colors (seeded), otherwise "clustered".
  * @returns {false | "flat" | "clustered"}
  */
-export function quantize(img, colors, { layerDiff = 0, seeds = null } = {}) {
+export function quantize(img, colors, { layerDiff = 0, seeds = null, keep = null } = {}) {
   const { data } = img;
+  const kept = keep ?? [];
   const exact = new Set();
-  for (let i = 0; i < data.length && exact.size <= colors; i += 4) {
+  for (let i = 0; i < data.length && exact.size <= colors + kept.length; i += 4) {
     if (data[i + 3] < ALPHA_THRESHOLD) continue;
     exact.add((data[i] << 16) | (data[i + 1] << 8) | data[i + 2]);
   }
-  if (exact.size <= colors) return false;
+  if (exact.size <= colors + kept.length) return false;
   const backfill = dominantOpaqueColor(img);
 
   const binOf = (r, g, b) =>
@@ -2628,10 +2631,35 @@ export function quantize(img, colors, { layerDiff = 0, seeds = null } = {}) {
     if (!changed) break;
   }
 
-  // Every pixel maps through its bin to the (now converged) palette entry.
-  const rgb = new Uint8Array(k * 3);
+  // Painted fill colors join after clustering, exact and fixed, so they
+  // neither take the image's own slots nor pull its colors off.
+  const rgb = new Uint8Array((k + kept.length) * 3);
   for (let p = 0; p < k; p++) {
     rgb.set(oklabToSrgb([palette[p * 3], palette[p * 3 + 1], palette[p * 3 + 2]]), p * 3);
+  }
+  if (kept.length) {
+    const keptLab = kept.map((color) => srgbToOklab(color));
+    kept.forEach((color, j) => rgb.set(color, (k + j) * 3));
+    for (let e = 0; e < n; e++) {
+      let bestDist = Infinity;
+      for (let p = 0; p < k; p++) {
+        const dist =
+          (lab[0][e] - palette[p * 3]) ** 2 +
+          (lab[1][e] - palette[p * 3 + 1]) ** 2 +
+          (lab[2][e] - palette[p * 3 + 2]) ** 2;
+        if (dist < bestDist) {
+          bestDist = dist;
+          assign[e] = p;
+        }
+      }
+      keptLab.forEach(([L, A, B], j) => {
+        const dist = (lab[0][e] - L) ** 2 + (lab[1][e] - A) ** 2 + (lab[2][e] - B) ** 2;
+        if (dist < bestDist) {
+          bestDist = dist;
+          assign[e] = k + j;
+        }
+      });
+    }
   }
   const binToPalette = new Int32Array(binCount);
   for (let e = 0; e < n; e++) binToPalette[entryBin[e]] = assign[e];

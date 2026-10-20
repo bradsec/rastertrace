@@ -36,60 +36,64 @@
     "sha": "c791ac290668f1933993695c39260283c51955aad4524eed259bbfb501e43f72"
   },
   "js/app.js": {
-    "v": 159,
-    "sha": "dfa5de82357e661e6cd7a8087286f1599cf936d6fa3c281e33ac649b0962be68"
+    "v": 163,
+    "sha": "384287ce38866f8129c04f803a9d0bad5e1b00f167c50ff61da2ec7d23935974"
+  },
+  "js/bake.js": {
+    "v": 3,
+    "sha": "7dc42f2d0f24d125d8580193d93d2cefe9bea3b7783c78ebaafe108af90b4f78"
   },
   "js/cleanup-tools.js": {
-    "v": 70,
-    "sha": "0067420d9580e7f8cae28c62cefc7551f7e1f7201626cab9e1dd2fc811645d37"
+    "v": 73,
+    "sha": "9f27368a9e71a9145b5d7b3633e37ca099ee720d1b855373b26ba61751223fbc"
   },
   "js/context.js": {
-    "v": 51,
-    "sha": "9e00c5415a873992a7defa0e12e7c9559982da7c01412fe4c64f1a9328f06f79"
+    "v": 53,
+    "sha": "578727ce9395b99978d70a106e5135243619d9242ab6f11e0ba36c3ca58d86b3"
   },
   "js/eraser.js": {
-    "v": 11,
-    "sha": "712c9839c5391bbad6769e6534f8317204f9303f9232e209dadcf5ac4e190c3f"
+    "v": 12,
+    "sha": "891ca970aefc0bed94a938a348133d3355081336e7d3a612e85f30d9daac1905"
   },
   "js/exporters.js": {
-    "v": 60,
-    "sha": "b480cad11515a507450368248ae35f14a434ed0e76ebbce418c2a5515d1f4734"
+    "v": 63,
+    "sha": "cbc0b7e59b1bd97dd794ddf35bd1c2d9bfa8336060bfe0cdc66c4f56fbfcda88"
   },
   "js/magicwand.js": {
-    "v": 30,
-    "sha": "bf537716a30cf021e79f0d146600ad6e3d06ca74a64bb1b85ae8c1ea341155f0"
+    "v": 31,
+    "sha": "0801fa2c6a25d1db2d1ed9c9df83c8a818e614f2322fce46a106ec5adf5b3c4d"
   },
   "js/palette-ui.js": {
-    "v": 54,
-    "sha": "09ab6aef9d90f8220e1341f1d85d2781ca0835c259cc79bcb26049d19f006537"
+    "v": 57,
+    "sha": "1fc52e8bc682412ab5ba112149f1407f16468804d87602c113f9692de6899ef1"
   },
   "js/palette.js": {
-    "v": 32,
-    "sha": "cd1911f3ee9a4e2b2572d2fbc514e508e19bdf79ef99f341eeb532e20b1b1800"
+    "v": 33,
+    "sha": "792e1952c86965fec60f980f078dbe0ddfef86840138cd068002ac82ce097422"
   },
   "js/pipeline.js": {
-    "v": 78,
-    "sha": "84a24dd49e856ea87ec930183fce1e0db7438638619207e3943f6f3555059af7"
+    "v": 79,
+    "sha": "64bb8de812a06d01a4dd059fa772391ea0c351e2ba2d679c30a67b1807747cd2"
   },
   "js/preprocess.js": {
-    "v": 78,
-    "sha": "ffe166a38c57b66fef1c2eb82b230592b3b6fa107938ac7850f7a315a81aa3d0"
+    "v": 79,
+    "sha": "065b549a41175e042dbde1e32fc0b2414dbf858b20563976c79d1f30dc9a5ab5"
   },
   "js/settings.js": {
-    "v": 70,
-    "sha": "854d5be9007137810d4be1a05423dcba94d9fb0f2e8076e791c55f6af231678a"
+    "v": 73,
+    "sha": "d70ac1b98d523b65269eb87f1d44a81348ad2335ec56aba7e354fea808685e15"
   },
   "js/vectorexport.js": {
     "v": 44,
     "sha": "e759f7e132447b570670c436fec90c3727c42e6f33a3ad6ec490e650aca62fce"
   },
   "js/view.js": {
-    "v": 70,
-    "sha": "8658cad3070e3bb604966ebb009405c9602f5b8567f94ae7cf0b8926cc35da0d"
+    "v": 73,
+    "sha": "e2616852e627073e49e3322798a4f6330da2a5345c6413dca309b38eab7b5d93"
   },
   "js/worker.js": {
-    "v": 83,
-    "sha": "1498e6853c6df4b786045312a81032a0f640b35aeef8fa0572b041d83858b469"
+    "v": 84,
+    "sha": "58697296a5b06a32b59a0a23f2a6c8be0a1878f8fec8932be35c28a9182a241b"
   },
   "pkg/rastertrace_wasm.js": {
     "v": 43,

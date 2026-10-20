@@ -3,11 +3,11 @@
 // Listener order matters: the selection and eraser pointer handlers must
 // register before the pan handlers in view.js, so app.js imports this
 // module first.
-import { brushSizeForShortcut, snapPointToAngle, svgViewBox } from "./eraser.js?v=11";
-import { parseHexColor, sampleRasterColor, toHexColor, tracePixels } from "./preprocess.js?v=78";
-import { els, hooks, state } from "./context.js?v=51";
-import { floodRegion, growMask, maskLoops, unionMasks } from "./magicwand.js?v=30";
-import { refreshExport } from "./exporters.js?v=60";
+import { brushSizeForShortcut, snapPointToAngle, svgViewBox } from "./eraser.js?v=12";
+import { parseHexColor, sampleRasterColor, toHexColor, tracePixels } from "./preprocess.js?v=79";
+import { els, hooks, state } from "./context.js?v=53";
+import { floodRegion, growMask, maskLoops, unionMasks } from "./magicwand.js?v=31";
+import { refreshExport } from "./exporters.js?v=63";
 
 /** @param {"result" | "source" | "compare"} view */
 export function setView(view) {
@@ -719,6 +719,7 @@ function commitSelection(mode) {
   state.eraseStrokes.push({ ...action, ...fill });
   clearSelection();
   refreshExport();
+  hooks.scheduleRetrace();
   els.status.textContent =
     mode === "fill"
       ? `Selected area filled with ${els.blobFillColor.value}. Ctrl/Cmd+Z restores it.`
@@ -1222,6 +1223,7 @@ els.eraserUndo.addEventListener("click", () => {
   if (!action) return;
   state.eraseRedo.push(action);
   refreshExport();
+  hooks.scheduleRetrace();
   els.status.textContent = "Cleanup action undone.";
 });
 els.eraserRedo.addEventListener("click", () => {
@@ -1229,6 +1231,7 @@ els.eraserRedo.addEventListener("click", () => {
   if (!action) return;
   state.eraseStrokes.push(action);
   refreshExport();
+  hooks.scheduleRetrace();
   els.status.textContent = "Cleanup action restored.";
 });
 els.eraserClear.addEventListener("click", () => {
@@ -1236,6 +1239,7 @@ els.eraserClear.addEventListener("click", () => {
   state.eraseRedo = [];
   clearSelection();
   refreshExport();
+  hooks.scheduleRetrace();
   els.status.textContent = "Original traced result restored.";
 });
 
@@ -1354,6 +1358,8 @@ for (const type of ["pointerup", "pointercancel"]) {
       erasePointer = null;
       eraseStroke = null;
       refreshExport();
+      // The stroke is shown on top until the trace that includes it lands.
+      hooks.scheduleRetrace();
     },
     true,
   );

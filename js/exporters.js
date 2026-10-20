@@ -1,18 +1,27 @@
 // Export pipeline and save handlers: applies export post-processing to
 // the traced SVG, drives the result stats and action buttons, and saves
 // SVG/PNG/PDF/DXF through the File System Access API or a download.
-import { applyCleanupActions } from "./eraser.js?v=11";
+import { applyCleanupActions } from "./eraser.js?v=12";
 import {
   applyExportOptions,
   countPaths,
   nameColorGroups,
   physicalWidthValue,
-} from "./preprocess.js?v=78";
-import { recolorSvg } from "./palette.js?v=32";
+} from "./preprocess.js?v=79";
+import { recolorSvg } from "./palette.js?v=33";
 import { parseSvgPaths, toDxf, toPdf } from "./vectorexport.js?v=44";
-import { els, preferences, showError, state } from "./context.js?v=51";
+import { els, preferences, showError, state } from "./context.js?v=53";
 
 const DISPLAY_UNITS_PER_INCH = { px: 96, in: 1, cm: 2.54, mm: 25.4 };
+
+/**
+ * Whether the trace lags the cleanup edits: new ones are drawn on top of
+ * it and undone ones are still in it until the retrace lands.
+ */
+function cleanupPending() {
+  const baked = state.bakedActions;
+  return state.eraseStrokes.length !== baked.size || state.eraseStrokes.some((a) => !baked.has(a));
+}
 
 export function setResultActions(enabled) {
   els.copySvg.disabled = !enabled;
@@ -40,11 +49,11 @@ export function setResultActions(enabled) {
   els.eraserUndo.disabled = !cleaned;
   els.eraserRedo.disabled = !enabled || !state.eraseRedo.length;
   els.eraserClear.disabled = !cleaned;
-  if (cleaned) {
+  if (enabled && cleanupPending()) {
     els.downloadPdf.disabled = true;
     els.downloadDxf.disabled = true;
-    els.downloadPdf.title = "Clear cleanup actions before exporting PDF";
-    els.downloadDxf.title = "Clear cleanup actions before exporting DXF";
+    els.downloadPdf.title = "Available once the trace with your cleanup edits finishes";
+    els.downloadDxf.title = "Available once the trace with your cleanup edits finishes";
   } else {
     els.downloadPdf.title =
       "Save a vector PDF at the selected physical size, choosing its name and location";
@@ -140,7 +149,10 @@ export function refreshExport() {
     document.querySelector('input[name="mode"]:checked')
   );
   const pixelExact = selectedMode?.value === "none";
-  state.svg = applyCleanupActions(exportedSvg(), state.eraseStrokes, { pixelExact });
+  // Edits already traced are part of svgRaw; newer ones show on top
+  // until the retrace that includes them lands.
+  const pending = state.eraseStrokes.filter((a) => !state.bakedActions.has(a));
+  state.svg = applyCleanupActions(exportedSvg(), pending, { pixelExact });
 
   // Rendered via <img> + blob URL: sandboxes the generated markup and
   // avoids inflating the DOM with thousands of inline path nodes.
@@ -301,7 +313,7 @@ function physicalWidthIn(unitsPerMm, unitsPerInch) {
 }
 
 els.downloadPdf.addEventListener("click", async () => {
-  if (!state.svgRaw || els.downloadPdf.disabled || state.eraseStrokes.length) return;
+  if (!state.svgRaw || els.downloadPdf.disabled || cleanupPending()) return;
   showError("");
   try {
     // Pick the file first: the save picker needs the click's transient
@@ -328,7 +340,7 @@ els.downloadPdf.addEventListener("click", async () => {
 });
 
 els.downloadDxf.addEventListener("click", async () => {
-  if (!state.svgRaw || els.downloadDxf.disabled || state.eraseStrokes.length) return;
+  if (!state.svgRaw || els.downloadDxf.disabled || cleanupPending()) return;
   showError("");
   try {
     // File first, as for PDF: keep the picker inside the click's activation.
