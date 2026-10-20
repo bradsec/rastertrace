@@ -14,8 +14,9 @@ import {
   straightenPaths,
   thresholdImage,
   toGrayscale,
-} from "./preprocess.js?v=72";
-import { rasterPalette, snapFills } from "./palette.js?v=26";
+  tracePixels,
+} from "./preprocess.js?v=74";
+import { rasterPalette, snapFills } from "./palette.js?v=28";
 
 // Explicit versioned URL: the glue's own wasm fetch drops the ?v= query,
 // so a rebuilt binary would otherwise be served from stale browser cache
@@ -58,36 +59,38 @@ self.onmessage = async (event) => {
     // and the trace's fills must not add more.
     const swatches = settings.stencil ? null : settings.swatches;
     const reduced = !settings.stencil && (settings.colors < 256 || Boolean(swatches?.length));
+    // Trace pixels per source pixel: enclosed sizes are set in source px,
+    // the other pixel settings through tracePixels.
+    const scale = img.width / sourceWidth;
     const knockedOut = reduceAndRemoveBackground(
       img,
       settings.stencil ? 256 : settings.colors,
-      // Trace pixels per source pixel: enclosed sizes are set in source px.
-      { ...settings, swatches, scale: img.width / sourceWidth },
+      { ...settings, swatches, scale },
       stage,
     );
     if (settings.transparent) {
       // Before the trim: trimming would widen pinholes past the size limit.
       if (knockedOut && settings.specks > 0) {
         stage("Cleaning specks…");
-        removeSpecks(img, settings.specks);
+        removeSpecks(img, tracePixels(settings.specks, scale));
       }
       // Round off jagged cutout edges before trimming, so the trim and
       // defringe follow the smoothed boundary.
       if (knockedOut && settings.edgeSmooth > 0) {
         stage("Smoothing edges…");
-        smoothAlpha(img, settings.edgeSmooth);
+        smoothAlpha(img, tracePixels(settings.edgeSmooth, scale));
       }
       // Choke the matte: the knockout leaves a fringe of background-blend
       // colors along the boundary that no color tolerance can catch.
       if (knockedOut && settings.edgeTrim > 0) {
         stage("Trimming edges…");
-        erodeAlpha(img, settings.edgeTrim);
+        erodeAlpha(img, tracePixels(settings.edgeTrim, scale));
       }
       // Repaint whatever fringe remains after the trim: unlike trimming,
       // this keeps thin features at full size.
       if (knockedOut && settings.defringe > 0) {
         stage("Defringing…");
-        defringeAlpha(img, settings.defringe, { keepPalette: reduced });
+        defringeAlpha(img, tracePixels(settings.defringe, scale), { keepPalette: reduced });
       }
     }
 
@@ -107,7 +110,7 @@ self.onmessage = async (event) => {
       settings.mode,
       settings.hierarchical || "stacked", // stacked layers vs cutout tiles
       settings.stencil ? "binary" : "color",
-      settings.speckle,
+      tracePixels(settings.speckle, scale),
       8, // color_precision: colors already reduced above, like the CLI
       settings.layerDiff,
       settings.cornerThreshold ?? 60, // degrees; lower keeps corners sharper

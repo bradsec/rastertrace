@@ -10,7 +10,7 @@ import {
   rotateBitmap,
   sniffImageSize,
   Tracer,
-} from "./pipeline.js?v=72";
+} from "./pipeline.js?v=74";
 import {
   analyzeFlatness,
   detectedColorSettings,
@@ -30,17 +30,17 @@ import {
   toHexColor,
   USER_PRESET_PREFIX,
   userPresetName,
-} from "./preprocess.js?v=72";
-import { $, els, hooks, preferences, showError, state } from "./context.js?v=44";
-import { refreshExport, setResultActions } from "./exporters.js?v=53";
+} from "./preprocess.js?v=74";
+import { $, els, hooks, preferences, showError, state } from "./context.js?v=46";
+import { refreshExport, setResultActions } from "./exporters.js?v=55";
 import {
   clearSelection,
   setBlobFill,
   setEraser,
   setSelectionTool,
   setView,
-} from "./cleanup-tools.js?v=62";
-import { afterTrace, resetPalette } from "./palette-ui.js?v=46";
+} from "./cleanup-tools.js?v=64";
+import { afterTrace, resetPalette } from "./palette-ui.js?v=48";
 import {
   applyExportProfile,
   applyMeasurementUnit,
@@ -70,8 +70,8 @@ import {
   updateTraceFields,
   updateTransparencyFields,
   userPresets,
-} from "./settings.js?v=62";
-import { actualSizeView, resetView } from "./view.js?v=62";
+} from "./settings.js?v=64";
+import { actualSizeView, resetView } from "./view.js?v=64";
 
 const SAMPLE_FILES = [
   "synthwave.png",
@@ -92,7 +92,7 @@ const SAMPLE_KEY = "rastertrace:last-sample";
 
 const EMPTY_IMAGE_SRC = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==";
 
-const tracer = new Tracer(new URL("./worker.js?v=77", import.meta.url));
+const tracer = new Tracer(new URL("./worker.js?v=79", import.meta.url));
 
 let elapsedTimer = 0;
 
@@ -135,10 +135,15 @@ async function retrace() {
     // "auto"/"ultra" trace at the full budget for their ceiling: upscale
     // to the cap regardless of source size (never below 1x).
     const maxSide = settings.upscale === "ultra" ? MAX_TRACE_SIDE_ULTRA : MAX_TRACE_SIDE;
+    const fill = Math.max(1, maxSide / Math.max(state.bitmap.width, state.bitmap.height));
     const upscale =
-      settings.upscale === "auto" || settings.upscale === "ultra"
-        ? Math.max(1, maxSide / Math.max(state.bitmap.width, state.bitmap.height))
-        : Number(settings.upscale);
+      settings.upscale === "auto"
+        ? photographic
+          ? Math.min(fill, PHOTO_MAX_UPSCALE)
+          : fill
+        : settings.upscale === "ultra"
+          ? fill
+          : Number(settings.upscale);
     const scale = fitTraceScale(state.bitmap.width, state.bitmap.height, upscale, maxSide);
     // Nearest-neighbor pairs with pixel-exact tracing only: it would
     // leave jaggies on anti-aliased sources.
@@ -239,6 +244,10 @@ async function recoverFromStaleCache(message) {
 // The current image's detected colors, for recounting Max colors when
 // Merge similar shades changes under auto-detect.
 let detectedSolids = null;
+// Photographic sources gain nothing from filling the trace size, and
+// their noise upscaled to 2048 px traces into huge, slow results.
+let photographic = false;
+const PHOTO_MAX_UPSCALE = 2;
 
 function applyDetectedSettings(bitmap) {
   // Keep the 1x pixels for the trace that follows. Any source at or above
@@ -248,6 +257,7 @@ function applyDetectedSettings(bitmap) {
   state.raster = { scale: 1, nearest: false, imageData };
   const analysis = analyzeFlatness(imageData);
   detectedSolids = analysis.solids ?? null;
+  photographic = !analysis.flat;
   if (!analysis.flat) {
     // Tracing suits flat art. One-time hint.
     state.flatNote =

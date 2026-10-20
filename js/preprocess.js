@@ -21,6 +21,20 @@ export const MAX_TRACE_SIDE = 2048;
 // it; low-memory mobile devices may not, so it never becomes the default.
 export const MAX_TRACE_SIDE_ULTRA = 4096;
 
+// Pixel settings (Smallest shape, clean specks, edge smooth, edge trim,
+// defringe, wand expand) were tuned at the former 2x default trace scale.
+const REFERENCE_SCALE = 2;
+
+/**
+ * A pixel setting in trace pixels at `scale` (trace px per source px), so
+ * it covers the same part of the image whatever the upscale. A set value
+ * never rounds away to nothing; 0 stays off.
+ */
+export function tracePixels(value, scale) {
+  if (value <= 0) return 0;
+  return Math.max(1, Math.round((value * scale) / REFERENCE_SCALE));
+}
+
 /**
  * Effective scale factor for tracing: the requested upscale, capped so
  * the longest side never exceeds maxSide. Below 1 the image is
@@ -50,7 +64,7 @@ export const DEFAULTS = Object.freeze({
   colors: 256,
   speckle: 8,
   layerDiff: 16,
-  upscale: 2,
+  upscale: "auto",
   mode: "spline",
   cornerThreshold: 60,
   hierarchical: "stacked",
@@ -187,7 +201,7 @@ export const EXPORT_PROFILES = Object.freeze({
     cornerThreshold: 60,
     hierarchical: "stacked",
     pathPrecision: 1,
-    upscale: 2,
+    upscale: "auto",
     straighten: 1,
     minify: true,
     stencil: false,
@@ -200,7 +214,7 @@ export const EXPORT_PROFILES = Object.freeze({
     cornerThreshold: 60,
     hierarchical: "stacked",
     pathPrecision: 2,
-    upscale: 2,
+    upscale: "auto",
     straighten: 0.5,
     minify: false,
     stencil: false,

@@ -4,10 +4,10 @@
 // register before the pan handlers in view.js, so app.js imports this
 // module first.
 import { brushSizeForShortcut, snapPointToAngle, svgViewBox } from "./eraser.js?v=11";
-import { parseHexColor, sampleRasterColor, toHexColor } from "./preprocess.js?v=72";
-import { els, hooks, state } from "./context.js?v=44";
-import { floodRegion, growMask, maskLoops, unionMasks } from "./magicwand.js?v=24";
-import { refreshExport } from "./exporters.js?v=53";
+import { parseHexColor, sampleRasterColor, toHexColor, tracePixels } from "./preprocess.js?v=74";
+import { els, hooks, state } from "./context.js?v=46";
+import { floodRegion, growMask, maskLoops, unionMasks } from "./magicwand.js?v=26";
+import { refreshExport } from "./exporters.js?v=55";
 
 export function setView(view) {
   const showResult = view === "result";
@@ -904,8 +904,10 @@ function regionShape(raster, seeds) {
     mask = mask ? unionMasks(mask, region.mask) : region.mask;
   }
   if (!mask) return null;
-  const grown = growMask(mask, width, height, Number(els.wandExpand.value));
-  const loops = maskLoops(grown, width, height, Number(els.wandSmooth.value));
+  // The raster is at trace scale; Expand and Smooth read the same at any.
+  const scale = width / state.sourceWidth;
+  const grown = growMask(mask, width, height, tracePixels(Number(els.wandExpand.value), scale));
+  const loops = maskLoops(grown, width, height, tracePixels(Number(els.wandSmooth.value), scale));
   return { type: "region", seeds, loops };
 }
 

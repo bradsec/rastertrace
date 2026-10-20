@@ -56,6 +56,7 @@ import {
   toGrayscaleColor,
   toGrayscale,
   toHexColor,
+  tracePixels,
 } from "../js/preprocess.js";
 
 function makeImage(width, height, fill = [0, 0, 0, 0]) {
@@ -1882,4 +1883,13 @@ test("sanitizeSettings validates the color source and swatches", () => {
     sanitizeSettings({ swatches: Array.from({ length: SWATCHES_MAX + 1 }, () => "#000000") }),
     {},
   );
+});
+
+test("tracePixels keeps pixel settings tuned at 2x the same size at any scale", () => {
+  assert.equal(tracePixels(8, 2), 8);
+  assert.equal(tracePixels(8, 4), 16);
+  assert.equal(tracePixels(8, 1), 4);
+  // A set value never rounds away to nothing; 0 stays off.
+  assert.equal(tracePixels(1, 0.5), 1);
+  assert.equal(tracePixels(0, 4), 0);
 });
