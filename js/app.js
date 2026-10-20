@@ -10,7 +10,7 @@ import {
   rotateBitmap,
   sniffImageSize,
   Tracer,
-} from "./pipeline.js?v=80";
+} from "./pipeline.js?v=81";
 import {
   analyzeFlatness,
   detectedColorSettings,
@@ -32,10 +32,10 @@ import {
   toHexColor,
   USER_PRESET_PREFIX,
   userPresetName,
-} from "./preprocess.js?v=80";
-import { $, els, hooks, preferences, showError, state } from "./context.js?v=54";
-import { bakeCleanup } from "./bake.js?v=4";
-import { refreshExport, setResultActions } from "./exporters.js?v=64";
+} from "./preprocess.js?v=81";
+import { $, els, hooks, preferences, showError, state } from "./context.js?v=55";
+import { bakeCleanup } from "./bake.js?v=5";
+import { refreshExport, setResultActions } from "./exporters.js?v=65";
 import {
   clearSelection,
   setBlobFill,
@@ -43,8 +43,8 @@ import {
   setSelectionTool,
   setView,
   showResultOverSource,
-} from "./cleanup-tools.js?v=74";
-import { afterTrace, resetPalette } from "./palette-ui.js?v=58";
+} from "./cleanup-tools.js?v=75";
+import { afterTrace, resetPalette } from "./palette-ui.js?v=59";
 import {
   applyExportProfile,
   applyMeasurementUnit,
@@ -74,8 +74,8 @@ import {
   updateTraceFields,
   updateTransparencyFields,
   userPresets,
-} from "./settings.js?v=74";
-import { actualSizeView, resetView } from "./view.js?v=74";
+} from "./settings.js?v=75";
+import { actualSizeView, resetView } from "./view.js?v=75";
 
 const SAMPLE_FILES = [
   "synthwave.png",
@@ -96,7 +96,7 @@ const SAMPLE_KEY = "rastertrace:last-sample";
 
 const EMPTY_IMAGE_SRC = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==";
 
-const tracer = new Tracer(new URL("./worker.js?v=85", import.meta.url));
+const tracer = new Tracer(new URL("./worker.js?v=86", import.meta.url));
 
 let elapsedTimer = 0;
 
@@ -138,6 +138,8 @@ async function retrace() {
     if (els.autoDetect.checked && detectedSolids && !settings.swatches) {
       settings.seeds = distinctColors(detectedSolids, settings.layerDiff);
     }
+    // Soft-edge repair suits flat art whichever way its colors are set.
+    settings.flatArt = !photographic;
     // "auto"/"ultra" trace at the full budget for their ceiling: upscale
     // to the cap regardless of source size (never below 1x).
     const maxSide = settings.upscale === "ultra" ? MAX_TRACE_SIDE_ULTRA : MAX_TRACE_SIDE;

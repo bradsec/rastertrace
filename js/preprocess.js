@@ -1401,7 +1401,9 @@ export const FRINGE_RINGS = 2;
  * contiguous and gradient as removeBackground takes them, plus enclosed,
  * enclosedSize and enclosedMaxSize (source pixels across;
  * ENCLOSED_NO_LIMIT for no maximum) and scale (trace pixels per source
- * pixel) for the enclosed-area limits.
+ * pixel) for the enclosed-area limits. `flatArt` (the source was
+ * detected as flat art) repairs soft edges even when the palette was
+ * clustered rather than seeded.
  * Returns the removed color, or null. Mutates img in place.
  * @param {(label: string) => void} [stage] progress reporter
  */
@@ -1419,6 +1421,7 @@ export function reduceAndRemoveBackground(img, colors, background, stage = () =>
     layerDiff = 0,
     seeds = null,
     keep = null,
+    flatArt = false,
   } = background;
   const options = {
     contiguous,
@@ -1442,7 +1445,9 @@ export function reduceAndRemoveBackground(img, colors, background, stage = () =>
       const result = quantize(img, colors, { layerDiff, seeds, keep });
       // Nothing remapped means no dither to clean: lone pixels are detail.
       if (!result) return;
-      flat = result === "flat";
+      // Compressed flat art clusters without seeds (Colors set by hand),
+      // but its edges blur all the same.
+      flat = result === "flat" || flatArt;
     }
     if (flat) unblendEdges(img, before, tracePixels(BLEND_REACH, scale));
     modeFilter(img);
@@ -2167,6 +2172,112 @@ export function analyzeFlatness(img) {
   return similarFlatness(img) ?? exact;
 }
 
+// withoutBlendShades: how close (RGB) a color must sit to the segment
+// between two fills to count as their mix, and how far along it (share
+// of the way from either end) it must be.
+const SHADE_TOLERANCE = 24;
+const SHADE_END = 0.08;
+// A real color fills areas: this share of its pixels have neighbors all
+// within the image's noise of their own color. Blur shades change from
+// pixel to pixel across an edge, and anti-alias shades are lines a pixel
+// or two wide. Measured: real sample colors 0.27 or more, blur and
+// anti-alias shades 0.09 or less.
+const SHADE_MIN_INTERIOR = 0.2;
+
+/**
+ * Detected colors without the shades a soft edge leaves between two
+ * fills. Blurred or resampled flat art grows bands of every mix of the
+ * two colors along each edge, and the common ones pass for colors. A
+ * color that is a mix of two other detected colors is dropped when its
+ * pixels rarely fill areas. `solids` are ordered most common first; the
+ * least common are tested first and only kept colors serve as ends.
+ */
+function withoutBlendShades(img, solids) {
+  if (solids.length < 3) return solids;
+  const { data, width } = img;
+  const pixelCount = data.length / 4;
+  const height = pixelCount / width;
+  let stride = Math.max(1, Math.ceil(pixelCount / 200_000));
+  if (stride % 2 === 0) stride += 1;
+  const row = width * 4;
+  const step = (i, j) =>
+    Math.abs(data[i] - data[j]) +
+    Math.abs(data[i + 1] - data[j + 1]) +
+    Math.abs(data[i + 2] - data[j + 2]);
+  // Noise level as similarFlatness measures it, for the interior test.
+  const steps = [];
+  for (let p = 0; p < pixelCount; p += stride * 7) {
+    if (p % width < width - 1 && data[p * 4 + 3] >= ALPHA_THRESHOLD) {
+      steps.push(step(p * 4, p * 4 + 4));
+    }
+  }
+  steps.sort((a, b) => a - b);
+  const flatStep = Math.max(6, 2 * (steps[steps.length >> 1] ?? 0));
+  const tolerance2 = SHADE_TOLERANCE * SHADE_TOLERANCE;
+  const along = (c, a, b) => {
+    const dr = b[0] - a[0];
+    const dg = b[1] - a[1];
+    const db = b[2] - a[2];
+    const len2 = dr * dr + dg * dg + db * db;
+    if (!len2) return null;
+    const t = ((c[0] - a[0]) * dr + (c[1] - a[1]) * dg + (c[2] - a[2]) * db) / len2;
+    const residual2 =
+      (c[0] - a[0] - t * dr) ** 2 + (c[1] - a[1] - t * dg) ** 2 + (c[2] - a[2] - t * db) ** 2;
+    return { t, residual2 };
+  };
+  const nearest = (i, colors) => {
+    let best = -1;
+    let bestDistance = Infinity;
+    for (let k = 0; k < colors.length; k++) {
+      const c = colors[k];
+      const d = (data[i] - c[0]) ** 2 + (data[i + 1] - c[1]) ** 2 + (data[i + 2] - c[2]) ** 2;
+      if (d < bestDistance) {
+        bestDistance = d;
+        best = k;
+      }
+    }
+    return best;
+  };
+  // Share of the color's pixels whose four neighbors match their own.
+  const interiorShare = (colors, k) => {
+    let count = 0;
+    let interior = 0;
+    for (let p = 0; p < pixelCount; p += stride) {
+      const i = p * 4;
+      if (data[i + 3] < ALPHA_THRESHOLD || nearest(i, colors) !== k) continue;
+      count += 1;
+      const x = p % width;
+      const y = (p - x) / width;
+      if (x === 0 || y === 0 || x === width - 1 || y === height - 1) continue;
+      if (
+        step(i, i - 4) <= flatStep &&
+        step(i, i + 4) <= flatStep &&
+        step(i, i - row) <= flatStep &&
+        step(i, i + row) <= flatStep
+      ) {
+        interior += 1;
+      }
+    }
+    return count ? interior / count : 0;
+  };
+  const kept = [...solids];
+  for (let k = kept.length - 1; k >= 2; k--) {
+    const color = kept[k];
+    const ends = kept.filter((_, j) => j !== k);
+    let shade = false;
+    for (let m = 0; m < ends.length && !shade; m++) {
+      for (let j = m + 1; j < ends.length && !shade; j++) {
+        const fit = along(color, ends[m], ends[j]);
+        if (!fit || fit.residual2 > tolerance2) continue;
+        if (fit.t < SHADE_END || fit.t > 1 - SHADE_END) continue;
+        shade = interiorShare(kept, k) < SHADE_MIN_INTERIOR;
+      }
+    }
+    if (shade) kept.splice(k, 1);
+  }
+  return kept;
+}
+
 /**
  * Solid colors of flat art whose colors are not exact: JPEG compression,
  * resampling or light noise spread each flat color over many near
@@ -2279,9 +2390,12 @@ function similarFlatness(img) {
     }
   }
   if (solidClusters.length > 32) return null;
-  const solids = solidClusters
-    .sort((a, b) => b.count - a.count)
-    .map((c) => c.sum.map((v) => Math.round(v / c.count)));
+  const solids = withoutBlendShades(
+    img,
+    solidClusters
+      .sort((a, b) => b.count - a.count)
+      .map((c) => c.sum.map((v) => Math.round(v / c.count))),
+  );
   return { flat: true, colorCount: Math.max(2, solids.length), solids };
 }
 
@@ -2379,7 +2493,10 @@ function exactFlatness(img) {
     .sort((a, b) => b[1] - a[1])
     .slice(0, 32);
   const solidShare = kept.reduce((sum, [, count]) => sum + count, 0) / total;
-  const solids = kept.map(([key]) => toRgb(key));
+  const solids = withoutBlendShades(
+    img,
+    kept.map(([key]) => toRgb(key)),
+  );
   return { flat: true, colorCount: Math.max(2, solids.length), solids, solidShare };
 }
 

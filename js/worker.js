@@ -16,8 +16,8 @@ import {
   thresholdImage,
   toGrayscale,
   tracePixels,
-} from "./preprocess.js?v=80";
-import { rasterPalette, snapFills } from "./palette.js?v=34";
+} from "./preprocess.js?v=81";
+import { rasterPalette, snapFills } from "./palette.js?v=35";
 
 // Explicit versioned URL: the glue's own wasm fetch drops the ?v= query,
 // so a rebuilt binary would otherwise be served from stale browser cache
