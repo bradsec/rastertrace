@@ -117,3 +117,11 @@ test("My colors swatches split a blurred edge between its two fills", () => {
     [CREAM, NAVY, CREAM].map((c) => c.join(",")),
   );
 });
+
+test("My colors swatches that differ from the art still split a blurred edge", () => {
+  const img = blurredArt(3);
+  // Each swatch sits well away from the art color it stands for.
+  const swatches = ["#ffffff", "#000050", "#ff8000", "#00a0a0", "#ff0000"];
+  reduceAndRemoveBackground(img, 5, { transparent: "", swatches });
+  assert.deepEqual(columnRuns(img, 80, 25, 85), ["255,255,255", "0,0,80", "255,255,255"]);
+});

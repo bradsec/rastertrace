@@ -1542,25 +1542,27 @@ export function removeSpecks(img, size) {
 // between two fills to count as their blend.
 const BLEND_REACH = 20;
 const BLEND_TOLERANCE = 24;
-// A pixel this close (RGB) to its palette color is a solid fill, not a
-// blend, and a pixel weighs at most this many nearby fills as blend ends.
+// A pixel this close (RGB) to its fill is solid, not a blend, and a
+// pixel weighs at most this many nearby fills as blend ends.
 const BLEND_MATCH = 10;
 const BLEND_CANDIDATES = 8;
-// A palette color this close (share of the way) to either end of a
-// blend counts as a shade of that end, not a gradient band.
+// A fill this close (share of the way) to either end of a blend counts
+// as a shade of that end, not a gradient band.
 const BLEND_BAND_END = 0.15;
 
 /**
  * Soft-edge repair after color reduction. A blurred or anti-aliased edge
  * between two fills holds blends of them, and snapping each blend to the
  * nearest palette color can land on a third color (a navy and cream blur
- * turns teal), leaving a stripe of it along the edge. A pixel whose
- * original color is a blend of two colors found within `reach` pixels,
- * and closer to that blend than to its own palette color, takes the one
- * of the two its blend leans to, so the edge splits where the mix
- * crosses half. Real outlines (the original matches its palette color)
- * and gradient bands (the palette color is itself between the two) stay.
- * `original` holds the colors before reduction. Mutates img.
+ * turns teal), leaving a stripe of it along the edge. Each palette color
+ * stands for its fill: the original color most of its pixels had, which
+ * My colors swatches can differ from. A pixel whose original color is a
+ * blend of two fills found within `reach` pixels, and closer to that
+ * blend than to its own fill, takes the palette color of the one its
+ * blend leans to, so the edge splits where the mix crosses half. Real
+ * outlines (the original matches its fill) and gradient bands (its fill
+ * is itself between the two) stay. `original` holds the colors before
+ * reduction. Mutates img.
  */
 export function unblendEdges(img, original, reach) {
   if (reach < 1) return img;
@@ -1575,38 +1577,82 @@ export function unblendEdges(img, original, reach) {
   }
   if (steps.at(-1) !== reach) steps.push(reach);
   const directions = [1, 0, -1, 0, 0, 1, 0, -1, 1, 1, 1, -1, -1, 1, -1, -1];
-  // Solid pixels match their palette color: the fills a blend can mix.
-  // Blend pixels, whatever color they snapped to, are never ends, and in
-  // flat art they are the only pixels left to look at.
-  // Squared distances throughout: Math.hypot is slow in WebKit.
-  const match2 = BLEND_MATCH * BLEND_MATCH;
-  const tolerance2 = BLEND_TOLERANCE * BLEND_TOLERANCE;
-  const keys = new Int32Array(n);
-  const solid = new Uint8Array(n);
+  // Pixels by palette index, tallying original colors per index. Flat
+  // art repeats each pair along a row, so runs are counted, not pixels.
+  const ids = new Int32Array(n);
+  const paletteIds = new Map();
+  const palette = [];
+  const tally = new Map();
+  const COLOR = 0x1000000;
+  let lastKey = -1;
+  let lastId = -1;
+  let runPair = -1;
+  let runLength = 0;
   for (let p = 0; p < n; p++) {
     const i = p * 4;
     if (data[i + 3] < ALPHA_THRESHOLD) {
-      keys[p] = -1;
+      ids[p] = -1;
       continue;
     }
-    keys[p] = (data[i] << 16) | (data[i + 1] << 8) | data[i + 2];
-    const dr = original[i] - data[i];
-    const dg = original[i + 1] - data[i + 1];
-    const db = original[i + 2] - data[i + 2];
+    const key = (data[i] << 16) | (data[i + 1] << 8) | data[i + 2];
+    if (key !== lastKey) {
+      lastKey = key;
+      lastId = paletteIds.get(key) ?? -1;
+      if (lastId === -1) {
+        lastId = palette.length;
+        paletteIds.set(key, lastId);
+        palette.push(key);
+      }
+    }
+    ids[p] = lastId;
+    const pair = lastId * COLOR + ((original[i] << 16) | (original[i + 1] << 8) | original[i + 2]);
+    if (pair === runPair) {
+      runLength++;
+      continue;
+    }
+    if (runLength) tally.set(runPair, (tally.get(runPair) || 0) + runLength);
+    runPair = pair;
+    runLength = 1;
+  }
+  if (runLength) tally.set(runPair, (tally.get(runPair) || 0) + runLength);
+  const fills = new Int32Array(palette.length);
+  const fillCounts = new Float64Array(palette.length);
+  for (const [pair, count] of tally) {
+    const id = Math.floor(pair / COLOR);
+    if (count > fillCounts[id]) {
+      fillCounts[id] = count;
+      fills[id] = pair % COLOR;
+    }
+  }
+  // Solid pixels match their fill: the colors a blend can mix. Blend
+  // pixels, whatever color they snapped to, are never ends, and in flat
+  // art they are the only pixels left to look at.
+  // Squared distances throughout: Math.hypot is slow in WebKit.
+  const match2 = BLEND_MATCH * BLEND_MATCH;
+  const tolerance2 = BLEND_TOLERANCE * BLEND_TOLERANCE;
+  const solid = new Uint8Array(n);
+  for (let p = 0; p < n; p++) {
+    if (ids[p] === -1) continue;
+    const i = p * 4;
+    const fill = fills[ids[p]];
+    const dr = original[i] - ((fill >> 16) & 0xff);
+    const dg = original[i + 1] - ((fill >> 8) & 0xff);
+    const db = original[i + 2] - (fill & 0xff);
     if (dr * dr + dg * dg + db * db <= match2) solid[p] = 1;
   }
-  // Rays read keys, so writing data as we go cannot feed later pixels.
+  // Rays read ids, so writing data as we go cannot feed later pixels.
   const seen = new Int32Array(BLEND_CANDIDATES);
   for (let p = 0; p < n; p++) {
-    const own = keys[p];
+    const own = ids[p];
     if (own === -1 || solid[p]) continue;
     const i = p * 4;
     const or = original[i];
     const og = original[i + 1];
     const ob = original[i + 2];
-    const cr = (own >> 16) & 0xff;
-    const cg = (own >> 8) & 0xff;
-    const cb = own & 0xff;
+    const ownFill = fills[own];
+    const cr = (ownFill >> 16) & 0xff;
+    const cg = (ownFill >> 8) & 0xff;
+    const cb = ownFill & 0xff;
     const ownDistance2 = (or - cr) ** 2 + (og - cg) ** 2 + (ob - cb) ** 2;
     const x0 = p % width;
     const y0 = (p - x0) / width;
@@ -1619,14 +1665,14 @@ export function unblendEdges(img, original, reach) {
         const y = y0 + dy * step;
         if (x < 0 || y < 0 || x >= width || y >= height) break;
         const q = y * width + x;
-        const k = keys[q];
-        if (k === -1) break;
+        const id = ids[q];
+        if (id === -1) break;
         // Keep walking past the first fill: a blend shade the palette
         // picked up can sit between this pixel and the real fill.
-        if (!solid[q] || k === own) continue;
+        if (!solid[q] || id === own) continue;
         let known = false;
-        for (let m = 0; m < count; m++) if (seen[m] === k) known = true;
-        if (!known) seen[count++] = k;
+        for (let m = 0; m < count; m++) if (seen[m] === id) known = true;
+        if (!known) seen[count++] = id;
         if (count === BLEND_CANDIDATES) break;
       }
     }
@@ -1634,12 +1680,12 @@ export function unblendEdges(img, original, reach) {
     let bestResidual2 = Math.min(ownDistance2, tolerance2);
     let pick = own;
     for (let m = 0; m < count; m++) {
-      const a = seen[m];
+      const a = fills[seen[m]];
       const ar = (a >> 16) & 0xff;
       const ag = (a >> 8) & 0xff;
       const ab = a & 0xff;
       for (let j = m + 1; j < count; j++) {
-        const b = seen[j];
+        const b = fills[seen[j]];
         const dr = ((b >> 16) & 0xff) - ar;
         const dg = ((b >> 8) & 0xff) - ag;
         const db = (b & 0xff) - ab;
@@ -1650,7 +1696,7 @@ export function unblendEdges(img, original, reach) {
         const residual2 =
           (or - ar - t * dr) ** 2 + (og - ag - t * dg) ** 2 + (ob - ab - t * db) ** 2;
         if (residual2 >= bestResidual2) continue;
-        // The pixel's own color partway between the two is a gradient
+        // The pixel's own fill partway between the two is a gradient
         // band. One next to an end is a blend shade the palette picked up.
         const u = ((cr - ar) * dr + (cg - ag) * dg + (cb - ab) * db) / len2;
         if (
@@ -1661,13 +1707,14 @@ export function unblendEdges(img, original, reach) {
           continue;
         }
         bestResidual2 = residual2;
-        pick = t < 0.5 ? a : b;
+        pick = t < 0.5 ? seen[m] : seen[j];
       }
     }
     if (pick === own) continue;
-    data[i] = (pick >> 16) & 0xff;
-    data[i + 1] = (pick >> 8) & 0xff;
-    data[i + 2] = pick & 0xff;
+    const color = palette[pick];
+    data[i] = (color >> 16) & 0xff;
+    data[i + 1] = (color >> 8) & 0xff;
+    data[i + 2] = color & 0xff;
   }
   return img;
 }
