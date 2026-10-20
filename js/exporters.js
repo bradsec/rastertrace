@@ -7,10 +7,10 @@ import {
   countPaths,
   nameColorGroups,
   physicalWidthValue,
-} from "./preprocess.js?v=69";
-import { recolorSvg } from "./palette.js?v=23";
+} from "./preprocess.js?v=72";
+import { recolorSvg } from "./palette.js?v=26";
 import { parseSvgPaths, toDxf, toPdf } from "./vectorexport.js?v=44";
-import { els, preferences, showError, state } from "./context.js?v=41";
+import { els, preferences, showError, state } from "./context.js?v=44";
 
 const DISPLAY_UNITS_PER_INCH = { px: 96, in: 1, cm: 2.54, mm: 25.4 };
 

@@ -10,11 +10,12 @@ import {
   rotateBitmap,
   sniffImageSize,
   Tracer,
-} from "./pipeline.js?v=69";
+} from "./pipeline.js?v=72";
 import {
   analyzeFlatness,
   detectedColorSettings,
   distinctColorCount,
+  distinctColors,
   fitTraceScale,
   isStaleModuleError,
   MAX_TRACE_SIDE,
@@ -29,17 +30,17 @@ import {
   toHexColor,
   USER_PRESET_PREFIX,
   userPresetName,
-} from "./preprocess.js?v=69";
-import { $, els, hooks, preferences, showError, state } from "./context.js?v=41";
-import { refreshExport, setResultActions } from "./exporters.js?v=50";
+} from "./preprocess.js?v=72";
+import { $, els, hooks, preferences, showError, state } from "./context.js?v=44";
+import { refreshExport, setResultActions } from "./exporters.js?v=53";
 import {
   clearSelection,
   setBlobFill,
   setEraser,
   setSelectionTool,
   setView,
-} from "./cleanup-tools.js?v=59";
-import { afterTrace, resetPalette } from "./palette-ui.js?v=43";
+} from "./cleanup-tools.js?v=62";
+import { afterTrace, resetPalette } from "./palette-ui.js?v=46";
 import {
   applyExportProfile,
   applyMeasurementUnit,
@@ -69,8 +70,8 @@ import {
   updateTraceFields,
   updateTransparencyFields,
   userPresets,
-} from "./settings.js?v=59";
-import { actualSizeView, resetView } from "./view.js?v=59";
+} from "./settings.js?v=62";
+import { actualSizeView, resetView } from "./view.js?v=62";
 
 const SAMPLE_FILES = [
   "synthwave.png",
@@ -91,7 +92,7 @@ const SAMPLE_KEY = "rastertrace:last-sample";
 
 const EMPTY_IMAGE_SRC = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==";
 
-const tracer = new Tracer(new URL("./worker.js?v=74", import.meta.url));
+const tracer = new Tracer(new URL("./worker.js?v=77", import.meta.url));
 
 let elapsedTimer = 0;
 
@@ -126,6 +127,11 @@ async function retrace() {
   showError("");
   try {
     const settings = currentSettings();
+    // Detected colors seed the quantizer: compressed sources have no exact
+    // colors for it to find them by itself.
+    if (els.autoDetect.checked && detectedSolids && !settings.swatches) {
+      settings.seeds = distinctColors(detectedSolids, settings.layerDiff);
+    }
     // "auto"/"ultra" trace at the full budget for their ceiling: upscale
     // to the cap regardless of source size (never below 1x).
     const maxSide = settings.upscale === "ultra" ? MAX_TRACE_SIDE_ULTRA : MAX_TRACE_SIDE;

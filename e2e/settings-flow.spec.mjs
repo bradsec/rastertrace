@@ -142,6 +142,35 @@ test("auto-detect sets colors per image; manual changes carry over", async ({ pa
   await expect(colors).toHaveValue("2");
 });
 
+test("auto-detect finds every color of a JPEG logo and traces them all", async ({ page }) => {
+  // Compression spreads each flat color over many near shades; the small
+  // red accent is what exact-color detection used to miss.
+  const base64 = await page.evaluate(async () => {
+    const canvas = new OffscreenCanvas(400, 300);
+    const ctx = canvas.getContext("2d");
+    ctx.fillStyle = "#f2e8cf";
+    ctx.fillRect(0, 0, 400, 300);
+    ctx.fillStyle = "#1d3557";
+    ctx.fillRect(40, 40, 200, 160);
+    ctx.fillStyle = "#2a9d8f";
+    ctx.beginPath();
+    ctx.arc(300, 150, 70, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#e63946";
+    ctx.fillRect(60, 230, 30, 30);
+    const blob = await canvas.convertToBlob({ type: "image/jpeg", quality: 0.75 });
+    const bytes = new Uint8Array(await blob.arrayBuffer());
+    let binary = "";
+    for (const byte of bytes) binary += String.fromCharCode(byte);
+    return btoa(binary);
+  });
+  const file = { name: "logo.jpg", mimeType: "image/jpeg", buffer: Buffer.from(base64, "base64") };
+  await traced(page, () => page.locator("#file-input").setInputFiles(file));
+  await openPanels(page);
+  await expect(page.locator("#colors")).toHaveValue("4");
+  await expect(page.locator("#palette-grid .swatch")).toHaveCount(4);
+});
+
 test("auto-detect stays on while Merge recounts Max colors", async ({ page }) => {
   // Two browns 10 apart (sum of channel differences) on cream.
   const file = await makePng(page, "close.png", 160, 120, CREAM, [

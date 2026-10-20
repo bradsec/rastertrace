@@ -137,3 +137,24 @@ test("quantize leaves spare slots empty instead of keeping rare blends", () => {
   for (let i = 0; i < data.length; i += 4) output.add(toHexColor(data.subarray(i, i + 3)));
   assert.deepEqual([...output].sort(), ["#1D3557", "#F2E8CF"]);
 });
+
+test("quantize uses given seeds as the palette, for compressed flat art", () => {
+  // JPEG-like: two flat colors and a small accent, each spread over
+  // many near shades, so no exact color is common enough to seed from.
+  const width = 10_000;
+  const data = new Uint8ClampedArray(width * 4);
+  const base = (i) => (i < 6000 ? [242, 232, 207] : i < 9800 ? [29, 53, 87] : [230, 57, 70]);
+  for (let i = 0; i < width; i++) {
+    const jitter = (i * 7) % 9;
+    data.set([...base(i).map((v) => v + jitter), 255], i * 4);
+  }
+  const seeds = [
+    [242, 232, 207],
+    [29, 53, 87],
+    [230, 57, 70],
+  ];
+  quantize({ width, height: 1, data }, 3, { seeds });
+  const output = new Set();
+  for (let i = 0; i < data.length; i += 4) output.add(toHexColor(data.subarray(i, i + 3)));
+  assert.deepEqual([...output].sort(), ["#1D3557", "#E63946", "#F2E8CF"]);
+});

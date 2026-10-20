@@ -162,11 +162,16 @@ function colorDistance(a, b) {
  * below the Max colors minimum of 2.
  */
 export function distinctColorCount(solids, layerDiff) {
+  return Math.max(2, distinctColors(solids, layerDiff).length);
+}
+
+/** The `solids` distinctColorCount keeps, most common first. */
+export function distinctColors(solids, layerDiff) {
   const kept = [];
   for (const color of solids) {
     if (kept.every((other) => colorDistance(color, other) > layerDiff)) kept.push(color);
   }
-  return Math.max(2, kept.length);
+  return kept;
 }
 
 // Purpose-based export profiles (SVG_EXPORT_RESEARCH.md). Values are
@@ -1372,6 +1377,7 @@ export function reduceAndRemoveBackground(img, colors, background, stage = () =>
     scale = 1,
     swatches = null,
     layerDiff = 0,
+    seeds = null,
   } = background;
   const options = {
     contiguous,
@@ -1389,7 +1395,7 @@ export function reduceAndRemoveBackground(img, colors, background, stage = () =>
     } else {
       stage(`Reducing to ${colors} colors…`);
       // Nothing remapped means no dither to clean: lone pixels are detail.
-      if (!quantize(img, colors, { layerDiff })) return;
+      if (!quantize(img, colors, { layerDiff, seeds })) return;
     }
     modeFilter(img);
   };
@@ -1745,6 +1751,19 @@ export function toGrayscaleColor([r, g, b]) {
 const SOLID_MIN_SHARE = 0.001;
 const SOLID_LINE_SHARE = 0.01;
 const SOLID_MIN_INTERIOR = 0.2;
+// Exact solid colors must cover this share of samples to be trusted;
+// below it (JPEG, resampling, noise) similarFlatness clusters instead.
+// Clean flat PNGs measure 0.979 or more, compressed or resampled 0.967 or less.
+const EXACT_SOLID_SHARE = 0.975;
+// similarFlatness: least neighbor tolerance (sum of RGB differences),
+// least share of samples inside areas, Oklab cluster radius, widest mean
+// cluster spread (gradients measure 0.0085, compressed flat art 0.0054 or
+// less), and the share that makes a color a thin line.
+const SIMILAR_MIN_TOLERANCE = 24;
+const SIMILAR_MIN_INSIDE = 0.5;
+const SIMILAR_CLUSTER_DISTANCE = 0.03;
+const SIMILAR_MAX_SPREAD = 0.007;
+const SIMILAR_LINE_SHARE = 0.02;
 
 /**
  * Coverage-based flatness heuristic. Flat-color sources (logos, text,
@@ -1766,6 +1785,134 @@ const SOLID_MIN_INTERIOR = 0.2;
  * small accents past 95% coverage still get a palette slot.
  */
 export function analyzeFlatness(img) {
+  const { solidShare, ...exact } = exactFlatness(img);
+  if (exact.solids && solidShare >= EXACT_SOLID_SHARE) return exact;
+  return similarFlatness(img) ?? exact;
+}
+
+/**
+ * Solid colors of flat art whose colors are not exact: JPEG compression,
+ * resampling or light noise spread each flat color over many near
+ * shades. A sample is inside an area when its four neighbors are within
+ * a tolerance that follows the image's own noise level (anti-alias
+ * blends sit between colors that differ sharply, so they drop out), and
+ * those samples are grouped into perceptual (Oklab) clusters. Returns
+ * null when the clusters do not describe flat art: too many, too wide
+ * (smooth gradients), or too little of the image inside areas (photos).
+ */
+function similarFlatness(img) {
+  const { data, width } = img;
+  const pixelCount = data.length / 4;
+  const height = pixelCount / width;
+  let stride = Math.max(1, Math.ceil(pixelCount / 200_000));
+  if (stride % 2 === 0) stride += 1;
+  const distance = (i, j) =>
+    Math.abs(data[i] - data[j]) +
+    Math.abs(data[i + 1] - data[j + 1]) +
+    Math.abs(data[i + 2] - data[j + 2]);
+  // Noise level: the median difference to the right-hand neighbor, which
+  // flat areas dominate in flat art.
+  const steps = [];
+  for (let p = 0; p < pixelCount; p += stride * 7) {
+    if (p % width < width - 1) steps.push(distance(p * 4, p * 4 + 4));
+  }
+  steps.sort((a, b) => a - b);
+  const tolerance = Math.max(SIMILAR_MIN_TOLERANCE, 3 * (steps[steps.length >> 1] ?? 0));
+
+  // 5-bit bins hold running sums so each cluster gets its mean color.
+  const bin = (bins, i) => {
+    const key = ((data[i] >> 3) << 10) | ((data[i + 1] >> 3) << 5) | (data[i + 2] >> 3);
+    let entry = bins.get(key);
+    if (!entry) bins.set(key, (entry = [0, 0, 0, 0]));
+    entry[0] += data[i];
+    entry[1] += data[i + 1];
+    entry[2] += data[i + 2];
+    entry[3] += 1;
+  };
+  const inside = new Map();
+  const everywhere = new Map();
+  const row = width * 4;
+  let opaque = 0;
+  let insideCount = 0;
+  for (let p = 0; p < pixelCount; p += stride) {
+    const i = p * 4;
+    if (data[i + 3] < ALPHA_THRESHOLD) continue;
+    opaque += 1;
+    bin(everywhere, i);
+    const x = p % width;
+    const y = (p - x) / width;
+    if (x === 0 || y === 0 || x === width - 1 || y === height - 1) continue;
+    if (
+      distance(i, i - 4) > tolerance ||
+      distance(i, i + 4) > tolerance ||
+      distance(i, i - row) > tolerance ||
+      distance(i, i + row) > tolerance
+    ) {
+      continue;
+    }
+    insideCount += 1;
+    bin(inside, i);
+  }
+  if (opaque === 0 || insideCount < opaque * SIMILAR_MIN_INSIDE) return null;
+
+  // Greedy by frequency: a bin joins the nearest cluster seed within
+  // SIMILAR_CLUSTER_DISTANCE, else seeds a cluster of its own.
+  const cluster = (bins) => {
+    const clusters = [];
+    for (const [r, g, b, count] of [...bins.values()].sort((x, y) => y[3] - x[3])) {
+      const lab = srgbToOklab([
+        Math.round(r / count),
+        Math.round(g / count),
+        Math.round(b / count),
+      ]);
+      let best = null;
+      let bestDistance = SIMILAR_CLUSTER_DISTANCE;
+      for (const c of clusters) {
+        const d = Math.hypot(c.lab[0] - lab[0], c.lab[1] - lab[1], c.lab[2] - lab[2]);
+        if (d < bestDistance) {
+          bestDistance = d;
+          best = c;
+        }
+      }
+      if (best) {
+        best.sum[0] += r;
+        best.sum[1] += g;
+        best.sum[2] += b;
+        best.count += count;
+        best.spread += bestDistance * count;
+      } else {
+        clusters.push({ lab, sum: [r, g, b], count, spread: 0 });
+      }
+    }
+    return clusters;
+  };
+  const areas = cluster(inside);
+  const solidClusters = areas.filter((c) => c.count >= opaque * SOLID_MIN_SHARE);
+  const covered = solidClusters.reduce((sum, c) => sum + c.count, 0);
+  const spread = areas.reduce((sum, c) => sum + c.spread, 0) / insideCount;
+  if (covered < insideCount * 0.9 || spread >= SIMILAR_MAX_SPREAD) return null;
+  // Thin lines have no inside samples: a common color anywhere that is
+  // not near an area color still counts.
+  const near = (a, b) =>
+    Math.hypot(a.lab[0] - b.lab[0], a.lab[1] - b.lab[1], a.lab[2] - b.lab[2]) <
+    SIMILAR_CLUSTER_DISTANCE;
+  for (const c of cluster(everywhere)) {
+    if (c.count >= opaque * SIMILAR_LINE_SHARE && !solidClusters.some((s) => near(s, c))) {
+      solidClusters.push(c);
+    }
+  }
+  if (solidClusters.length > 32) return null;
+  const solids = solidClusters
+    .sort((a, b) => b.count - a.count)
+    .map((c) => c.sum.map((v) => Math.round(v / c.count)));
+  return { flat: true, colorCount: Math.max(2, solids.length), solids };
+}
+
+/**
+ * analyzeFlatness on exact colors (described above), plus `solidShare`:
+ * the share of samples whose exact color is one of the solids.
+ */
+function exactFlatness(img) {
   const { data, width } = img;
   const pixelCount = data.length / 4;
   const height = pixelCount / width;
@@ -1819,6 +1966,7 @@ export function analyzeFlatness(img) {
       flat: true,
       colorCount: Math.max(2, counts.size),
       solids: [...counts.keys()].map(toRgb),
+      solidShare: 1,
     };
   }
   if (topCoverage < 0.9) {
@@ -1845,16 +1993,17 @@ export function analyzeFlatness(img) {
     }
   }
   if (topCoverage < 0.9) return { flat: false, colorCount: Math.min(32, Math.max(2, colorCount)) };
-  const solids = [...counts]
+  const kept = [...counts]
     .filter(([key, count]) => {
       const share = count / total;
       if (share < SOLID_MIN_SHARE) return false;
       return share >= SOLID_LINE_SHARE || (interior.get(key) || 0) / count >= SOLID_MIN_INTERIOR;
     })
     .sort((a, b) => b[1] - a[1])
-    .slice(0, 32)
-    .map(([key]) => toRgb(key));
-  return { flat: true, colorCount: Math.max(2, solids.length), solids };
+    .slice(0, 32);
+  const solidShare = kept.reduce((sum, [, count]) => sum + count, 0) / total;
+  const solids = kept.map(([key]) => toRgb(key));
+  return { flat: true, colorCount: Math.max(2, solids.length), solids, solidShare };
 }
 
 /**
@@ -1921,14 +2070,17 @@ const FLAT_SEED_MAX_COLORS = 32;
  * almost every pixel, keeps exactly those colors instead. Images that
  * already have at most `colors` exact colors are left untouched. A flat
  * color within `layerDiff` (the tracer's Merge) of a more common one gets
- * no slot, since the tracer would merge it away. The palette comes from
+ * no slot, since the tracer would merge it away. `seeds` ([r, g, b], at
+ * most `colors` used) replace that search when auto-detect already found
+ * the art's colors, as compressed sources have no exact colors to seed
+ * from. The palette comes from
  * opaque pixels only: hidden pixels carry garbage colors, and counting a
  * large knocked-out area as any one color would crowd small visible
  * details out of the palette. Transparent pixels are then painted with the dominant opaque
  * color's palette entry; alpha is untouched. Mutates img in place and
  * returns whether it remapped any colors.
  */
-export function quantize(img, colors, { layerDiff = 0 } = {}) {
+export function quantize(img, colors, { layerDiff = 0, seeds = null } = {}) {
   const { data } = img;
   const exact = new Set();
   for (let i = 0; i < data.length && exact.size <= colors; i += 4) {
@@ -2030,8 +2182,9 @@ export function quantize(img, colors, { layerDiff = 0 } = {}) {
       commonCount += count[e];
     }
   }
-  const seeded = commonCount >= opaqueCount * FLAT_SEED_COVERAGE;
-  const boxes = seeded ? common.map((e) => makeBox(Int32Array.of(e))) : [makeBox(all)];
+  const given = seeds?.length ? seeds.slice(0, colors) : null;
+  const seeded = given !== null || commonCount >= opaqueCount * FLAT_SEED_COVERAGE;
+  const boxes = given ? [] : seeded ? common.map((e) => makeBox(Int32Array.of(e))) : [makeBox(all)];
   while (boxes.length < colors) {
     let boxIndex = -1;
     for (let i = 0; i < boxes.length; i++) {
@@ -2058,8 +2211,9 @@ export function quantize(img, colors, { layerDiff = 0 } = {}) {
   }
 
   // Weighted average color per box seeds the palette.
-  const k = boxes.length;
+  const k = given ? given.length : boxes.length;
   const palette = new Float64Array(k * 3);
+  given?.forEach((rgb, p) => palette.set(srgbToOklab(rgb), p * 3));
   boxes.forEach(({ members }, b) => {
     let total = 0;
     for (const e of members) {
