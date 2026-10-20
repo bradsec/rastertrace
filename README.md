@@ -17,6 +17,7 @@ Convert raster images to clean, scalable SVG vectors entirely in your browser. [
 - PNG, JPEG, WebP, GIF, and BMP input, up to 50 MB and 100 megapixels
 - Premultiplied-alpha upscaling (no edge halos), binary alpha (no fringe fragmentation)
 - Median-cut + k-means color quantization in perceptual Oklab space with transparent-area backfill; clusters below 0.1% of opaque pixels are reseeded toward the largest population-weighted color error so edge blends do not waste palette slots. Flat art whose most common colors cover 90% of pixels keeps exactly those colors, so small accents are not lost to anti-alias blends
+- Soft-edge repair on flat art: a blurred or anti-aliased edge between two fills splits where the blend crosses half, instead of snapping to an unrelated palette color and leaving a stripe of it along the edge
 - Speck removal on the reduced colors by area alone, in place of the tracer's filter (which also drops every line about 2 px wide or thinner): specks merge into the color around them, blend slivers along edges merge too, and thin lines and outlines between fills stay
 - 3x3 majority filter to clean quantization dither (skipped when no colors were reduced, so lone pixels in pixel art survive)
 - Optional edge-preserving median denoise for photographic sources
