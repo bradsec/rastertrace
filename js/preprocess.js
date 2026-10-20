@@ -1581,6 +1581,7 @@ export function unblendEdges(img, original, reach) {
     steps.push(step);
   }
   if (steps.at(-1) !== reach) steps.push(reach);
+  const stepCount = steps.length;
   const directions = [1, 0, -1, 0, 0, 1, 0, -1, 1, 1, 1, -1, -1, 1, -1, -1];
   // Pixels by palette index, tallying original colors per index. Flat
   // art repeats each pair along a row, so runs are counted, not pixels.
@@ -1665,7 +1666,9 @@ export function unblendEdges(img, original, reach) {
     for (let d = 0; d < 16 && count < BLEND_CANDIDATES; d += 2) {
       const dx = directions[d];
       const dy = directions[d + 1];
-      for (const step of steps) {
+      // Indexed: for-of over an array is several times slower in WebKit.
+      for (let k = 0; k < stepCount; k++) {
+        const step = steps[k];
         const x = x0 + dx * step;
         const y = y0 + dy * step;
         if (x < 0 || y < 0 || x >= width || y >= height) break;

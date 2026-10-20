@@ -2,7 +2,7 @@
 // is traced, so profiles and settings apply to them like the rest of the
 // artwork: a fill is traced in its color, an erase leaves a hole.
 import { cleanupMaskSvg } from "./eraser.js?v=12";
-import { parseHexColor } from "./preprocess.js?v=81";
+import { parseHexColor } from "./preprocess.js?v=82";
 
 /** @typedef {{ mode?: string, color?: string, points?: unknown[], type?: string }} CleanupAction */
 
