@@ -1950,7 +1950,8 @@ test("despeckleColors keeps a long thin line on one background", () => {
 
 test("despeckleColors keeps an outline between two different fills", () => {
   const img = makeImage(40, 20, [240, 240, 240, 255]);
-  for (let y = 11; y < 20; y++) for (let x = 0; x < 40; x++) setPixel(img, x, y, [200, 30, 30, 255]);
+  for (let y = 11; y < 20; y++)
+    for (let x = 0; x < 40; x++) setPixel(img, x, y, [200, 30, 30, 255]);
   for (let x = 0; x < 40; x++) setPixel(img, x, 10, [0, 0, 0, 255]);
   despeckleColors(img, 4);
   assert.deepEqual(getPixel(img, 20, 10).slice(0, 3), [0, 0, 0]);
@@ -1959,7 +1960,8 @@ test("despeckleColors keeps an outline between two different fills", () => {
 test("despeckleColors merges a blend sliver between two fills", () => {
   // Color reduction leaves a band of in-between color along an edge.
   const img = makeImage(40, 20, [240, 240, 240, 255]);
-  for (let y = 11; y < 20; y++) for (let x = 0; x < 40; x++) setPixel(img, x, y, [200, 30, 30, 255]);
+  for (let y = 11; y < 20; y++)
+    for (let x = 0; x < 40; x++) setPixel(img, x, y, [200, 30, 30, 255]);
   for (let x = 0; x < 40; x++) setPixel(img, x, 10, [220, 135, 135, 255]);
   despeckleColors(img, 4);
   const [r, g, b] = getPixel(img, 20, 10);
