@@ -33,6 +33,7 @@ for (const viewport of viewports) {
 
     await page.locator("#file-input").setInputFiles(path.resolve("android-chrome-192x192.png"));
     await expect(page.locator("#workspace")).toBeVisible();
+    await expect(page.locator("#status")).toContainText(/Traced \d/, { timeout: 60_000 });
     await expect(page.locator("#tracing-veil")).toBeHidden();
 
     const workspace = await page.locator("#workspace").boundingBox();
