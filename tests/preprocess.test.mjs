@@ -1501,7 +1501,8 @@ test("detectedColorSettings keeps Merge below the closest pair of colors", () =>
   );
 });
 
-test("distinctColorCount merges colors within the Merge distance", () => {
+test("distinctColorCount drops colors within Merge of a more common one", () => {
+  // Most common first, as analyzeFlatness lists solids.
   const solids = [
     [0, 0, 0],
     [20, 0, 0],
@@ -1509,8 +1510,9 @@ test("distinctColorCount merges colors within the Merge distance", () => {
     [255, 255, 255],
   ];
   assert.equal(distinctColorCount(solids, 10), 4);
-  // Chained near colors merge into one group.
-  assert.equal(distinctColorCount(solids, 20), 2);
+  // 20 is within Merge of 0; 40 is not, so it keeps its own slot, as in
+  // quantize's flat-art seeding.
+  assert.equal(distinctColorCount(solids, 20), 3);
   // Never below the Max colors minimum of 2.
   assert.equal(distinctColorCount(solids, 1000), 2);
 });

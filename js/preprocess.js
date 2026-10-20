@@ -156,29 +156,17 @@ function colorDistance(a, b) {
 }
 
 /**
- * How many of the detected `solids` stay separate once colors within
- * `layerDiff` of each other merge (chained, like the tracer's layers),
- * never below the Max colors minimum of 2.
+ * How many of the detected `solids` (most common first) keep a color of
+ * their own once Merge applies: each is dropped when within `layerDiff`
+ * of a more common color already kept, as quantize seeds flat art. Never
+ * below the Max colors minimum of 2.
  */
 export function distinctColorCount(solids, layerDiff) {
-  const parent = solids.map((_, i) => i);
-  const root = (i) => {
-    while (parent[i] !== i) i = parent[i] = parent[parent[i]];
-    return i;
-  };
-  let groups = solids.length;
-  for (let i = 0; i < solids.length; i++) {
-    for (let j = i + 1; j < solids.length; j++) {
-      if (colorDistance(solids[i], solids[j]) > layerDiff) continue;
-      const a = root(i);
-      const b = root(j);
-      if (a !== b) {
-        parent[a] = b;
-        groups -= 1;
-      }
-    }
+  const kept = [];
+  for (const color of solids) {
+    if (kept.every((other) => colorDistance(color, other) > layerDiff)) kept.push(color);
   }
-  return Math.max(2, groups);
+  return Math.max(2, kept.length);
 }
 
 // Purpose-based export profiles (SVG_EXPORT_RESEARCH.md). Values are
@@ -1336,6 +1324,7 @@ export function reduceAndRemoveBackground(img, colors, background, stage = () =>
     gradient = false,
     scale = 1,
     swatches = null,
+    layerDiff = 0,
   } = background;
   const options = {
     contiguous,
@@ -1352,7 +1341,7 @@ export function reduceAndRemoveBackground(img, colors, background, stage = () =>
       mapToPalette(img, swatches);
     } else {
       stage(`Reducing to ${colors} colors…`);
-      quantize(img, colors);
+      quantize(img, colors, { layerDiff });
     }
     modeFilter(img);
   };
@@ -1880,13 +1869,15 @@ const FLAT_SEED_MAX_COLORS = 32;
  * Median-cut color quantization to at most `colors` colors, refined with
  * k-means in Oklab. Flat art, where the `colors` most common colors cover
  * almost every pixel, keeps exactly those colors instead. Images that
- * already have at most `colors` exact colors are left untouched. The palette comes from opaque pixels only:
+ * already have at most `colors` exact colors are left untouched. A flat
+ * color within `layerDiff` (the tracer's Merge) of a more common one gets
+ * no slot, since the tracer would merge it away. The palette comes from opaque pixels only:
  * hidden pixels carry garbage colors, and counting a large knocked-out
  * area as any one color would crowd small visible details out of the
  * palette. Transparent pixels are then painted with the dominant opaque
  * color's palette entry; alpha is untouched. Mutates img in place.
  */
-export function quantize(img, colors) {
+export function quantize(img, colors, { layerDiff = 0 } = {}) {
   const { data } = img;
   const exact = new Set();
   for (let i = 0; i < data.length && exact.size <= colors; i += 4) {
@@ -1923,14 +1914,12 @@ export function quantize(img, colors) {
   const entryBin = new Int32Array(n);
   const count = new Float64Array(n);
   const lab = [new Float64Array(n), new Float64Array(n), new Float64Array(n)];
+  const means = new Array(n);
   for (let bin = 0, e = 0; bin < binCount; bin++) {
     const h = hits[bin];
     if (!h) continue;
-    const [L, A, B] = srgbToOklab([
-      Math.round(sumR[bin] / h),
-      Math.round(sumG[bin] / h),
-      Math.round(sumB[bin] / h),
-    ]);
+    means[e] = [Math.round(sumR[bin] / h), Math.round(sumG[bin] / h), Math.round(sumB[bin] / h)];
+    const [L, A, B] = srgbToOklab(means[e]);
     entryBin[e] = bin;
     count[e] = h;
     lab[0][e] = L;
@@ -1970,8 +1959,8 @@ export function quantize(img, colors) {
   // pixel, each gets its own one-color box and the splitting below stops
   // at once. Anti-alias blends stretch box ranges, so median cut would
   // split them off ahead of small solid accents. Near-duplicates of a
-  // color already picked (resampling blends) count toward its coverage
-  // instead of taking a slot.
+  // color already picked (resampling blends), and colors the tracer would
+  // merge into it, count toward its coverage instead of taking a slot.
   const common = [];
   let commonCount = 0;
   const candidates = colors <= FLAT_SEED_MAX_COLORS ? Array.from(all) : [];
@@ -1979,7 +1968,7 @@ export function quantize(img, colors) {
     const near = common.some(
       (p) =>
         (lab[0][e] - lab[0][p]) ** 2 + (lab[1][e] - lab[1][p]) ** 2 + (lab[2][e] - lab[2][p]) ** 2 <
-        FLAT_SEED_MIN_DISTANCE ** 2,
+          FLAT_SEED_MIN_DISTANCE ** 2 || colorDistance(means[e], means[p]) <= layerDiff,
     );
     if (near) commonCount += count[e];
     else if (common.length < colors) {

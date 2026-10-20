@@ -95,3 +95,28 @@ test("quantize gives a near-duplicate blend no slot of its own", () => {
   for (let i = 0; i < data.length; i += 4) output.add(toHexColor(data.subarray(i, i + 3)));
   assert.deepEqual([...output].sort(), ["#06D6A0", "#13294B", "#F4EFE6"]);
 });
+
+test("quantize skips flat colors the tracer would merge into a kept one", () => {
+  // The chip sample's colors, most common first. #1B2430 is within Merge
+  // 67 of #0B1F1A, so with 4 slots it gives way to the green accent,
+  // matching distinctColorCount, instead of taking a slot the tracer
+  // would merge away.
+  const runs = [
+    ["#0B1F1A", 7300],
+    ["#2A3644", 1260],
+    ["#1B2430", 800],
+    ["#C9D1D9", 200],
+    ["#2FD39A", 170],
+  ];
+  const width = runs.reduce((total, [, count]) => total + count, 0);
+  const data = new Uint8ClampedArray(width * 4);
+  let offset = 0;
+  for (const [hex, count] of runs) {
+    const rgba = [...parseHexColor(hex), 255];
+    for (let i = 0; i < count; i++, offset += 4) data.set(rgba, offset);
+  }
+  quantize({ width, height: 1, data }, 4, { layerDiff: 67 });
+  const output = new Set();
+  for (let i = 0; i < data.length; i += 4) output.add(toHexColor(data.subarray(i, i + 3)));
+  assert.deepEqual([...output].sort(), ["#0B1F1A", "#2A3644", "#2FD39A", "#C9D1D9"]);
+});
