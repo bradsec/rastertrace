@@ -329,6 +329,7 @@ async function loadFile(file) {
   if (wasEmpty) {
     els.emptyState.hidden = true;
     els.workspace.hidden = false;
+    syncFoldMenu();
   }
   setBusy(true, "Loading image…");
   try {
@@ -381,6 +382,7 @@ async function loadFile(file) {
     els.sourceView.src = state.sourceUrl;
     els.emptyState.hidden = true;
     els.workspace.hidden = false;
+    syncFoldMenu();
     resetView();
     setView("result");
     if (els.upscale.value === "ultra") await ensureUltraBitmap();
@@ -394,6 +396,7 @@ async function loadFile(file) {
       if (wasEmpty && !state.bitmap) {
         els.workspace.hidden = true;
         els.emptyState.hidden = false;
+        syncFoldMenu();
       }
       showError(err.message || "Could not open that file.");
     }
@@ -1199,6 +1202,7 @@ const foldMenuButtons = {
   right: /** @type {HTMLButtonElement} */ (
     document.querySelector('[data-action="toggle-right-panel"]')
   ),
+  both: /** @type {HTMLButtonElement} */ (document.querySelector('[data-action="toggle-panels"]')),
 };
 const foldingLayout = window.matchMedia("(min-width: 901px)");
 const foldLabels = { left: "profile, colors and palette", right: "settings" };
@@ -1207,10 +1211,13 @@ function isFolded(side) {
   return els.workspace.classList.contains(`${side}-folded`);
 }
 
+// Without an image the workspace, and so both panels, is hidden.
 function syncFoldMenu() {
+  const noPanels = Boolean(els.workspace.hidden);
   for (const side of /** @type {const} */ (["left", "right"])) {
-    foldMenuButtons[side].disabled = !foldingLayout.matches || !isFolded(side);
+    foldMenuButtons[side].disabled = noPanels || !foldingLayout.matches || !isFolded(side);
   }
+  foldMenuButtons.both.disabled = noPanels;
 }
 foldingLayout.addEventListener("change", syncFoldMenu);
 
@@ -1263,7 +1270,7 @@ for (const side of /** @type {const} */ (["left", "right"])) {
     saveFolds();
   });
 }
-document.querySelector('[data-action="toggle-panels"]').addEventListener("click", toggleBothPanels);
+foldMenuButtons.both.addEventListener("click", toggleBothPanels);
 
 els.showResult.addEventListener("click", () => setView("result"));
 els.showSource.addEventListener("click", () => setView("source"));

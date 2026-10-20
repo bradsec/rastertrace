@@ -62,6 +62,11 @@ test("View image actions require a loaded sample while panel actions follow fold
     "zoom-out",
   ];
   await page.setViewportSize({ width: 1440, height: 900 });
+  // Folded panels would otherwise enable their items: with no image there
+  // are no panels to show.
+  await page.evaluate(() =>
+    localStorage.setItem("rastertrace:folded", JSON.stringify({ left: true, right: true })),
+  );
   await page.reload();
   const left = menu.locator('[data-action="toggle-left-panel"]');
   const right = menu.locator('[data-action="toggle-right-panel"]');
@@ -73,7 +78,12 @@ test("View image actions require a loaded sample while panel actions follow fold
   }
   await expect(left).toBeDisabled();
   await expect(right).toBeDisabled();
-  await expect(both).toBeEnabled();
+  await expect(both).toBeDisabled();
+  await page.keyboard.press("Escape");
+  await page.evaluate(() => localStorage.removeItem("rastertrace:folded"));
+  await page.reload();
+  await menu.locator("summary").click();
+  await expect(both).toBeDisabled();
   await page.keyboard.press("Escape");
   const initialTransform = await transform(page);
   for (const key of ["Control+0", "Control+1", "Meta+0", "Meta+1", "+", "-"]) {
