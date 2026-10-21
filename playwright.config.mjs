@@ -4,6 +4,10 @@ export default defineConfig({
   testDir: "./e2e",
   outputDir: ".playwright-artifacts",
   reporter: "line",
+  // Many specs trace two or three times, and the helpers allow 60 s per
+  // trace. GitHub's runners trace several times slower than a desktop, so
+  // the 30 s default timed out whole tests there (iPad WebKit most often).
+  timeout: 90_000,
   use: {
     baseURL: "http://127.0.0.1:8137",
     screenshot: "only-on-failure",
