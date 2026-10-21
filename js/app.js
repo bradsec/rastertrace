@@ -184,7 +184,9 @@ async function retrace() {
     });
     if (run !== retraceRun) return;
     const result = await tracer.trace(imageData, settings, state.sourceWidth, state.sourceHeight);
-    if (!result) return; // superseded by a newer request
+    // Superseded: a newer request reached the worker, or a newer edit,
+    // rotation or image is still on its way to it.
+    if (!result || run !== retraceRun) return;
     state.processedRaster = result.processed ?? null;
     state.svgRaw = result.svg;
     state.bakedActions = new Set(actions);
@@ -412,6 +414,7 @@ async function loadFile(file) {
 
 function resetForNewImage() {
   clearTimeout(state.debounce);
+  retraceRun++; // a trace of the old image still baking must not land
   tracer.cancelPending();
   state.bitmap?.close();
   state.bitmap = null;
