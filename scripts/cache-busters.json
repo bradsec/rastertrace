@@ -36,16 +36,16 @@
     "sha": "c791ac290668f1933993695c39260283c51955aad4524eed259bbfb501e43f72"
   },
   "js/app.js": {
-    "v": 183,
-    "sha": "1021c55fdf25123c64fa6730ff9fb34587ed37fa285c0a19fe643630872ffd3d"
+    "v": 184,
+    "sha": "11961b9359ab8b5edcdb2edfbc921919e4c2433b08d032ae41c705e36ff3cd55"
   },
   "js/bake.js": {
     "v": 16,
     "sha": "d1d4a2fc29fbb1fc0043e4f7168eeb768058076b5aef83aec04433179be12001"
   },
   "js/cleanup-tools.js": {
-    "v": 86,
-    "sha": "c8b1f0d4c1abd13fafbc670bee39fd4e19213762c0f6331e364b73a0c2115f23"
+    "v": 87,
+    "sha": "ad4c1aa02782510958bff2cb22c2b1c363e5c42312173b7b56dd48efa1629f1d"
   },
   "js/context.js": {
     "v": 66,
@@ -56,16 +56,16 @@
     "sha": "2d05760f1fc256687573b2981ac79c11afc3c4b410aa26b72a4d8c54558fb9aa"
   },
   "js/exporters.js": {
-    "v": 76,
-    "sha": "5dc208b3ee8fd4868477279983a9461b00ae60d2af5f7df6632ab82a76f08425"
+    "v": 77,
+    "sha": "38080214354498f9b6c9af673d0eadc5a059f245142dcca8bcf02797279551e6"
   },
   "js/magicwand.js": {
     "v": 44,
     "sha": "25a09ab2257e032b06184eb15fa5861d6ed4e986900c49dc76381a970804d989"
   },
   "js/palette-ui.js": {
-    "v": 70,
-    "sha": "1e85bd5aff7b9763d5f1e09d671257c992642751987e023391d86021ff6a7149"
+    "v": 71,
+    "sha": "a96f8875db205ac99f6fec7ec6d881d6d9b490592b675aca269d4fbad44b0e9e"
   },
   "js/palette.js": {
     "v": 46,
@@ -80,16 +80,16 @@
     "sha": "986ee519b1d2565abb0c7f3e39e7b9c91a58c03549d6f09c1102a03ff20d5f96"
   },
   "js/settings.js": {
-    "v": 88,
-    "sha": "0497b045a87bb557f173207b0a334d4c30808a7c7056a50ffebba4b34adce4cb"
+    "v": 89,
+    "sha": "261232928c1e77d870fb8f916be3a7df3121c5ad4fbd22432c6ec39bed43d68c"
   },
   "js/vectorexport.js": {
     "v": 44,
     "sha": "e759f7e132447b570670c436fec90c3727c42e6f33a3ad6ec490e650aca62fce"
   },
   "js/view.js": {
-    "v": 86,
-    "sha": "ec49e9b0f169c453c9c8928a54c28e2519fe16fa595e3f9bee057819c89379bd"
+    "v": 87,
+    "sha": "b79f7868f39b66631e25c78b9d38e9e36dfa6e48c2a113afdc05dd6def78862a"
   },
   "js/worker.js": {
     "v": 97,

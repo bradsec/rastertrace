@@ -50,7 +50,8 @@ export function setResultActions(enabled) {
   els.eraserUndo.disabled = !cleaned;
   els.eraserRedo.disabled = !enabled || !state.eraseRedo.length;
   els.eraserClear.disabled = !cleaned;
-  if (enabled && cleanupPending()) {
+  const vectorBlocked = enabled && cleanupPending();
+  if (vectorBlocked) {
     els.downloadPdf.disabled = true;
     els.downloadDxf.disabled = true;
     els.downloadPdf.title = "Available once the trace with your cleanup edits finishes";
@@ -65,7 +66,7 @@ export function setResultActions(enabled) {
     document.querySelectorAll('[data-action="download-pdf"], [data-action="download-dxf"]')
   );
   for (const button of pdfDxfButtons) {
-    button.disabled = !enabled || cleaned;
+    button.disabled = !enabled || vectorBlocked;
   }
 }
 

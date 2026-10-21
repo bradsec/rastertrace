@@ -21,6 +21,8 @@ function element() {
 }
 
 const elements = new Map();
+// File-menu PDF and DXF items, looked up by data-action selector.
+const vectorMenuItems = [element(), element()];
 globalThis.window = {};
 globalThis.document = {
   getElementById(id) {
@@ -30,8 +32,8 @@ globalThis.document = {
   querySelector() {
     return element();
   },
-  querySelectorAll() {
-    return [];
+  querySelectorAll(selector) {
+    return selector.includes('data-action="download-pdf"') ? vectorMenuItems : [];
   },
 };
 
@@ -48,7 +50,7 @@ Object.defineProperty(globalThis, "navigator", {
 });
 
 const { state } = await sharedContext("exporters.js");
-const { paletteSvg, refreshExport } = await import("../js/exporters.js?v=test");
+const { paletteSvg, refreshExport, setResultActions } = await import("../js/exporters.js?v=test");
 
 test("copy SVG rebuilds cleanup instead of using stale export state", async () => {
   state.fileName = "test.png";
@@ -146,4 +148,32 @@ test("palette edits recolor the preview and every export source", () => {
   refreshExport();
   assert.match(state.svg, /fill="#ff0000"/i);
   assert.doesNotMatch(state.svg, /#00FF00/);
+});
+
+test("menu PDF and DXF items follow the footer buttons once cleanup is traced", () => {
+  const stroke = { diameter: 0.2, points: [{ x: 0.5, y: 0.5 }] };
+  state.eraseStrokes = [stroke];
+  state.eraseRedo = [];
+
+  state.bakedActions = new Set();
+  setResultActions(true);
+  assert.equal(elements.get("download-pdf").disabled, true);
+  assert.deepEqual(
+    vectorMenuItems.map((item) => item.disabled),
+    [true, true],
+  );
+
+  state.bakedActions = new Set([stroke]);
+  setResultActions(true);
+  assert.equal(elements.get("download-pdf").disabled, false);
+  assert.deepEqual(
+    vectorMenuItems.map((item) => item.disabled),
+    [false, false],
+  );
+
+  setResultActions(false);
+  assert.deepEqual(
+    vectorMenuItems.map((item) => item.disabled),
+    [true, true],
+  );
 });
