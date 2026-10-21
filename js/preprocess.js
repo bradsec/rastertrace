@@ -1947,7 +1947,7 @@ function boxBlur(values, width, height, radius) {
   const window = 2 * radius + 1;
   // One line at a time, padded by `radius` repeats of each end so the
   // running sum needs no bounds checks (slow in WebKit).
-  const line = new Float32Array(Math.max(width, height) + 2 * radius + 1);
+  const line = new Float32Array(width + 2 * radius + 1);
   const blur = (length, count, stride, step) => {
     for (let l = 0; l < count; l++) {
       const base = l * stride;
@@ -1964,9 +1964,31 @@ function boxBlur(values, width, height, radius) {
       }
     }
   };
+  // Columns run a row at a time over a snapshot: walking a column one
+  // stride apart misses the cache on every read.
+  const source = new Float32Array(values.length);
+  const sums = new Float64Array(width);
+  const row = (y) => Math.min(height - 1, Math.max(0, y)) * width;
+  const blurColumns = () => {
+    source.set(values);
+    sums.fill(0);
+    for (let k = -radius; k <= radius; k++) {
+      const r = row(k);
+      for (let x = 0; x < width; x++) sums[x] += source[r + x];
+    }
+    for (let y = 0; y < height; y++) {
+      const out = y * width;
+      const add = row(y + radius + 1);
+      const drop = row(y - radius);
+      for (let x = 0; x < width; x++) {
+        values[out + x] = sums[x] / window;
+        sums[x] += source[add + x] - source[drop + x];
+      }
+    }
+  };
   for (let pass = 0; pass < 2; pass++) {
     blur(width, height, width, 1);
-    blur(height, width, 1, width);
+    blurColumns();
   }
 }
 
