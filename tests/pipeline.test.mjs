@@ -4,7 +4,9 @@ import {
   bitmapOperationIsCurrent,
   decodeImage,
   fitDecodeSize,
+  invertBitmap,
   invertRGBA,
+  rotateBitmap,
   sniffImageSize,
   Tracer,
 } from "../js/pipeline.js";
@@ -284,3 +286,78 @@ test("Tracer terminates a long-running trace before posting the next one", () =>
     workers[1].onmessage({ data: { id: workers[1].messages[0].id, svg: "<svg></svg>", ms: 1 } });
     assert.deepEqual(await latest, { id: 1, svg: "<svg></svg>", ms: 1 });
   }));
+
+/** A source bitmap and a createImageBitmap the test resolves by hand. */
+function bitmapHarness() {
+  const originals = [globalThis.OffscreenCanvas, globalThis.createImageBitmap];
+  globalThis.OffscreenCanvas = class {
+    constructor(width, height) {
+      this.width = width;
+      this.height = height;
+    }
+    getContext() {
+      const { width, height } = this;
+      return {
+        translate() {},
+        rotate() {},
+        drawImage() {},
+        getImageData: () => ({ data: new Uint8ClampedArray(width * height * 4) }),
+        putImageData() {},
+      };
+    }
+  };
+  let settle;
+  globalThis.createImageBitmap = () =>
+    new Promise((resolve, reject) => {
+      settle = { resolve, reject };
+    });
+  const source = {
+    width: 4,
+    height: 2,
+    closed: false,
+    close() {
+      this.closed = true;
+    },
+  };
+  return {
+    source,
+    settle: () => settle,
+    restore() {
+      [globalThis.OffscreenCanvas, globalThis.createImageBitmap] = originals;
+    },
+  };
+}
+
+for (const [name, run] of [
+  ["rotateBitmap", (bitmap) => rotateBitmap(bitmap, true)],
+  ["invertBitmap", (bitmap) => invertBitmap(bitmap)],
+]) {
+  test(`${name} keeps the source open until its replacement exists`, async () => {
+    const harness = bitmapHarness();
+    try {
+      const result = run(harness.source);
+      await Promise.resolve();
+      // The app still holds the source as state.bitmap while this awaits.
+      assert.equal(harness.source.closed, false);
+      const replacement = { width: 2, height: 4 };
+      harness.settle().resolve(replacement);
+      assert.equal(await result, replacement);
+      assert.equal(harness.source.closed, true);
+    } finally {
+      harness.restore();
+    }
+  });
+
+  test(`${name} leaves the source usable when the replacement fails`, async () => {
+    const harness = bitmapHarness();
+    try {
+      const result = run(harness.source);
+      await Promise.resolve();
+      harness.settle().reject(new Error("out of memory"));
+      await assert.rejects(result, /out of memory/);
+      assert.equal(harness.source.closed, false);
+    } finally {
+      harness.restore();
+    }
+  });
+}
