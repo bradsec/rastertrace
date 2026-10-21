@@ -4,10 +4,10 @@
 // register before the pan handlers in view.js, so app.js imports this
 // module first.
 import { brushSizeForShortcut, snapPointToAngle, svgViewBox } from "./eraser.js?v=13";
-import { parseHexColor, sampleRasterColor, toHexColor, tracePixels } from "./preprocess.js?v=84";
-import { els, hooks, state } from "./context.js?v=58";
-import { floodRegion, growMask, maskLoops, unionMasks } from "./magicwand.js?v=36";
-import { refreshExport } from "./exporters.js?v=68";
+import { parseHexColor, sampleRasterColor, toHexColor, tracePixels } from "./preprocess.js?v=91";
+import { els, hooks, state } from "./context.js?v=65";
+import { floodRegion, growMask, maskLoops, unionMasks } from "./magicwand.js?v=43";
+import { refreshExport } from "./exporters.js?v=75";
 
 /** @param {"result" | "source" | "compare"} view */
 export function setView(view) {

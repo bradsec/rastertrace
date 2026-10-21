@@ -10,7 +10,7 @@ import {
   rotateBitmap,
   sniffImageSize,
   Tracer,
-} from "./pipeline.js?v=84";
+} from "./pipeline.js?v=91";
 import {
   analyzeFlatness,
   detectedColorSettings,
@@ -32,10 +32,10 @@ import {
   toHexColor,
   USER_PRESET_PREFIX,
   userPresetName,
-} from "./preprocess.js?v=84";
-import { $, els, hooks, preferences, showError, state } from "./context.js?v=58";
-import { bakeCleanup, smoothRegions } from "./bake.js?v=8";
-import { refreshExport, setResultActions } from "./exporters.js?v=68";
+} from "./preprocess.js?v=91";
+import { $, els, hooks, preferences, showError, state } from "./context.js?v=65";
+import { bakeCleanup, smoothRegions } from "./bake.js?v=15";
+import { refreshExport, setResultActions } from "./exporters.js?v=75";
 import {
   clearSelection,
   setBlobFill,
@@ -43,8 +43,8 @@ import {
   setSelectionTool,
   setView,
   showResultOverSource,
-} from "./cleanup-tools.js?v=78";
-import { afterTrace, resetPalette } from "./palette-ui.js?v=62";
+} from "./cleanup-tools.js?v=85";
+import { afterTrace, resetPalette } from "./palette-ui.js?v=69";
 import {
   applyExportProfile,
   applyMeasurementUnit,
@@ -59,6 +59,7 @@ import {
   flushSettings,
   importUserPresets,
   loadUserPresets,
+  noteCarriedSettings,
   readPreferences,
   resetSettings,
   restoreSettings,
@@ -74,8 +75,8 @@ import {
   updateTraceFields,
   updateTransparencyFields,
   userPresets,
-} from "./settings.js?v=78";
-import { actualSizeView, resetView } from "./view.js?v=78";
+} from "./settings.js?v=87";
+import { actualSizeView, resetView } from "./view.js?v=85";
 
 const SAMPLE_FILES = [
   "synthwave.png",
@@ -96,7 +97,7 @@ const SAMPLE_KEY = "rastertrace:last-sample";
 
 const EMPTY_IMAGE_SRC = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==";
 
-const tracer = new Tracer(new URL("./worker.js?v=89", import.meta.url));
+const tracer = new Tracer(new URL("./worker.js?v=96", import.meta.url));
 
 let elapsedTimer = 0;
 
@@ -141,9 +142,13 @@ async function retrace() {
     // Soft-edge repair suits flat art whichever way its colors are set.
     settings.flatArt = !photographic;
     // "auto"/"ultra" trace at the full budget for their ceiling: upscale
-    // to the cap regardless of source size (never below 1x).
-    const maxSide = settings.upscale === "ultra" ? MAX_TRACE_SIDE_ULTRA : MAX_TRACE_SIDE;
-    const fill = Math.max(1, maxSide / Math.max(state.bitmap.width, state.bitmap.height));
+    // to the cap regardless of source size (never below 1x). Auto traces
+    // flat art larger than the default cap at its own size instead of
+    // shrinking it, up to the Ultra ceiling it was decoded to.
+    const longest = Math.max(state.bitmap.width, state.bitmap.height);
+    const native = settings.upscale === "auto" && !photographic && longest > MAX_TRACE_SIDE;
+    const maxSide = settings.upscale === "ultra" || native ? MAX_TRACE_SIDE_ULTRA : MAX_TRACE_SIDE;
+    const fill = native ? 1 : Math.max(1, maxSide / longest);
     const upscale =
       settings.upscale === "auto"
         ? photographic
@@ -334,12 +339,14 @@ async function loadFile(file) {
   setBusy(true, "Loading image…");
   try {
     const sourceSize = await sniffImageSize(file);
-    const decoded = await decodeImage(file, MAX_TRACE_SIDE, sourceSize);
+    // Decoded to the Ultra ceiling: Auto traces large flat art at its own
+    // size, and the trace scale caps everything else.
+    const decoded = await decodeImage(file, MAX_TRACE_SIDE_ULTRA, sourceSize);
     const sourceWidth = sourceSize?.width ?? decoded.width;
     const sourceHeight = sourceSize?.height ?? decoded.height;
     // Shrink oversized bitmaps right away: only the capped copy is
     // retained, so a huge photo does not hold its full decode in memory.
-    const bitmap = await capBitmap(decoded);
+    const bitmap = await capBitmap(decoded, MAX_TRACE_SIDE_ULTRA);
     if (token !== state.loadToken) {
       bitmap.close(); // a newer load started while this one decoded
       return;
@@ -364,7 +371,7 @@ async function loadFile(file) {
     }
     state.inverted = false;
     els.invertImage.setAttribute("aria-pressed", "false");
-    state.decodedSide = MAX_TRACE_SIDE;
+    state.decodedSide = MAX_TRACE_SIDE_ULTRA;
     state.sourceWidth = sourceWidth;
     state.sourceHeight = sourceHeight;
     state.raster = null;
@@ -376,6 +383,7 @@ async function loadFile(file) {
     setEraser(false);
     setBlobFill(false);
     applyDetectedSettings(bitmap);
+    noteCarriedSettings();
     state.fileName = file.name || "image";
     if (state.sourceUrl) URL.revokeObjectURL(state.sourceUrl);
     state.sourceUrl = URL.createObjectURL(file);
@@ -896,6 +904,11 @@ els.cornerThreshold.addEventListener("input", () => {
   scheduleRetrace();
 });
 els.straighten.addEventListener("input", () => {
+  clearProfile();
+  updateOutputs();
+  scheduleRetrace();
+});
+els.smoothOutlines.addEventListener("input", () => {
   clearProfile();
   updateOutputs();
   scheduleRetrace();

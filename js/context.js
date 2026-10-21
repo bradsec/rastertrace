@@ -1,7 +1,7 @@
 // Shared DOM references and mutable app state, imported by every UI
 // module. Keeps no logic beyond tiny helpers so it can never participate
 // in an import cycle.
-import { MAX_TRACE_SIDE } from "./preprocess.js?v=84";
+import { MAX_TRACE_SIDE } from "./preprocess.js?v=91";
 
 /**
  * @template {Element} [T=HTMLElement]
@@ -52,6 +52,8 @@ export const els = {
   cornerThresholdOut: $("corner-threshold-out"),
   straighten: /** @type {HTMLInputElement} */ ($("straighten")),
   straightenOut: $("straighten-out"),
+  smoothOutlines: /** @type {HTMLInputElement} */ ($("smooth-outlines")),
+  smoothOutlinesOut: $("smooth-outlines-out"),
   hierarchical: /** @type {HTMLSelectElement} */ ($("hierarchical")),
   upscale: /** @type {HTMLSelectElement} */ ($("upscale")),
   pathPrecision: /** @type {HTMLInputElement} */ ($("path-precision")),
@@ -209,7 +211,7 @@ export const state = {
   file: null, // original file, kept for the Ultra re-decode
   rotation: 0, // quarter turns applied since load, for re-decode replay
   inverted: false, // negative applied since load, replayed on Ultra re-decode
-  decodedSide: MAX_TRACE_SIDE, // cap used when bitmap was decoded
+  decodedSide: MAX_TRACE_SIDE, // cap used when bitmap was decoded (Ultra's once an image loads)
   sourceWidth: 0,
   sourceHeight: 0,
   fileName: "image",

@@ -14,10 +14,10 @@ import {
   toGrayscaleColor,
   USER_PRESET_PREFIX,
   userPresetName,
-} from "./preprocess.js?v=84";
-import { els, preferences } from "./context.js?v=58";
-import { refreshExport, updatePhysicalHeightOut } from "./exporters.js?v=68";
-import { setEyedropper } from "./cleanup-tools.js?v=78";
+} from "./preprocess.js?v=91";
+import { els, preferences } from "./context.js?v=65";
+import { refreshExport, updatePhysicalHeightOut } from "./exporters.js?v=75";
+import { setEyedropper } from "./cleanup-tools.js?v=85";
 
 /** @returns {HTMLInputElement} */
 const radioEl = (selector) => /** @type {HTMLInputElement} */ (document.querySelector(selector));
@@ -86,6 +86,7 @@ export function currentSettings() {
     layerDiff: Number(els.layerDiff.value),
     cornerThreshold: Number(els.cornerThreshold.value),
     straighten: Number(els.straighten.value),
+    smoothOutlines: Number(els.smoothOutlines.value),
     hierarchical: els.hierarchical.value,
     upscale:
       els.upscale.value === "auto" || els.upscale.value === "ultra"
@@ -153,6 +154,8 @@ export function updateOutputs() {
   els.layerDiffOut.textContent = els.layerDiff.value;
   els.cornerThresholdOut.textContent = els.cornerThreshold.value;
   els.straightenOut.textContent = Number(els.straighten.value) === 0 ? "Off" : els.straighten.value;
+  els.smoothOutlinesOut.textContent =
+    Number(els.smoothOutlines.value) === 0 ? "Off" : els.smoothOutlines.value;
   els.fuzzOut.textContent = els.fuzz.value;
   els.specksOut.textContent = els.specks.value;
   els.enclosedSizeOut.textContent = `${els.enclosedSize.value} px`;
@@ -279,6 +282,9 @@ export function applyExportProfile(name) {
   els.layerDiff.value = String(profile.layerDiff);
   els.cornerThreshold.value = String(profile.cornerThreshold);
   els.straighten.value = String(profile.straighten);
+  if (profile.smoothOutlines !== undefined) {
+    els.smoothOutlines.value = String(profile.smoothOutlines);
+  }
   radioEl(`input[name="mode"][value="${profile.mode}"]`).checked = true;
   els.hierarchical.value = profile.hierarchical;
   els.upscale.value = String(profile.upscale);
@@ -309,6 +315,15 @@ export function clearProfile() {
 // -- Settings persistence: survive reloads, keep tuned values ----------
 
 const SETTINGS_KEY = "rastertrace-settings";
+// The defaults in effect when the settings were saved. A saved value that
+// still equals its default then was never chosen, so it follows today's
+// default instead of pinning the old one.
+const SAVED_DEFAULTS_KEY = "rastertrace-settings-defaults";
+// Saves from before SAVED_DEFAULTS_KEY existed: the defaults that changed
+// since, so values left at those follow the new defaults too.
+const LEGACY_DEFAULTS = { straighten: 0, lengthThreshold: 4, spliceThreshold: 45 };
+/** This page's defaults, read before saved settings apply. */
+let pageDefaults = null;
 
 function snapshotSettings() {
   return {
@@ -320,6 +335,7 @@ function snapshotSettings() {
     layerDiff: Number(els.layerDiff.value),
     cornerThreshold: Number(els.cornerThreshold.value),
     straighten: Number(els.straighten.value),
+    smoothOutlines: Number(els.smoothOutlines.value),
     hierarchical: els.hierarchical.value,
     upscale:
       els.upscale.value === "auto" || els.upscale.value === "ultra"
@@ -361,6 +377,7 @@ function writeSettings() {
   saveTimer = 0;
   try {
     localStorage.setItem(SETTINGS_KEY, JSON.stringify(snapshotSettings()));
+    if (pageDefaults) localStorage.setItem(SAVED_DEFAULTS_KEY, JSON.stringify(pageDefaults));
   } catch {
     // storage full or blocked (private mode): persistence is optional
   }
@@ -395,6 +412,7 @@ function applySnapshot(saved) {
   set(els.layerDiff, "layerDiff");
   set(els.cornerThreshold, "cornerThreshold");
   set(els.straighten, "straighten");
+  set(els.smoothOutlines, "smoothOutlines");
   set(els.hierarchical, "hierarchical");
   set(els.upscale, "upscale");
   if (saved.mode) {
@@ -443,7 +461,25 @@ export function restoreSettings() {
   } catch {
     return;
   }
-  const defaults = JSON.stringify(snapshotSettings());
+  pageDefaults = snapshotSettings();
+  const defaults = JSON.stringify(pageDefaults);
+  let savedDefaults = null;
+  try {
+    savedDefaults = JSON.parse(localStorage.getItem(SAVED_DEFAULTS_KEY) ?? "null");
+  } catch {
+    // Unreadable: treat the save as one from before defaults were kept.
+  }
+  if (!savedDefaults || typeof savedDefaults !== "object") {
+    savedDefaults = { ...pageDefaults, ...LEGACY_DEFAULTS };
+  }
+  for (const key of Object.keys(saved)) {
+    if (
+      Object.prototype.hasOwnProperty.call(DEFAULTS, key) &&
+      JSON.stringify(saved[key]) === JSON.stringify(savedDefaults[key])
+    ) {
+      delete saved[key];
+    }
+  }
   if (saved.profile !== undefined) els.exportProfile.value = saved.profile;
   // Saves from before the checkbox existed: a chosen profile or preset
   // means the user picked color settings, so keep them across images.
@@ -453,6 +489,26 @@ export function restoreSettings() {
   // Tell the user their previous session's settings are in effect, so a
   // surprising result (e.g. an old stencil threshold) is explainable.
   els.restoredNote.hidden = JSON.stringify(snapshotSettings()) === defaults;
+}
+
+// Set per image by auto-detect, so they never count as carried over.
+const DETECTED_KEYS = ["colors", "speckle", "layerDiff"];
+
+/**
+ * Show the settings reminder when an image opens with settings that differ
+ * from the defaults: they carry over from image to image, and a result
+ * shaped by an earlier image's choices should be explainable. Values
+ * auto-detect sets for each image do not count while it is on.
+ */
+export function noteCarriedSettings() {
+  if (!pageDefaults) return;
+  const current = snapshotSettings();
+  const detected = els.autoDetect.checked ? DETECTED_KEYS : [];
+  const differs = Object.keys(pageDefaults).some(
+    (key) =>
+      !detected.includes(key) && JSON.stringify(current[key]) !== JSON.stringify(pageDefaults[key]),
+  );
+  els.restoredNote.hidden = !differs;
 }
 
 /** Quick color count: sets Colors only, leaving cleanup settings alone. */
@@ -496,6 +552,7 @@ export function resetSettings() {
   els.layerDiff.value = String(DEFAULTS.layerDiff);
   els.cornerThreshold.value = String(DEFAULTS.cornerThreshold);
   els.straighten.value = String(DEFAULTS.straighten);
+  els.smoothOutlines.value = String(DEFAULTS.smoothOutlines);
   els.hierarchical.value = DEFAULTS.hierarchical;
   els.upscale.value = String(DEFAULTS.upscale);
   radioEl(`input[name="mode"][value="${DEFAULTS.mode}"]`).checked = true;

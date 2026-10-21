@@ -13,12 +13,13 @@ import {
   removeSpecks,
   smoothAlpha,
   smoothLabels,
+  smoothOutlines,
   straightenPaths,
   thresholdImage,
   toGrayscale,
   tracePixels,
-} from "./preprocess.js?v=84";
-import { rasterPalette, snapFills } from "./palette.js?v=38";
+} from "./preprocess.js?v=91";
+import { rasterPalette, snapFills } from "./palette.js?v=45";
 
 // Explicit versioned URL: the glue's own wasm fetch drops the ?v= query,
 // so a rebuilt binary would otherwise be served from stale browser cache
@@ -102,6 +103,14 @@ self.onmessage = async (event) => {
     if (settings.stencil) {
       thresholdImage(img, settings.stencilThreshold ?? 128);
       fillTransparent(img, [255, 255, 255]);
+    }
+
+    // Smooth outlines: clear pixel-level steps and noise along every edge
+    // of reduced art. Pixel exact keeps its pixels, and unreduced images
+    // have no shared colors to vote with.
+    if ((reduced || settings.stencil) && settings.mode !== "none" && settings.smoothOutlines > 0) {
+      stage("Smoothing outlines…");
+      smoothOutlines(img, tracePixels(settings.smoothOutlines, scale));
     }
 
     // Smooth brush strokes vote among the final colors (and transparency),

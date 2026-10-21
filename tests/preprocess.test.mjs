@@ -1522,11 +1522,26 @@ test("analyzeFlatness does not count a thin anti-alias blend as a color", () => 
 test("detectedColorSettings keeps Merge below the closest pair of colors", () => {
   const solids = [
     [0, 0, 0],
-    [20, 0, 0],
+    [60, 0, 0],
     [255, 255, 255],
   ];
-  // Closest pair differs by 20 (sum of channel differences): Merge 10.
-  assert.equal(detectedColorSettings({ flat: true, colorCount: 3, solids }).layerDiff, 10);
+  // Closest pair differs by 60 (sum of channel differences): Merge 30.
+  assert.equal(detectedColorSettings({ flat: true, colorCount: 3, solids }).layerDiff, 30);
+  // Near-identical shades (8 apart) do not drag Merge below 12, and
+  // shades within it share one color in the count.
+  const dark = [
+    [22, 6, 0],
+    [4, 0, 0],
+    [12, 0, 0],
+    [245, 235, 217],
+  ];
+  const merged = detectedColorSettings({ flat: true, colorCount: 4, solids: dark });
+  assert.equal(merged.layerDiff, 12);
+  assert.equal(merged.colors, 3);
+  // The floor holds even when the closest pair alone would set less.
+  const many = [...Array(13)].map((_, i) => [i * 19, 255 - i * 19, 0]);
+  many.push([0, 255, 20]);
+  assert.equal(detectedColorSettings({ flat: true, colorCount: 14, solids: many }).layerDiff, 12);
   // Well separated colors keep the preset's Merge.
   const far = [
     [0, 0, 0],
@@ -1614,7 +1629,7 @@ test("straightenPaths output still parses for DXF/PDF export", async () => {
 });
 
 test("straighten setting has a default, validates, and appears in profiles", () => {
-  assert.equal(DEFAULTS.straighten, 0);
+  assert.equal(DEFAULTS.straighten, 1);
   assert.deepEqual(sanitizeSettings({ straighten: 1.5 }), { straighten: 1.5 });
   assert.deepEqual(sanitizeSettings({ straighten: -1 }), {});
   assert.deepEqual(sanitizeSettings({ straighten: 99 }), {});
@@ -1887,10 +1902,13 @@ test("sanitizeSettings validates the color source and swatches", () => {
   );
 });
 
-test("tracePixels keeps pixel settings tuned at 2x the same size at any scale", () => {
+test("tracePixels keeps pixel settings tuned at 2x the same size at any upscale", () => {
   assert.equal(tracePixels(8, 2), 8);
   assert.equal(tracePixels(8, 4), 16);
-  assert.equal(tracePixels(8, 1), 4);
+  // Below 2x a setting stays in trace pixels, as it was tuned: large
+  // sources traced at the size cap never reached 2x.
+  assert.equal(tracePixels(8, 1), 8);
+  assert.equal(tracePixels(8, 0.7), 8);
   // A set value never rounds away to nothing; 0 stays off.
   assert.equal(tracePixels(1, 0.5), 1);
   assert.equal(tracePixels(0, 4), 0);
@@ -1900,7 +1918,7 @@ test("profileColorSettings follows flat art's colors within the profile", () => 
   const profile = EXPORT_PROFILES.detail;
   const solids = [
     [0, 0, 0],
-    [20, 0, 0],
+    [60, 0, 0],
     [255, 255, 255],
   ];
   // Flat art: its own color count, Merge kept below its closest pair,
@@ -1908,11 +1926,17 @@ test("profileColorSettings follows flat art's colors within the profile", () => 
   assert.deepEqual(profileColorSettings(profile, { flat: true, colorCount: 3, solids }), {
     colors: 3,
     speckle: profile.speckle,
-    layerDiff: Math.min(profile.layerDiff, 10),
+    layerDiff: Math.min(profile.layerDiff, 30),
   });
   // Never above the profile's own color count.
+  const grid = [];
+  for (let r = 0; r < 256; r += 51) {
+    for (let g = 0; g < 256; g += 51) {
+      for (let b = 0; b < 256; b += 51) grid.push([r, g, b]);
+    }
+  }
   assert.equal(
-    profileColorSettings(profile, { flat: true, colorCount: 500, solids }).colors,
+    profileColorSettings(profile, { flat: true, colorCount: grid.length, solids: grid }).colors,
     profile.colors,
   );
   // Photos keep the profile's values.

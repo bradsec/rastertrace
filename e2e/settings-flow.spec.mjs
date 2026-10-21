@@ -172,19 +172,20 @@ test("auto-detect finds every color of a JPEG logo and traces them all", async (
 });
 
 test("auto-detect stays on while Merge recounts Max colors", async ({ page }) => {
-  // Two browns 10 apart (sum of channel differences) on cream.
+  // Two browns 30 apart (sum of channel differences) on cream.
   const file = await makePng(page, "close.png", 160, 120, CREAM, [
     ["#3c281e", 20, 30, 50, 60],
-    ["#46281e", 90, 30, 50, 60],
+    ["#5a281e", 90, 30, 50, 60],
   ]);
   const colors = page.locator("#colors");
   const autoDetect = page.locator("#auto-detect");
   await traced(page, () => page.locator("#file-input").setInputFiles(file));
   await openPanels(page);
   await expect(colors).toHaveValue("3");
-  await expect(page.locator("#layer-diff")).toHaveValue("5");
+  // Half their gap: 15.
+  await expect(page.locator("#layer-diff")).toHaveValue("15");
 
-  await setRange(page, "#layer-diff", 20);
+  await setRange(page, "#layer-diff", 40);
   await expect(autoDetect).toBeChecked();
   await expect(colors).toHaveValue("2");
 
@@ -344,7 +345,7 @@ test("Simplify sets the curve settings and shows Custom after hand edits", async
     for (const details of document.querySelectorAll("aside details")) details.open = true;
   });
   const out = page.locator("#simplify-out");
-  await expect(out).toHaveText("3");
+  await expect(out).toHaveText("4");
 
   await setRange(page, "#simplify", 6);
   await expect(page.locator("#length-threshold")).toHaveValue("10");
@@ -538,4 +539,64 @@ test("My colors traces with only the swatches given", async ({ page }) => {
   );
   await expect(page.locator("#swatch-note")).toHaveText("Imported 2 colors from brand.gpl.");
   await expect(page.locator("#swatch-list [data-swatch]")).toHaveCount(2);
+});
+
+test("saved settings left at old defaults follow the new ones", async ({ page }) => {
+  // A save from before defaults were recorded: every value at the
+  // defaults of the time (Straighten Off, Simplify 3). The page saves its
+  // settings shortly after loading; plant this after that.
+  await page.waitForTimeout(500);
+  await page.evaluate(() => {
+    localStorage.clear();
+    localStorage.setItem(
+      "rastertrace-settings",
+      JSON.stringify({
+        straighten: 0,
+        lengthThreshold: 4,
+        spliceThreshold: 45,
+        cornerThreshold: 60,
+      }),
+    );
+  });
+  await page.reload();
+  await expect(page.locator("#straighten")).toHaveValue("1");
+  await expect(page.locator("#simplify")).toHaveValue("4");
+  // The reminder sits in the workspace, shown once an image opens.
+  await expect(page.locator("#restored-note")).toHaveAttribute("hidden", "");
+
+  // A value chosen by hand is kept and the reminder says so. The page
+  // saves its settings shortly after loading; plant this after that.
+  await page.waitForTimeout(500);
+  await page.evaluate(() => {
+    localStorage.setItem(
+      "rastertrace-settings",
+      JSON.stringify({ straighten: 3, lengthThreshold: 6, spliceThreshold: 60 }),
+    );
+  });
+  await page.reload();
+  await expect(page.locator("#straighten")).toHaveValue("3");
+  await expect(page.locator("#restored-note")).not.toHaveAttribute("hidden");
+});
+
+test("opening an image with carried-over settings shows the reminder", async ({ page }) => {
+  const first = await makePng(page, "first.png", 160, 120, CREAM, [["#3c281e", 20, 30, 50, 60]]);
+  const second = await makePng(page, "second.png", 160, 120, CREAM, [["#2a9d8f", 40, 30, 80, 60]]);
+  const note = page.locator("#restored-note");
+  await traced(page, () => page.locator("#file-input").setInputFiles(first));
+  // Defaults, with auto-detect's own values per image: no reminder.
+  await expect(note).toBeHidden();
+  await traced(page, () => page.locator("#file-input").setInputFiles(second));
+  await expect(note).toBeHidden();
+
+  // A hand-set Max colors turns auto-detect off and carries over.
+  await openPanels(page);
+  await setRange(page, "#colors", 6);
+  await expect(page.locator("#auto-detect")).not.toBeChecked();
+  await traced(page, () => page.locator("#file-input").setInputFiles(first));
+  await expect(note).toBeVisible();
+  await expect(page.locator("#colors")).toHaveValue("6");
+
+  await note.getByRole("button", { name: "Reset to defaults" }).click();
+  await expect(note).toBeHidden();
+  await expect(page.locator("#auto-detect")).toBeChecked();
 });

@@ -195,7 +195,7 @@ test.describe("small screens", () => {
     await note.getByRole("button", { name: "Reset to defaults" }).click();
     await expect(note).toBeHidden();
     await expect(page.locator("#status")).toContainText("Settings reset");
-    await expect(page.locator("#straighten")).toHaveValue("0");
+    await expect(page.locator("#straighten")).toHaveValue("1");
   });
 
   test("status and zoom stay on screen while settings scroll", async ({ page }) => {

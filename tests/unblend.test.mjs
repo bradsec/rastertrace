@@ -1,12 +1,20 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { analyzeFlatness, reduceAndRemoveBackground } from "../js/preprocess.js";
+import {
+  analyzeFlatness,
+  modeFilter,
+  quantize,
+  reduceAndRemoveBackground,
+} from "../js/preprocess.js";
 
 const CREAM = [240, 230, 208];
 const NAVY = [30, 52, 90];
 const ORANGE = [244, 162, 97];
 const TEAL = [42, 157, 143];
 const RED = [230, 57, 70];
+// The repair is for upscaled art (trace pixels per source pixel above 1):
+// test at the reference upscale.
+const UPSCALED = 2;
 
 /** Flat shapes on cream, then a box blur: a soft-edged flat illustration. */
 function blurredArt(radius, { teal = true, red = true } = {}) {
@@ -58,7 +66,11 @@ function columnRuns(img, x, y0, y1) {
 for (const radius of [2, 4]) {
   test(`a blurred edge splits between its two fills (blur radius ${radius})`, () => {
     const img = blurredArt(radius);
-    reduceAndRemoveBackground(img, 5, { transparent: "", seeds: [CREAM, NAVY, ORANGE, TEAL, RED] });
+    reduceAndRemoveBackground(img, 5, {
+      transparent: "",
+      seeds: [CREAM, NAVY, ORANGE, TEAL, RED],
+      scale: UPSCALED,
+    });
     const cream = CREAM.join(",");
     const navy = NAVY.join(",");
     // Across the navy bar's top and bottom edges: cream, navy, cream only.
@@ -83,7 +95,11 @@ test("a real outline color between two fills stays", () => {
   const img = { data, width, height };
   // A sixth color forces quantize to remap instead of returning early.
   data.set([...RED, 255], 0);
-  reduceAndRemoveBackground(img, 3, { transparent: "", seeds: [CREAM, TEAL, NAVY] });
+  reduceAndRemoveBackground(img, 3, {
+    transparent: "",
+    seeds: [CREAM, TEAL, NAVY],
+    scale: UPSCALED,
+  });
   assert.deepEqual(columnRuns(img, 30, 20, 40), [CREAM.join(","), TEAL.join(","), NAVY.join(",")]);
 });
 
@@ -101,7 +117,7 @@ test("a smooth gradient keeps its middle bands", () => {
     }
   }
   const img = { data, width, height };
-  reduceAndRemoveBackground(img, 4, { transparent: "" });
+  reduceAndRemoveBackground(img, 4, { transparent: "", scale: UPSCALED });
   const runs = new Set();
   for (let x = 0; x < width; x++) runs.add(key(img.data, 3 * width + x));
   assert.equal(runs.size, 4);
@@ -111,7 +127,7 @@ test("My colors swatches split a blurred edge between its two fills", () => {
   const img = blurredArt(3);
   const hex = (rgb) => `#${rgb.map((v) => v.toString(16).padStart(2, "0")).join("")}`;
   const swatches = [CREAM, NAVY, ORANGE, TEAL, RED].map(hex);
-  reduceAndRemoveBackground(img, 5, { transparent: "", swatches });
+  reduceAndRemoveBackground(img, 5, { transparent: "", swatches, scale: UPSCALED });
   assert.deepEqual(
     columnRuns(img, 80, 25, 85),
     [CREAM, NAVY, CREAM].map((c) => c.join(",")),
@@ -122,7 +138,7 @@ test("My colors swatches that differ from the art still split a blurred edge", (
   const img = blurredArt(3);
   // Each swatch sits well away from the art color it stands for.
   const swatches = ["#ffffff", "#000050", "#ff8000", "#00a0a0", "#ff0000"];
-  reduceAndRemoveBackground(img, 5, { transparent: "", swatches });
+  reduceAndRemoveBackground(img, 5, { transparent: "", swatches, scale: UPSCALED });
   assert.deepEqual(columnRuns(img, 80, 25, 85), ["255,255,255", "0,0,80", "255,255,255"]);
 });
 
@@ -130,7 +146,10 @@ for (const radius of [1, 2, 4, 6]) {
   test(`auto-detect finds only the fills of blurred art (blur radius ${radius})`, () => {
     const { flat, colorCount, solids } = analyzeFlatness(blurredArt(radius));
     assert.equal(flat, true);
-    assert.equal(colorCount, 5, JSON.stringify(solids));
+    // Heavy blur on art this small widens bands past the reach that tells
+    // a soft edge's shade from a textured area (hair, halftone), which
+    // must keep its color: one shade may survive.
+    assert.ok(colorCount <= (radius >= 4 ? 6 : 5), JSON.stringify(solids));
     for (const fill of [CREAM, NAVY, ORANGE, TEAL, RED]) {
       assert.ok(
         solids.some((s) => s.every((v, c) => Math.abs(v - fill[c]) <= 3)),
@@ -163,7 +182,7 @@ test("soft edges split on noisy flat art with a manual color count", () => {
     const noise = ((p * 7919) % 13) - 6;
     for (let c = 0; c < 3; c++) img.data[p * 4 + c] += noise;
   }
-  reduceAndRemoveBackground(img, 3, { transparent: "", flatArt: true });
+  reduceAndRemoveBackground(img, 3, { transparent: "", flatArt: true, scale: UPSCALED });
   const at = (x, y) => key(img.data, y * img.width + x);
   const cream = at(80, 10);
   const navy = at(80, 55);
@@ -204,8 +223,11 @@ test("noisy fills still split a soft edge near a third fill", () => {
     }
   }
   const img = { data, width, height };
-  // Scale 2, the reference upscale, as flat art is traced upscaled.
-  reduceAndRemoveBackground(img, 3, { transparent: "", seeds: [GOLD, INK, PEACH], scale: 2 });
+  reduceAndRemoveBackground(img, 3, {
+    transparent: "",
+    seeds: [GOLD, INK, PEACH],
+    scale: UPSCALED,
+  });
   let stray = 0;
   for (let y = 40; y < height; y++) {
     for (let x = 0; x < width; x++) {
@@ -213,4 +235,42 @@ test("noisy fills still split a soft edge near a third fill", () => {
     }
   }
   assert.equal(stray, 0);
+});
+
+test("a trace at 1x or below skips the soft-edge repair", () => {
+  // Art at its own size or scaled down has sharp edges; the repair only
+  // steps their diagonals, so reduction stays plain.
+  const seeds = [CREAM, NAVY, ORANGE, TEAL, RED];
+  const repaired = blurredArt(3);
+  reduceAndRemoveBackground(repaired, 5, { transparent: "", seeds, scale: 0.7 });
+  const plain = blurredArt(3);
+  quantize(plain, 5, { seeds });
+  modeFilter(plain);
+  assert.deepEqual(repaired.data, plain.data);
+});
+
+test("auto-detect keeps a halftone color that sits between two others", () => {
+  // Orange skin below brown hair drawn as a halftone (brown with black
+  // dots), on black: brown is a darker orange, so it lies between orange
+  // and black like a blur shade, but it fills an area of its own.
+  const width = 200;
+  const height = 160;
+  const data = new Uint8ClampedArray(width * height * 4);
+  const SKIN = [242, 108, 35];
+  const HAIR = [124, 44, 2];
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      let rgb = [0, 0, 0];
+      if (x >= 20 && x < 180 && y >= 90) rgb = SKIN;
+      else if (x >= 20 && x < 180 && y >= 10 && y < 90) {
+        rgb = (x + y) % 2 === 0 ? [0, 0, 0] : HAIR;
+      }
+      data.set([...rgb, 255], (y * width + x) * 4);
+    }
+  }
+  const { solids } = analyzeFlatness({ data, width, height });
+  assert.ok(
+    solids.some((s) => s.every((v, c) => Math.abs(v - HAIR[c]) <= 12)),
+    JSON.stringify(solids),
+  );
 });

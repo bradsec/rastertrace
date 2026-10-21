@@ -16,23 +16,29 @@ export const MAX_TRACE_PIXELS = 64_000_000;
 // 1-1.5 GB. 2048x2048 tops out at 4.2 MP.
 export const MAX_TRACE_SIDE = 2048;
 
-// Opt-in "Ultra" ceiling for fabrication exports (laser, cutting): 4096
-// on the longest side is 16.8 MP, ~67 MB per RGBA copy. Desktop handles
-// it; low-memory mobile devices may not, so it never becomes the default.
+// "Ultra" ceiling for fabrication exports (laser, cutting): 4096 on the
+// longest side is 16.8 MP, ~67 MB per RGBA copy. Desktop handles it;
+// low-memory mobile devices may not, so Auto only reaches it for flat art
+// that is already that large, never by upscaling.
 export const MAX_TRACE_SIDE_ULTRA = 4096;
 
 // Pixel settings (Smallest shape, clean specks, edge smooth, edge trim,
-// defringe, wand expand) were tuned at the former 2x default trace scale.
+// defringe, wand expand) were tuned at the former 2x default trace scale,
+// which large sources never reached: they traced at the size cap, below
+// 2x, with these settings in plain trace pixels.
 const REFERENCE_SCALE = 2;
 
 /**
  * A pixel setting in trace pixels at `scale` (trace px per source px), so
- * it covers the same part of the image whatever the upscale. A set value
- * never rounds away to nothing; 0 stays off.
+ * it covers the same part of the image whatever the upscale. Below the
+ * reference scale it stays in trace pixels, as it was tuned: shrinking it
+ * with a large source's downscale would let edge noise through as specks
+ * and ragged outlines. A set value never rounds away to nothing; 0 stays
+ * off.
  */
 export function tracePixels(value, scale) {
   if (value <= 0) return 0;
-  return Math.max(1, Math.round((value * scale) / REFERENCE_SCALE));
+  return Math.max(1, Math.round((value * Math.max(scale, REFERENCE_SCALE)) / REFERENCE_SCALE));
 }
 
 /**
@@ -85,9 +91,10 @@ export const DEFAULTS = Object.freeze({
   stencilThreshold: 128,
   stencilInk: "black",
   pathPrecision: 3,
-  lengthThreshold: 4,
-  spliceThreshold: 45,
-  straighten: 0,
+  lengthThreshold: 6,
+  spliceThreshold: 60,
+  straighten: 1,
+  smoothOutlines: 1,
 });
 
 // Keyed by color count. Speckle and layer difference scale inversely:
@@ -131,6 +138,14 @@ export function simplifyLevel(lengthThreshold, spliceThreshold) {
   );
 }
 
+// The lowest Merge auto-detect sets (sum of RGB channel differences).
+// Shades closer than this look the same: kept apart, as a near-black
+// outline and a dark background about 10 apart were, their noisy shared
+// edge breaks the outline into ragged pieces. Kept low so real nearby
+// shades (skin tones, hair highlights) keep their own colors; Smooth
+// outlines clears the remaining edge noise.
+const DETECTED_MERGE_FLOOR = 12;
+
 /**
  * Color settings auto-detection derives from one image's analyzeFlatness
  * result. Flat art snaps colors to the detected count and takes cleanup
@@ -150,7 +165,9 @@ export function detectedColorSettings({ flat, colorCount, solids }) {
     .find((k) => k >= colorCount);
   const preset = PRESETS[key ?? 256];
   // The tracer merges neighboring layers whose colors differ by no more
-  // than Merge, so stay under half the closest pair of detected colors.
+  // than Merge, so stay under half the closest pair of detected colors,
+  // but no lower than DETECTED_MERGE_FLOOR: shades closer than that look
+  // the same, and kept apart their noisy shared edge breaks up outlines.
   let layerDiff = preset.layerDiff;
   if (solids && solids.length > 1) {
     let closest = Infinity;
@@ -159,7 +176,15 @@ export function detectedColorSettings({ flat, colorCount, solids }) {
         closest = Math.min(closest, colorDistance(solids[i], solids[j]));
       }
     }
-    layerDiff = Math.min(layerDiff, Math.max(1, Math.floor(closest / 2)));
+    // The floor wins over the preset too: many-color presets set a low
+    // Merge that would keep near-identical shades apart again.
+    layerDiff = Math.max(DETECTED_MERGE_FLOOR, Math.min(layerDiff, Math.floor(closest / 2)));
+    // Shades within Merge share a color, so they take no slot of their own.
+    return {
+      colors: distinctColorCount(solids, layerDiff),
+      speckle: preset.speckle,
+      layerDiff,
+    };
   }
   return { colors: colorCount, speckle: preset.speckle, layerDiff };
 }
@@ -251,6 +276,7 @@ export const EXPORT_PROFILES = Object.freeze({
     cornerThreshold: 45,
     hierarchical: "stacked",
     pathPrecision: 4,
+    lengthThreshold: 4,
     spliceThreshold: 30,
     upscale: "auto",
     straighten: 0,
@@ -266,6 +292,7 @@ export const EXPORT_PROFILES = Object.freeze({
     cornerThreshold: 25,
     hierarchical: "stacked",
     pathPrecision: 4,
+    lengthThreshold: 4,
     spliceThreshold: 20,
     upscale: "auto",
     straighten: 0,
@@ -290,9 +317,11 @@ export const EXPORT_PROFILES = Object.freeze({
     cornerThreshold: 60,
     hierarchical: "stacked",
     pathPrecision: 4,
+    lengthThreshold: 4,
     spliceThreshold: 45,
     upscale: 1,
     straighten: 0,
+    smoothOutlines: 0,
     minify: false,
     stencil: false,
   },
@@ -706,7 +735,8 @@ const SETTING_CHECKS = {
   pathPrecision: (v) => Number.isFinite(v) && v >= 1 && v <= 4,
   lengthThreshold: (v) => Number.isFinite(v) && v >= 3.5 && v <= 10,
   spliceThreshold: (v) => Number.isFinite(v) && v >= 10 && v <= 90,
-  straighten: (v) => Number.isFinite(v) && v >= 0 && v <= 4,
+  straighten: (v) => Number.isFinite(v) && v >= 0 && v <= 16,
+  smoothOutlines: (v) => Number.isInteger(v) && v >= 0 && v <= 4,
   exportSize: (v) => v === "px" || v === "physical",
   physicalWidth: (v) => typeof v === "number" && physicalWidthValue(v) !== null,
   physicalUnit: (v) => ["px", "mm", "cm", "in"].includes(v),
@@ -1449,7 +1479,10 @@ export function reduceAndRemoveBackground(img, colors, background, stage = () =>
       // but its edges blur all the same.
       flat = result === "flat" || flatArt;
     }
-    if (flat) unblendEdges(img, before, tracePixels(BLEND_REACH, scale));
+    // Only upscaled art has soft edges to repair: at its own size or
+    // scaled down, edges are a pixel or two wide, which nearest-color
+    // snapping already splits, and repairing them only steps diagonals.
+    if (flat && scale > 1) unblendEdges(img, before, tracePixels(BLEND_REACH, scale));
     modeFilter(img);
   };
   const connected = transparent === "edges" || (Array.isArray(transparent) && contiguous);
@@ -2042,13 +2075,13 @@ const SMOOTH_PASSES = 3;
  * than about `radius` flatten while longer edges stay put. Each color's
  * mask is box-blurred twice (as smoothAlpha does for the matte) over the
  * stroke's box grown by the blur's reach, the strongest color wins, and
- * the vote repeats SMOOTH_PASSES times.
+ * the vote repeats `passes` times.
  * Transparency counts as a color, so erased edges smooth too, and no new
  * colors appear. `regions` hold a stroke's mask in image pixels: { x, y,
  * width, height, bits (1 inside), radius }. Mutates img in place.
  * @param {{ x: number, y: number, width: number, height: number, bits: Uint8Array, radius: number }[]} regions
  */
-export function smoothLabels(img, regions) {
+export function smoothLabels(img, regions, passes = SMOOTH_PASSES) {
   const { data, width, height } = img;
   for (const region of regions) {
     const radius = Math.max(1, Math.round(region.radius));
@@ -2070,7 +2103,7 @@ export function smoothLabels(img, regions) {
     // One vote moves edges but keeps each color's area, so a notch only
     // spreads into a shallow dip; repeating it flattens the dip, as
     // curvature flow does.
-    for (let pass = 0; pass < SMOOTH_PASSES; pass++) {
+    for (let pass = 0; pass < passes; pass++) {
       // Color key per box pixel; -1 is transparent.
       const counts = new Map();
       for (let y = 0; y < boxHeight; y++) {
@@ -2127,6 +2160,19 @@ export function smoothLabels(img, regions) {
     }
   }
   return img;
+}
+
+/**
+ * Smooth outlines: one smoothLabels vote over the whole image at `radius`
+ * (trace pixels), clearing the pixel-level steps and noise reduced flat
+ * art leaves along its edges. One pass keeps lines a few pixels wide that
+ * repeated votes would thin. Mutates img in place.
+ */
+export function smoothOutlines(img, radius) {
+  if (radius <= 0) return img;
+  const { width, height } = img;
+  const bits = new Uint8Array(width * height).fill(1);
+  return smoothLabels(img, [{ x: 0, y: 0, width, height, bits, radius }], 1);
 }
 
 /**
@@ -2335,16 +2381,23 @@ const SHADE_END = 0.08;
 // A real color fills areas: this share of its pixels have neighbors all
 // within the image's noise of their own color. Blur shades change from
 // pixel to pixel across an edge, and anti-alias shades are lines a pixel
-// or two wide. Measured: real sample colors 0.27 or more, blur and
-// anti-alias shades 0.09 or less.
-const SHADE_MIN_INTERIOR = 0.2;
+// or two wide. Measured: blur and anti-alias shades 0.04 or less, while
+// textured real colors in large AI art (hair, gun-metal greys) measure
+// 0.08 to 0.19 and must keep their own color.
+const SHADE_MIN_INTERIOR = 0.05;
+// A halftone or textured area (dotted hair, screened shading) fails the
+// interior test too, but covers an area of its own: a shade is also only
+// dropped when this share of its pixels have both of its ends within
+// SHADE_REACH pixels, as a soft edge's band between two fills does.
+const SHADE_MIN_BETWEEN = 0.6;
+const SHADE_REACH = 12;
 
 /**
  * Detected colors without the shades a soft edge leaves between two
  * fills. Blurred or resampled flat art grows bands of every mix of the
  * two colors along each edge, and the common ones pass for colors. A
  * color that is a mix of two other detected colors is dropped when its
- * pixels rarely fill areas. `solids` are ordered most common first; the
+ * pixels rarely fill areas and mostly lie where those two colors meet. `solids` are ordered most common first; the
  * least common are tested first and only kept colors serve as ends.
  */
 function withoutBlendShades(img, solids) {
@@ -2394,7 +2447,7 @@ function withoutBlendShades(img, solids) {
     return best;
   };
   // Share of the color's pixels whose four neighbors match their own.
-  const interiorShare = (colors, k) => {
+  const measure = (colors, k) => {
     let count = 0;
     let interior = 0;
     for (let p = 0; p < pixelCount; p += stride) {
@@ -2415,6 +2468,41 @@ function withoutBlendShades(img, solids) {
     }
     return count ? interior / count : 0;
   };
+  // Share of the color's pixels with both `a` and `b` within SHADE_REACH:
+  // a soft edge's shade lies in the band where they meet.
+  const between = (colors, k, a, b) => {
+    let count = 0;
+    let found = 0;
+    for (let p = 0; p < pixelCount; p += stride * 3) {
+      const i = p * 4;
+      if (data[i + 3] < ALPHA_THRESHOLD || nearest(i, colors) !== k) continue;
+      count += 1;
+      const x0 = p % width;
+      const y0 = (p - x0) / width;
+      let seenA = false;
+      let seenB = false;
+      for (
+        let y = Math.max(0, y0 - SHADE_REACH);
+        y <= Math.min(height - 1, y0 + SHADE_REACH);
+        y++
+      ) {
+        for (
+          let x = Math.max(0, x0 - SHADE_REACH);
+          x <= Math.min(width - 1, x0 + SHADE_REACH);
+          x++
+        ) {
+          const j = (y * width + x) * 4;
+          if (data[j + 3] < ALPHA_THRESHOLD) continue;
+          const near = nearest(j, colors);
+          if (near === a) seenA = true;
+          else if (near === b) seenB = true;
+        }
+        if (seenA && seenB) break;
+      }
+      if (seenA && seenB) found += 1;
+    }
+    return count ? found / count : 0;
+  };
   const kept = [...solids];
   for (let k = kept.length - 1; k >= 2; k--) {
     const color = kept[k];
@@ -2425,7 +2513,18 @@ function withoutBlendShades(img, solids) {
         const fit = along(color, ends[m], ends[j]);
         if (!fit || fit.residual2 > tolerance2) continue;
         if (fit.t < SHADE_END || fit.t > 1 - SHADE_END) continue;
-        shade = interiorShare(kept, k) < SHADE_MIN_INTERIOR;
+        shade =
+          measure(kept, k) < SHADE_MIN_INTERIOR &&
+          between(kept, k, kept.indexOf(ends[m]), kept.indexOf(ends[j])) >= SHADE_MIN_BETWEEN;
+        if (globalThis.SHADE_DEBUG)
+          console.log(
+            "CAND",
+            JSON.stringify(color),
+            "interior",
+            measure(kept, k).toFixed(2),
+            "between",
+            between(kept, k, kept.indexOf(ends[m]), kept.indexOf(ends[j])).toFixed(2),
+          );
       }
     }
     if (shade) kept.splice(k, 1);

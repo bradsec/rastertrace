@@ -872,7 +872,7 @@
                     <option value="2">2×</option>
                     <option value="3">3×</option>
                     <option value="4">4×</option>
-                    <option value="auto" selected>Auto (fit 2048, default)</option>
+                    <option value="auto" selected>Auto (default)</option>
                     <option value="ultra">Ultra (fit 4096, slow)</option>
                   </select>
                 </div>
@@ -905,9 +905,9 @@
                       title="How closely paths follow the image. Lower keeps more detail and anchor points; higher gives simpler, smoother paths with fewer points. Sets Segment length and Spline splitting under Advanced tracing"
                       >Simplify</label
                     >
-                    <output id="simplify-out" for="simplify">3</output>
+                    <output id="simplify-out" for="simplify">4</output>
                   </div>
-                  <input type="range" id="simplify" min="0" max="6" step="1" value="3" />
+                  <input type="range" id="simplify" min="0" max="6" step="1" value="4" />
                 </div>
 
                 <div class="field">
@@ -929,9 +929,21 @@
                       title="Snap wobbly, bumpy or stair-stepped edges to true straight lines, up to this many source pixels off. Higher values straighten more aggressively; corners and curves larger than the setting are kept"
                       >Straighten lines</label
                     >
-                    <output id="straighten-out" for="straighten">Off</output>
+                    <output id="straighten-out" for="straighten">1</output>
                   </div>
-                  <input type="range" id="straighten" min="0" max="16" step="0.5" value="0" />
+                  <input type="range" id="straighten" min="0" max="16" step="0.5" value="1" />
+                </div>
+
+                <div class="field">
+                  <div class="label-row">
+                    <label
+                      for="smooth-outlines"
+                      title="Smooths pixel-level steps and noise along every edge before tracing, so outlines come out cleaner. Higher values smooth more but round small corners and can thin fine lines. Off in Pixel mode"
+                      >Smooth outlines</label
+                    >
+                    <output id="smooth-outlines-out" for="smooth-outlines">1</output>
+                  </div>
+                  <input type="range" id="smooth-outlines" min="0" max="4" step="1" value="1" />
                 </div>
 
                 <div class="field">
@@ -968,7 +980,7 @@
                         title="Curves subdivide until segments are shorter than this. Lower keeps more detail; higher simplifies"
                         >Segment length</label
                       >
-                      <output id="length-threshold-out" for="length-threshold">4</output>
+                      <output id="length-threshold-out" for="length-threshold">6</output>
                     </div>
                     <input
                       type="range"
@@ -976,7 +988,7 @@
                       min="3.5"
                       max="10"
                       step="0.5"
-                      value="4"
+                      value="6"
                     />
                   </div>
                   <div class="subfield">
@@ -986,7 +998,7 @@
                         title="Angle change needed to split a spline. Lower traces more faithful curves; higher simplifies"
                         >Spline splitting</label
                       >
-                      <output id="splice-threshold-out" for="splice-threshold">45</output>
+                      <output id="splice-threshold-out" for="splice-threshold">60</output>
                     </div>
                     <input
                       type="range"
@@ -994,7 +1006,7 @@
                       min="10"
                       max="90"
                       step="5"
-                      value="45"
+                      value="60"
                     />
                   </div>
                 </details>
@@ -1636,8 +1648,9 @@
             <div>
               <dt>Upscale before tracing</dt>
               <dd>
-                Enlarges the image before tracing for smoother curves. Auto fits 2048&nbsp;px; Ultra
-                fits 4096&nbsp;px for fabrication (slower).
+                Enlarges the image before tracing for smoother curves. Auto fits 2048&nbsp;px, and
+                traces flat art larger than that at its own size, up to 4096&nbsp;px; Ultra fits
+                4096&nbsp;px for fabrication (slower).
               </dd>
             </div>
             <div>
@@ -1668,6 +1681,15 @@
                 Snaps edges that wander up to this many source pixels from a straight line onto one.
                 Low values clean up slight wobble; high values flatten the stair steps of an
                 enlarged, blurred image. Detail smaller than the setting is flattened too.
+              </dd>
+            </div>
+            <div>
+              <dt>Smooth outlines</dt>
+              <dd>
+                Smooths pixel-level steps and noise along every edge before tracing, the same way
+                the smooth brush does, across the whole image. 1 cleans up most art; higher values
+                smooth more but round small corners and can thin fine lines. It does not apply in
+                Pixel mode or when Max colors is All.
               </dd>
             </div>
             <div>
@@ -2102,6 +2124,6 @@
         location.reload();
       };
     </script>
-    <script type="module" src="js/app.js?v=172" onerror="window.recoverRasterTraceBoot()"></script>
+    <script type="module" src="js/app.js?v=182" onerror="window.recoverRasterTraceBoot()"></script>
   </body>
 </html>

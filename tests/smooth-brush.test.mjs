@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { smoothLabels } from "../js/preprocess.js";
+import { DEFAULTS, sanitizeSettings, smoothLabels, smoothOutlines } from "../js/preprocess.js";
 
 const BLUE = [20, 80, 180];
 const CREAM = [240, 228, 200];
@@ -125,4 +125,31 @@ test("smoothLabels evens out a stair-stepped diagonal", () => {
   // Blur radius a quarter of the stroke diameter, as the brush uses.
   smoothLabels(img, [disc(40, 37, 24, 12)]);
   assert.ok(wobble() <= 1, `wobble ${before} -> ${wobble()}`);
+});
+
+test("smoothOutlines clears single-pixel steps but keeps a 3 px line", () => {
+  // Blue over cream along row 20 with one-pixel bumps every 4 columns,
+  // and a 3 px cream line across the blue.
+  const rows = [];
+  for (let y = 0; y < 40; y++) {
+    let row = "";
+    for (let x = 0; x < 40; x++) {
+      const bump = y === 19 && x % 4 === 0;
+      row += y >= 20 || bump || (y >= 6 && y < 9) ? "c" : "b";
+    }
+    rows.push(row);
+  }
+  const img = image(rows, { b: BLUE, c: CREAM });
+  smoothOutlines(img, 1);
+  for (let x = 2; x < 38; x++) {
+    assert.deepEqual(colorAt(img, x, 19), BLUE, `bump at ${x}`);
+    assert.deepEqual(colorAt(img, x, 7), CREAM, `line at ${x}`);
+  }
+});
+
+test("smooth outlines setting defaults on and validates", () => {
+  assert.equal(DEFAULTS.smoothOutlines, 1);
+  assert.deepEqual(sanitizeSettings({ smoothOutlines: 3 }), { smoothOutlines: 3 });
+  assert.deepEqual(sanitizeSettings({ smoothOutlines: 5 }), {});
+  assert.deepEqual(sanitizeSettings({ smoothOutlines: 1.5 }), {});
 });
