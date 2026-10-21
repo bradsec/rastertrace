@@ -1,9 +1,9 @@
 // Palette panel: swatch grid, color editor, and the result eyedropper
 // that picks a traced color to edit. Edits recolor fills only; they
 // only retrace when switching layering.
-import { els, hooks, state } from "./context.js?v=67";
-import { deactivateCleanupTools, setView, showResultOverSource } from "./cleanup-tools.js?v=89";
-import { refreshExport } from "./exporters.js?v=79";
+import { els, hooks, state } from "./context.js?v=68";
+import { deactivateCleanupTools, setView, showResultOverSource } from "./cleanup-tools.js?v=90";
+import { refreshExport } from "./exporters.js?v=80";
 import {
   mergeEdits,
   mergeGroups,

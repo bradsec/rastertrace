@@ -1,7 +1,6 @@
 // Shared DOM references and mutable app state, imported by every UI
 // module. Keeps no logic beyond tiny helpers so it can never participate
 // in an import cycle.
-import { MAX_TRACE_SIDE } from "./preprocess.js?v=93";
 
 /**
  * @template {Element} [T=HTMLElement]
@@ -207,11 +206,10 @@ export const els = {
 };
 
 export const state = {
-  bitmap: null, // capped at decodedSide; source dims kept separately
+  bitmap: null, // decoded at MAX_TRACE_SIDE_ULTRA; source dims kept separately
   file: null, // original file, kept for the Ultra re-decode
   rotation: 0, // quarter turns applied since load, for re-decode replay
   inverted: false, // negative applied since load, replayed on Ultra re-decode
-  decodedSide: MAX_TRACE_SIDE, // cap used when bitmap was decoded (Ultra's once an image loads)
   sourceWidth: 0,
   sourceHeight: 0,
   fileName: "image",

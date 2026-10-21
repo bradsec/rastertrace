@@ -10,7 +10,7 @@ import {
 } from "./preprocess.js?v=93";
 import { recolorSvg } from "./palette.js?v=47";
 import { parseSvgPaths, toDxf, toPdf } from "./vectorexport.js?v=44";
-import { els, hooks, preferences, showError, state } from "./context.js?v=67";
+import { els, hooks, preferences, showError, state } from "./context.js?v=68";
 
 const DISPLAY_UNITS_PER_INCH = { px: 96, in: 1, cm: 2.54, mm: 25.4 };
 

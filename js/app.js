@@ -33,10 +33,10 @@ import {
   USER_PRESET_PREFIX,
   userPresetName,
 } from "./preprocess.js?v=93";
-import { $, els, hooks, preferences, showError, state } from "./context.js?v=67";
+import { $, els, hooks, preferences, showError, state } from "./context.js?v=68";
 import { bakeCleanup, smoothRegions } from "./bake.js?v=18";
 import { rotateCleanupAction } from "./eraser.js?v=14";
-import { refreshExport, setResultActions } from "./exporters.js?v=79";
+import { refreshExport, setResultActions } from "./exporters.js?v=80";
 import {
   clearSelection,
   setBlobFill,
@@ -44,8 +44,8 @@ import {
   setSelectionTool,
   setView,
   showResultOverSource,
-} from "./cleanup-tools.js?v=89";
-import { afterTrace, resetPalette } from "./palette-ui.js?v=73";
+} from "./cleanup-tools.js?v=90";
+import { afterTrace, resetPalette } from "./palette-ui.js?v=74";
 import {
   applyExportProfile,
   applyMeasurementUnit,
@@ -76,8 +76,8 @@ import {
   updateTraceFields,
   updateTransparencyFields,
   userPresets,
-} from "./settings.js?v=91";
-import { actualSizeView, resetView } from "./view.js?v=89";
+} from "./settings.js?v=92";
+import { actualSizeView, resetView } from "./view.js?v=90";
 
 const SAMPLE_FILES = [
   "synthwave.png",
@@ -372,7 +372,6 @@ async function loadFile(file) {
     }
     state.inverted = false;
     els.invertImage.setAttribute("aria-pressed", "false");
-    state.decodedSide = MAX_TRACE_SIDE_ULTRA;
     state.sourceWidth = sourceWidth;
     state.sourceHeight = sourceHeight;
     state.raster = null;
@@ -394,7 +393,6 @@ async function loadFile(file) {
     syncFoldMenu();
     resetView();
     setView("result");
-    if (els.upscale.value === "ultra") await ensureUltraBitmap();
     await retrace();
     if (token === state.loadToken) setBitmapActionsEnabled(true);
     els.preview.focus({ preventScroll: false });
@@ -653,11 +651,8 @@ async function updateSourceView(bitmap, token) {
   return true;
 }
 
-let bitmapRevision = 0;
-
 async function rotate(clockwise) {
   if (!state.bitmap || els.rotateLeft.disabled) return;
-  bitmapRevision++;
   const token = state.loadToken;
   const sourceBitmap = state.bitmap;
   setBitmapActionsEnabled(false);
@@ -690,7 +685,6 @@ async function rotate(clockwise) {
 
 async function invert() {
   if (!state.bitmap || els.invertImage.disabled) return;
-  bitmapRevision++;
   const token = state.loadToken;
   const sourceBitmap = state.bitmap;
   setBitmapActionsEnabled(false);
@@ -817,65 +811,8 @@ els.enclosed.addEventListener("change", () => {
 });
 els.gradient.addEventListener("change", scheduleRetrace);
 
-/**
- * The bitmap is decoded at the 2048 cap. Ultra re-decodes the kept file
- * at 4096 so capped sources regain real detail, replaying any rotation.
- * Uncapped sources (small logos) skip this: upscaling covers them.
- */
-let ultraBitmapPromise = null;
-let ultraBitmapToken = -1;
-
-async function loadUltraBitmap() {
-  if (!state.file || !state.bitmap || state.decodedSide >= MAX_TRACE_SIDE_ULTRA) return;
-  if (
-    Math.max(state.sourceWidth, state.sourceHeight) <=
-    Math.max(state.bitmap.width, state.bitmap.height)
-  ) {
-    state.decodedSide = MAX_TRACE_SIDE_ULTRA;
-    return;
-  }
-  const token = state.loadToken;
-  const revision = bitmapRevision;
-  const sourceBitmap = state.bitmap;
-  const rotation = state.rotation;
-  const inverted = state.inverted;
-  els.status.textContent = "Reloading image at 4096 px…";
-  try {
-    const decoded = await decodeImage(state.file, MAX_TRACE_SIDE_ULTRA);
-    let bitmap = await capBitmap(decoded, MAX_TRACE_SIDE_ULTRA);
-    for (let i = 0; i < rotation; i++) bitmap = await rotateBitmap(bitmap, true);
-    if (inverted) bitmap = await invertBitmap(bitmap);
-    if (token !== state.loadToken || revision !== bitmapRevision || state.bitmap !== sourceBitmap) {
-      bitmap.close();
-      return;
-    }
-    sourceBitmap.close();
-    state.bitmap = bitmap;
-    state.raster = null;
-    state.decodedSide = MAX_TRACE_SIDE_ULTRA;
-    if (state.rotation || state.inverted) await updateSourceView(bitmap, token);
-  } catch (err) {
-    showError(err.message || "Could not reload the image at 4096 px.");
-  }
-}
-
-async function ensureUltraBitmap() {
-  const token = state.loadToken;
-  if (ultraBitmapPromise && ultraBitmapToken !== token) {
-    await ultraBitmapPromise;
-  }
-  if (!ultraBitmapPromise) {
-    ultraBitmapToken = token;
-    ultraBitmapPromise = loadUltraBitmap().finally(() => {
-      ultraBitmapPromise = null;
-    });
-  }
-  return ultraBitmapPromise;
-}
-
-els.upscale.addEventListener("change", async () => {
+els.upscale.addEventListener("change", () => {
   clearProfile();
-  if (els.upscale.value === "ultra") await ensureUltraBitmap();
   scheduleRetrace();
 });
 els.grayscale.addEventListener("change", scheduleRetrace);
@@ -929,13 +866,12 @@ for (const input of [els.pathPrecision, els.lengthThreshold, els.spliceThreshold
   });
 }
 
-els.exportProfile.addEventListener("change", async () => {
+els.exportProfile.addEventListener("change", () => {
   const name = els.exportProfile.value;
   if (!name) return;
   if (name.startsWith(USER_PRESET_PREFIX)) applyUserPreset(name);
   else applyExportProfile(name);
   if (els.autoDetect.checked && state.bitmap) applyDetectedSettings(state.bitmap);
-  if (els.upscale.value === "ultra") await ensureUltraBitmap();
   refreshExport(); // minify may have changed; applies without waiting
   scheduleRetrace();
 });
