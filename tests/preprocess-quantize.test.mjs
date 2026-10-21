@@ -1,6 +1,13 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { parseHexColor, quantize, srgbToOklab, toHexColor } from "../js/preprocess.js";
+import {
+  analyzeFlatness,
+  oklabToSrgb,
+  parseHexColor,
+  quantize,
+  srgbToOklab,
+  toHexColor,
+} from "../js/preprocess.js";
 
 test("quantize preserves eight flat colors despite rare edge blends", () => {
   const runs = [
@@ -197,4 +204,101 @@ test("quantize keeps a painted fill color on a clustered palette", () => {
   const colors = colorsOf(img);
   assert.ok(colors.includes("#00FF00"), colors.join(" "));
   assert.equal(colors.length, 5);
+});
+
+/**
+ * Flat art like a large AI-made sticker: a dark ground, cream, grey and tan
+ * areas with soft (blurred) edges and slight noise, and optionally a small
+ * pink accent whose noise spreads it over many quantize bins. The accent
+ * covers about 0.08% of the image, under the 0.1% a flat color needs.
+ */
+function stickerArt({ accent = true } = {}) {
+  const width = 600;
+  const height = 600;
+  const colors = {
+    ground: [22, 6, 0],
+    cream: [245, 235, 217],
+    grey: [76, 81, 86],
+    tan: [131, 108, 79],
+    pink: [196, 120, 108],
+  };
+  const paint = (x, y) => {
+    if (accent && x >= 300 && x < 317 && y >= 420 && y < 437) return colors.pink;
+    if ((x - 300) ** 2 + (y - 260) ** 2 < 170 ** 2) return colors.cream;
+    if (x >= 60 && x < 260 && y >= 470 && y < 560) return colors.grey;
+    if (x >= 380 && x < 560 && y >= 470 && y < 560) return colors.tan;
+    return colors.ground;
+  };
+  let seed = 11;
+  const noise = (amount) => {
+    seed = (seed * 16807) % 2147483647;
+    return Math.round((seed / 2147483647 - 0.5) * 2 * amount);
+  };
+  const data = new Uint8ClampedArray(width * height * 4);
+  // A 3x3 box average softens every edge into a band of blends, as
+  // upscaled and compressed art has.
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const sum = [0, 0, 0];
+      for (let dy = -1; dy <= 1; dy++) {
+        for (let dx = -1; dx <= 1; dx++) {
+          const c = paint(x + dx, y + dy);
+          for (let k = 0; k < 3; k++) sum[k] += c[k];
+        }
+      }
+      const pinkArea = paint(x, y) === colors.pink;
+      const i = (y * width + x) * 4;
+      for (let k = 0; k < 3; k++) data[i + k] = sum[k] / 9 + noise(pinkArea ? 4 : 2);
+      data[i + 3] = 255;
+    }
+  }
+  return { width, height, data };
+}
+
+const PINK = srgbToOklab([196, 120, 108]);
+const labDistance = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
+
+/** Distinct output colors of a reduced image, and its color at (x, y). */
+function reduced(img, x, y) {
+  const fills = new Set();
+  for (let i = 0; i < img.data.length; i += 4) fills.add(toHexColor(img.data.subarray(i, i + 3)));
+  const i = (y * img.width + x) * 4;
+  return { fills, at: srgbToOklab([...img.data.subarray(i, i + 3)]) };
+}
+
+test("quantize keeps a small accent color that stands apart from the rest", () => {
+  const img = stickerArt();
+  quantize(img, 32, { layerDiff: 12 });
+  const { fills, at } = reduced(img, 308, 428);
+  assert.ok(labDistance(at, PINK) < 0.03, `accent became ${toHexColor(oklabToSrgb(at))}`);
+  assert.equal(fills.size, 5, [...fills].join(" "));
+  // Mid blends along the cream disk's edge sit nearer the accent than any
+  // fill; they must not trace as slivers of it.
+  const accentHex = toHexColor(oklabToSrgb(at));
+  let stray = 0;
+  for (let y = 0; y < img.height; y++) {
+    for (let x = 0; x < img.width; x++) {
+      if (x >= 298 && x < 319 && y >= 418 && y < 439) continue;
+      const i = (y * img.width + x) * 4;
+      if (toHexColor(img.data.subarray(i, i + 3)) === accentHex) stray++;
+    }
+  }
+  assert.equal(stray, 0, `${stray} accent pixels outside the accent`);
+});
+
+test("quantize gives soft edge blends no accent slot", () => {
+  const img = stickerArt({ accent: false });
+  quantize(img, 32, { layerDiff: 12 });
+  const { fills } = reduced(img, 0, 0);
+  assert.equal(fills.size, 4, [...fills].join(" "));
+});
+
+test("analyzeFlatness detects a small accent color that stands apart", () => {
+  const { solids } = analyzeFlatness(stickerArt());
+  assert.ok(
+    solids.some((rgb) => labDistance(srgbToOklab(rgb), PINK) < 0.03),
+    solids.map((rgb) => toHexColor(rgb)).join(" "),
+  );
+  assert.equal(solids.length, 5, solids.map((rgb) => toHexColor(rgb)).join(" "));
+  assert.equal(analyzeFlatness(stickerArt({ accent: false })).solids.length, 4);
 });

@@ -2670,6 +2670,20 @@ function similarFlatness(img) {
       solidClusters.push(c);
     }
   }
+  // A small area far from every other color is an accent, not a shade.
+  for (const c of areas) {
+    if (
+      c.count < opaque * SOLID_MIN_SHARE &&
+      c.count >= opaque * SOLID_MIN_SHARE * FLAT_ACCENT_SHARE &&
+      solidClusters.every(
+        (s) =>
+          Math.hypot(s.lab[0] - c.lab[0], s.lab[1] - c.lab[1], s.lab[2] - c.lab[2]) >=
+          FLAT_ACCENT_DISTANCE,
+      )
+    ) {
+      solidClusters.push(c);
+    }
+  }
   if (solidClusters.length > 32) return null;
   const solids = withoutBlendShades(
     img,
@@ -2838,6 +2852,17 @@ const FLAT_SEED_MIN_DISTANCE = 0.015;
 const FLAT_SEED_MIN_SHARE = 0.001;
 // Flat art seeding is for small palettes: auto-detect caps flat art at 32.
 const FLAT_SEED_MAX_COLORS = 32;
+// A flat color under FLAT_SEED_MIN_SHARE still takes a spare slot when it
+// stands this far (Oklab) from every other color, as a small pink tongue
+// does among browns and creams, and covers at least this share of that
+// minimum. Highlights and shading sit closer to their own color.
+const FLAT_ACCENT_DISTANCE = 0.1;
+const FLAT_ACCENT_SHARE = 0.25;
+// A distinct color under this share of the pixels counts as an accent when
+// pixels are assigned (see accentReach2 in quantize).
+const FLAT_ACCENT_MAX_SHARE = 0.005;
+// Rare color groups tracked for accents, most common first.
+const FLAT_ACCENT_CANDIDATES = 64;
 
 /**
  * Median-cut color quantization to at most `colors` colors, refined with
@@ -2949,16 +2974,97 @@ export function quantize(img, colors, { layerDiff = 0, seeds = null, keep = null
   const common = [];
   let commonCount = 0;
   const candidates = colors <= FLAT_SEED_MAX_COLORS ? Array.from(all) : [];
-  for (const e of candidates.sort((a, b) => count[b] - count[a])) {
-    const near = common.some(
-      (p) =>
-        (lab[0][e] - lab[0][p]) ** 2 + (lab[1][e] - lab[1][p]) ** 2 + (lab[2][e] - lab[2][p]) ** 2 <
-          FLAT_SEED_MIN_DISTANCE ** 2 || colorDistance(means[e], means[p]) <= layerDiff,
-    );
-    if (near) commonCount += count[e];
+  candidates.sort((a, b) => count[b] - count[a]);
+  const near = (e, p) =>
+    (lab[0][e] - lab[0][p]) ** 2 + (lab[1][e] - lab[1][p]) ** 2 + (lab[2][e] - lab[2][p]) ** 2 <
+      FLAT_SEED_MIN_DISTANCE ** 2 || colorDistance(means[e], means[p]) <= layerDiff;
+  for (const e of candidates) {
+    if (common.some((p) => near(e, p))) commonCount += count[e];
     else if (common.length < colors && count[e] >= opaqueCount * FLAT_SEED_MIN_SHARE) {
       common.push(e);
       commonCount += count[e];
+    }
+  }
+  // Flat art with spare slots: colors too rare for one, grouped within
+  // half the accent distance, since a small accent's shading spreads it
+  // over many bins that only add up together.
+  /** @type {{ head: number, mass: number }[]} */
+  const rare = [];
+  if (common.length < colors && commonCount >= opaqueCount * FLAT_SEED_COVERAGE) {
+    const chosen = new Set(common);
+    for (const e of candidates) {
+      if (chosen.has(e) || common.some((p) => near(e, p))) continue;
+      const group = rare.find(
+        ({ head }) =>
+          (lab[0][e] - lab[0][head]) ** 2 +
+            (lab[1][e] - lab[1][head]) ** 2 +
+            (lab[2][e] - lab[2][head]) ** 2 <
+          (FLAT_ACCENT_DISTANCE / 2) ** 2,
+      );
+      if (group) group.mass += count[e];
+      else if (rare.length < FLAT_ACCENT_CANDIDATES) rare.push({ head: e, mass: count[e] });
+    }
+  }
+  if (rare.length) {
+    const accents = rare.filter(
+      ({ head, mass }) =>
+        mass >= opaqueCount * FLAT_SEED_MIN_SHARE * FLAT_ACCENT_SHARE &&
+        common.every(
+          (p) =>
+            Math.hypot(
+              lab[0][head] - lab[0][p],
+              lab[1][head] - lab[1][p],
+              lab[2][head] - lab[2][p],
+            ) >= FLAT_ACCENT_DISTANCE,
+        ),
+    );
+    accents.sort((a, b) => b.mass - a.mass);
+    if (accents.length) {
+      // Soft edges and stray pixels also leave far-off colors, but only a
+      // real accent fills an area: some of its pixels have all four
+      // neighbors in its own group.
+      const groupOf = new Int32Array(binCount).fill(-1);
+      accents.forEach((accent, g) => {
+        for (const e of all) {
+          if (
+            (lab[0][e] - lab[0][accent.head]) ** 2 +
+              (lab[1][e] - lab[1][accent.head]) ** 2 +
+              (lab[2][e] - lab[2][accent.head]) ** 2 <
+            (FLAT_ACCENT_DISTANCE / 2) ** 2
+          ) {
+            groupOf[entryBin[e]] = g;
+          }
+        }
+      });
+      const { width } = img;
+      const height = data.length / 4 / width;
+      const group = (p) => {
+        const i = p * 4;
+        return data[i + 3] < ALPHA_THRESHOLD
+          ? -1
+          : groupOf[binOf(data[i], data[i + 1], data[i + 2])];
+      };
+      const seen = new Float64Array(accents.length);
+      const inside = new Float64Array(accents.length);
+      for (let p = 0; p < width * height; p++) {
+        const g = group(p);
+        if (g < 0) continue;
+        seen[g] += 1;
+        const x = p % width;
+        if (x === 0 || x === width - 1 || p < width || p >= width * (height - 1)) continue;
+        if (
+          group(p - 1) === g &&
+          group(p + 1) === g &&
+          group(p - width) === g &&
+          group(p + width) === g
+        ) {
+          inside[g] += 1;
+        }
+      }
+      accents.forEach((accent, g) => {
+        if (common.length >= colors || inside[g] < seen[g] * SOLID_MIN_INTERIOR) return;
+        common.push(accent.head);
+      });
     }
   }
   const given = seeds?.length ? seeds.slice(0, colors) : null;
@@ -3011,6 +3117,66 @@ export function quantize(img, colors, { layerDiff = 0, seeds = null, keep = null
   const sums = new Float64Array(k * 4);
   const errors = new Float64Array(n);
   const minPopulation = opaqueCount * 0.001;
+  // A small distinct flat color (an accent) does not take the blends of a
+  // soft edge between two other fills, which often pass nearest to it and
+  // would trace as slivers of it along those edges. Its own shades, and
+  // blends of it with a neighbor, stay with it.
+  const accentReach2 = (FLAT_ACCENT_DISTANCE / 2) ** 2;
+  const accent = new Uint8Array(k);
+  if (seeded) {
+    for (let p = 0; p < k; p++) {
+      let mass = 0;
+      for (let e = 0; e < n; e++) {
+        const dist =
+          (lab[0][e] - palette[p * 3]) ** 2 +
+          (lab[1][e] - palette[p * 3 + 1]) ** 2 +
+          (lab[2][e] - palette[p * 3 + 2]) ** 2;
+        if (dist < accentReach2) mass += count[e];
+      }
+      let nearest = Infinity;
+      for (let q = 0; q < k; q++) {
+        if (q === p) continue;
+        nearest = Math.min(
+          nearest,
+          (palette[q * 3] - palette[p * 3]) ** 2 +
+            (palette[q * 3 + 1] - palette[p * 3 + 1]) ** 2 +
+            (palette[q * 3 + 2] - palette[p * 3 + 2]) ** 2,
+        );
+      }
+      accent[p] =
+        mass < opaqueCount * FLAT_ACCENT_MAX_SHARE && nearest >= FLAT_ACCENT_DISTANCE ** 2 ? 1 : 0;
+    }
+  }
+  // Whether entry e lies between two palette colors other than p, as a
+  // soft edge's blend does (RGB, with withoutBlendShades' tolerances).
+  const paletteRgb = [];
+  for (let p = 0; p < k; p++) {
+    paletteRgb.push(oklabToSrgb([palette[p * 3], palette[p * 3 + 1], palette[p * 3 + 2]]));
+  }
+  const mixOfOthers = (e, p) => {
+    const c = means[e];
+    for (let a = 0; a < k; a++) {
+      if (a === p) continue;
+      for (let b = a + 1; b < k; b++) {
+        if (b === p) continue;
+        const from = paletteRgb[a];
+        const to = paletteRgb[b];
+        const dr = to[0] - from[0];
+        const dg = to[1] - from[1];
+        const db = to[2] - from[2];
+        const len2 = dr * dr + dg * dg + db * db;
+        if (!len2) continue;
+        const t = ((c[0] - from[0]) * dr + (c[1] - from[1]) * dg + (c[2] - from[2]) * db) / len2;
+        if (t <= SHADE_END || t >= 1 - SHADE_END) continue;
+        const residual2 =
+          (c[0] - from[0] - t * dr) ** 2 +
+          (c[1] - from[1] - t * dg) ** 2 +
+          (c[2] - from[2] - t * db) ** 2;
+        if (residual2 <= SHADE_TOLERANCE * SHADE_TOLERANCE) return true;
+      }
+    }
+    return false;
+  };
   for (let iter = 0; iter < 10; iter++) {
     let changed = false;
     for (let e = 0; e < n; e++) {
@@ -3024,6 +3190,7 @@ export function quantize(img, colors, { layerDiff = 0, seeds = null, keep = null
         const dA = A - palette[p * 3 + 1];
         const dB = B - palette[p * 3 + 2];
         const dist = dL * dL + dA * dA + dB * dB;
+        if (dist < bestDist && accent[p] && dist >= accentReach2 && mixOfOthers(e, p)) continue;
         if (dist < bestDist) {
           bestDist = dist;
           best = p;
