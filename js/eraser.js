@@ -30,6 +30,48 @@ export function snapPointToAngle(anchor, point, width, height, increment = Math.
   };
 }
 
+/**
+ * A cleanup action turned a quarter with the image. Action geometry is
+ * normalized to the image (0..1 on each axis), so a turn swaps the axes
+ * and mirrors one; brush diameters are relative to the shorter side and
+ * stay as they are. Returns a new action and leaves the input untouched.
+ */
+export function rotateCleanupAction(action, clockwise) {
+  const turn = (point) =>
+    clockwise ? { x: 1 - point.y, y: point.x } : { x: point.y, y: 1 - point.x };
+  if (action.type === "composite") {
+    return {
+      ...action,
+      parts: action.parts.map((part) => ({
+        ...part,
+        shape: rotateCleanupAction(part.shape, clockwise),
+      })),
+    };
+  }
+  if (action.type === "rect") {
+    return {
+      ...action,
+      x: clockwise ? 1 - action.y - action.height : action.y,
+      y: clockwise ? action.x : 1 - action.x - action.width,
+      width: action.height,
+      height: action.width,
+    };
+  }
+  if (action.type === "ellipse") {
+    const center = turn({ x: action.cx, y: action.cy });
+    return { ...action, cx: center.x, cy: center.y, rx: action.ry, ry: action.rx };
+  }
+  if (action.type === "region") {
+    return {
+      ...action,
+      seeds: action.seeds.map(turn),
+      loops: action.loops.map((loop) => loop.map(turn)),
+    };
+  }
+  // Freehand strokes and polygons.
+  return { ...action, points: action.points.map(turn) };
+}
+
 function n(value) {
   return Number(value.toFixed(3));
 }

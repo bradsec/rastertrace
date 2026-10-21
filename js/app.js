@@ -34,8 +34,9 @@ import {
   userPresetName,
 } from "./preprocess.js?v=92";
 import { $, els, hooks, preferences, showError, state } from "./context.js?v=66";
-import { bakeCleanup, smoothRegions } from "./bake.js?v=16";
-import { refreshExport, setResultActions } from "./exporters.js?v=77";
+import { bakeCleanup, smoothRegions } from "./bake.js?v=17";
+import { rotateCleanupAction } from "./eraser.js?v=14";
+import { refreshExport, setResultActions } from "./exporters.js?v=78";
 import {
   clearSelection,
   setBlobFill,
@@ -43,8 +44,8 @@ import {
   setSelectionTool,
   setView,
   showResultOverSource,
-} from "./cleanup-tools.js?v=87";
-import { afterTrace, resetPalette } from "./palette-ui.js?v=71";
+} from "./cleanup-tools.js?v=88";
+import { afterTrace, resetPalette } from "./palette-ui.js?v=72";
 import {
   applyExportProfile,
   applyMeasurementUnit,
@@ -75,8 +76,8 @@ import {
   updateTraceFields,
   updateTransparencyFields,
   userPresets,
-} from "./settings.js?v=89";
-import { actualSizeView, resetView } from "./view.js?v=87";
+} from "./settings.js?v=90";
+import { actualSizeView, resetView } from "./view.js?v=88";
 
 const SAMPLE_FILES = [
   "synthwave.png",
@@ -669,6 +670,13 @@ async function rotate(clockwise) {
     state.bitmap = bitmap;
     state.rotation = (state.rotation + (clockwise ? 1 : 3)) % 4;
     [state.sourceWidth, state.sourceHeight] = [state.sourceHeight, state.sourceWidth];
+    // Cleanup geometry is image-relative, so it turns with the image. The
+    // baked set keys on action identity and follows each action across.
+    const turned = new Map(state.eraseStrokes.map((a) => [a, rotateCleanupAction(a, clockwise)]));
+    state.eraseStrokes = [...turned.values()];
+    state.eraseRedo = state.eraseRedo.map((a) => rotateCleanupAction(a, clockwise));
+    state.bakedActions = new Set([...state.bakedActions].flatMap((a) => turned.get(a) ?? []));
+    clearSelection();
     state.raster = null;
     if (!(await updateSourceView(bitmap, token))) return;
     resetView();

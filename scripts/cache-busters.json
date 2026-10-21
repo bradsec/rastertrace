@@ -36,36 +36,36 @@
     "sha": "c791ac290668f1933993695c39260283c51955aad4524eed259bbfb501e43f72"
   },
   "js/app.js": {
-    "v": 184,
-    "sha": "11961b9359ab8b5edcdb2edfbc921919e4c2433b08d032ae41c705e36ff3cd55"
+    "v": 185,
+    "sha": "5ba3a2282c83a029a5c3dc513743d02f294f54068569504b7ccf08b0a9c6ac83"
   },
   "js/bake.js": {
-    "v": 16,
-    "sha": "d1d4a2fc29fbb1fc0043e4f7168eeb768058076b5aef83aec04433179be12001"
+    "v": 17,
+    "sha": "28ed32c4b42990d0d4ab3c9e5e3692b54b122b6fcdb5c3370c9b389eed9ff80b"
   },
   "js/cleanup-tools.js": {
-    "v": 87,
-    "sha": "ad4c1aa02782510958bff2cb22c2b1c363e5c42312173b7b56dd48efa1629f1d"
+    "v": 88,
+    "sha": "62aabc17aea722630d76b0078c760277e6aab2a42a5eb25f290b223a139ea1df"
   },
   "js/context.js": {
     "v": 66,
     "sha": "b8598d86ffb7008fbbe588cc0753f87125b3a25664d827f4cc664553ec433c87"
   },
   "js/eraser.js": {
-    "v": 13,
-    "sha": "2d05760f1fc256687573b2981ac79c11afc3c4b410aa26b72a4d8c54558fb9aa"
+    "v": 14,
+    "sha": "c4f7749332fe5798d1eb70eafc199873157b08c350eb43bb433a91e33ca3b6b5"
   },
   "js/exporters.js": {
-    "v": 77,
-    "sha": "38080214354498f9b6c9af673d0eadc5a059f245142dcca8bcf02797279551e6"
+    "v": 78,
+    "sha": "a14d39adeb60a9ba5175f60e08ca9f21b6afdb4cd019608b4b4d5ef436988585"
   },
   "js/magicwand.js": {
     "v": 44,
     "sha": "25a09ab2257e032b06184eb15fa5861d6ed4e986900c49dc76381a970804d989"
   },
   "js/palette-ui.js": {
-    "v": 71,
-    "sha": "a96f8875db205ac99f6fec7ec6d881d6d9b490592b675aca269d4fbad44b0e9e"
+    "v": 72,
+    "sha": "07326e89f30a79c990d1a9127045f1b3ad560d7e48a2b51fb2dae9083be45d91"
   },
   "js/palette.js": {
     "v": 46,
@@ -80,16 +80,16 @@
     "sha": "986ee519b1d2565abb0c7f3e39e7b9c91a58c03549d6f09c1102a03ff20d5f96"
   },
   "js/settings.js": {
-    "v": 89,
-    "sha": "261232928c1e77d870fb8f916be3a7df3121c5ad4fbd22432c6ec39bed43d68c"
+    "v": 90,
+    "sha": "481ebd7f1bce2e16708751526f246174a8c7685a197454de5ec2051491462515"
   },
   "js/vectorexport.js": {
     "v": 44,
     "sha": "e759f7e132447b570670c436fec90c3727c42e6f33a3ad6ec490e650aca62fce"
   },
   "js/view.js": {
-    "v": 87,
-    "sha": "b79f7868f39b66631e25c78b9d38e9e36dfa6e48c2a113afdc05dd6def78862a"
+    "v": 88,
+    "sha": "6c33032b617dd973b12163d77bdc889b885c0a2c09e6e952a364cefda87695fd"
   },
   "js/worker.js": {
     "v": 97,

@@ -1,7 +1,7 @@
 // Export pipeline and save handlers: applies export post-processing to
 // the traced SVG, drives the result stats and action buttons, and saves
 // SVG/PNG/PDF/DXF through the File System Access API or a download.
-import { applyCleanupActions } from "./eraser.js?v=13";
+import { applyCleanupActions } from "./eraser.js?v=14";
 import {
   applyExportOptions,
   countPaths,

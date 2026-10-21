@@ -4,6 +4,7 @@ import {
   applyCleanupActions,
   applyEraserMask,
   brushSizeForShortcut,
+  rotateCleanupAction,
   snapPointToAngle,
   svgViewBox,
 } from "../js/eraser.js";
@@ -212,4 +213,70 @@ test("composite fill paints the color through a mask of the parts", () => {
       `<g mask="url\\(#${id}\\)"><rect x="0" y="0" width="100" height="100" fill="#0f0"/></g>`,
     ),
   );
+});
+
+test("rotateCleanupAction turns every cleanup shape with the image", () => {
+  const stroke = { mode: "fill", color: "#ff0000", diameter: 0.1, points: [{ x: 0.2, y: 0.1 }] };
+  assert.deepEqual(rotateCleanupAction(stroke, true), { ...stroke, points: [{ x: 0.9, y: 0.2 }] });
+  assert.deepEqual(rotateCleanupAction(stroke, false), { ...stroke, points: [{ x: 0.1, y: 0.8 }] });
+
+  const rect = { type: "rect", x: 0.125, y: 0.25, width: 0.375, height: 0.5 };
+  assert.deepEqual(rotateCleanupAction(rect, true), {
+    type: "rect",
+    x: 0.25,
+    y: 0.125,
+    width: 0.5,
+    height: 0.375,
+  });
+  assert.deepEqual(rotateCleanupAction(rect, false), {
+    type: "rect",
+    x: 0.25,
+    y: 0.5,
+    width: 0.5,
+    height: 0.375,
+  });
+
+  const ellipse = { type: "ellipse", cx: 0.25, cy: 0.5, rx: 0.125, ry: 0.25 };
+  assert.deepEqual(rotateCleanupAction(ellipse, true), {
+    type: "ellipse",
+    cx: 0.5,
+    cy: 0.25,
+    rx: 0.25,
+    ry: 0.125,
+  });
+
+  const region = { type: "region", seeds: [{ x: 0.5, y: 0.25 }], loops: [[{ x: 0, y: 0.75 }]] };
+  assert.deepEqual(rotateCleanupAction(region, true), {
+    type: "region",
+    seeds: [{ x: 0.75, y: 0.5 }],
+    loops: [[{ x: 0.25, y: 0 }]],
+  });
+
+  const composite = {
+    type: "composite",
+    mode: "fill",
+    color: "#00ff00",
+    parts: [
+      { op: "add", shape: { type: "polygon", points: [{ x: 0.5, y: 0 }] } },
+      { op: "subtract", shape: rect },
+    ],
+  };
+  const turned = rotateCleanupAction(composite, true);
+  assert.equal(turned.mode, "fill");
+  assert.equal(turned.color, "#00ff00");
+  assert.deepEqual(turned.parts[0], {
+    op: "add",
+    shape: { type: "polygon", points: [{ x: 1, y: 0.5 }] },
+  });
+  assert.deepEqual(turned.parts[1].shape, rotateCleanupAction(rect, true));
+  // The input is left alone: undo history and the baked set hold it.
+  assert.deepEqual(composite.parts[0].shape.points, [{ x: 0.5, y: 0 }]);
+});
+
+test("four quarter turns return a cleanup action to where it started", () => {
+  const rect = { type: "rect", x: 0.125, y: 0.25, width: 0.375, height: 0.5 };
+  let turned = rect;
+  for (let i = 0; i < 4; i++) turned = rotateCleanupAction(turned, true);
+  assert.deepEqual(turned, rect);
+  assert.deepEqual(rotateCleanupAction(rotateCleanupAction(rect, true), false), rect);
 });
