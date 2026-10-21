@@ -914,7 +914,12 @@ export function parseAse(bytes) {
       let p = start + 2 + view.getUint16(start) * 2;
       const model = String.fromCharCode(...bytes.subarray(p, p + 4));
       p += 4;
-      const f = (i) => view.getFloat32(p + i * 4);
+      const f = (i) => {
+        const value = view.getFloat32(p + i * 4);
+        // NaN would format as "#NANNANNAN" and pass for a swatch.
+        if (!Number.isFinite(value)) fail();
+        return value;
+      };
       const unit = (v) => Math.max(0, Math.min(255, Math.round(v * 255)));
       let rgb;
       if (model === "RGB ") {

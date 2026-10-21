@@ -1853,6 +1853,17 @@ test("parseAse rejects other and truncated files", () => {
   assert.throws(() => parseAse(good.slice(0, good.length - 5)), /swatch/i);
 });
 
+test("parseAse rejects color values that are not numbers", () => {
+  for (const [model, values] of [
+    ["RGB ", [Number.NaN, 0, 0]],
+    ["CMYK", [0, 0, 0, Number.POSITIVE_INFINITY]],
+    ["LAB ", [Number.NaN, 0, 0]],
+    ["Gray", [Number.NaN]],
+  ]) {
+    assert.throws(() => parseAse(aseBytes([["Bad", model, values, 2]])), /swatch/i, model);
+  }
+});
+
 test("parseSwatchText reads hex lists and GIMP palettes", () => {
   assert.deepEqual(parseSwatchText("#1f2a3b, ffffff\n#abc nope #12345 #1F2A3B"), [
     "#1F2A3B",
