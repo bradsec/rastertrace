@@ -3274,7 +3274,9 @@ export function nameColorGroups(svgText, { mosaic = false } = {}) {
       const byFill = new Map();
       for (const [path] of paths) {
         const fill = path.match(/\sfill="([^"]*)"/)?.[1] ?? "";
-        byFill.set(fill, [...(byFill.get(fill) ?? []), path]);
+        const group = byFill.get(fill);
+        if (group) group.push(path);
+        else byFill.set(fill, [path]);
       }
       const first = paths[0];
       const last = paths.at(-1);
