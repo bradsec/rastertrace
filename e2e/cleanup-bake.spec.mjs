@@ -76,7 +76,7 @@ test("an erase leaves a hole in the trace and keeps PDF and DXF export", async (
   await page.locator("#eraser-size").fill("80");
   await traced(page, () => dragResult(page, [0.2, 0.5], [0.8, 0.5]));
   const svg = await resultSvg(page);
-  expect(svg).not.toContain("<mask");
+  expect(svg).toContain('id="rastertrace-baked-erasure-guard"');
   await expect(page.locator("#download-pdf")).toBeEnabled();
   await expect(page.locator("#download-dxf")).toBeEnabled();
 });

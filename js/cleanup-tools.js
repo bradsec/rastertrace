@@ -3,11 +3,11 @@
 // Listener order matters: the selection and eraser pointer handlers must
 // register before the pan handlers in view.js, so app.js imports this
 // module first.
-import { brushSizeForShortcut, snapPointToAngle, svgViewBox } from "./eraser.js?v=14";
+import { brushSizeForShortcut, snapPointToAngle, svgViewBox } from "./eraser.js?v=17";
 import { parseHexColor, sampleRasterColor, toHexColor, tracePixels } from "./preprocess.js?v=97";
 import { els, hooks, state } from "./context.js?v=68";
 import { floodRegion, growMask, maskLoops, unionMasks } from "./magicwand.js?v=49";
-import { refreshExport } from "./exporters.js?v=84";
+import { refreshExport } from "./exporters.js?v=87";
 
 /** @param {"result" | "source" | "compare"} view */
 export function setView(view) {
@@ -121,7 +121,7 @@ document.addEventListener(
     if (!(event.target instanceof Element)) return;
     if (
       event.target.closest(
-        ".tool-rail, .tool-options, #preview, #pick-from-image, #selection-actions",
+        ".tool-rail, .tool-options, #preview, #pick-from-image, #selection-actions, #zoom-in, #zoom-out, #zoom-reset",
       )
     )
       return;
@@ -500,6 +500,17 @@ export function renderSelection() {
   els.selectionOverlay.replaceChildren(...selectionNodes);
   els.selectionOverlay.removeAttribute("hidden");
 }
+
+// A resized preview or a newly decoded result changes the image's screen
+// box without changing the selection geometry.
+const selectionResizeObserver = new ResizeObserver(() => {
+  if (state.selection) renderSelection();
+});
+selectionResizeObserver.observe(els.preview);
+selectionResizeObserver.observe(els.resultView);
+els.resultView.addEventListener("load", () => {
+  if (state.selection) renderSelection();
+});
 
 /**
  * Outline the smooth strokes the current trace does not include yet:

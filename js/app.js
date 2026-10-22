@@ -34,9 +34,9 @@ import {
   userPresetName,
 } from "./preprocess.js?v=97";
 import { $, els, hooks, preferences, showError, state } from "./context.js?v=68";
-import { bakeCleanup, smoothRegions } from "./bake.js?v=22";
-import { rotateCleanupAction } from "./eraser.js?v=14";
-import { refreshExport, setResultActions } from "./exporters.js?v=84";
+import { bakeCleanup, smoothRegions } from "./bake.js?v=25";
+import { rotateCleanupAction } from "./eraser.js?v=17";
+import { refreshExport, setResultActions } from "./exporters.js?v=87";
 import {
   clearSelection,
   setBlobFill,
@@ -44,8 +44,8 @@ import {
   setSelectionTool,
   setView,
   showResultOverSource,
-} from "./cleanup-tools.js?v=94";
-import { afterTrace, resetPalette } from "./palette-ui.js?v=78";
+} from "./cleanup-tools.js?v=99";
+import { afterTrace, resetPalette } from "./palette-ui.js?v=83";
 import {
   applyExportProfile,
   applyMeasurementUnit,
@@ -76,8 +76,8 @@ import {
   updateTraceFields,
   updateTransparencyFields,
   userPresets,
-} from "./settings.js?v=96";
-import { actualSizeView, resetView } from "./view.js?v=94";
+} from "./settings.js?v=101";
+import { actualSizeView, resetView } from "./view.js?v=99";
 
 const SAMPLE_FILES = [
   "synthwave.png",
@@ -98,7 +98,7 @@ const SAMPLE_KEY = "rastertrace:last-sample";
 
 const EMPTY_IMAGE_SRC = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==";
 
-const tracer = new Tracer(new URL("./worker.js?v=102", import.meta.url));
+const tracer = new Tracer(new URL("./worker.js?v=104", import.meta.url));
 
 let elapsedTimer = 0;
 

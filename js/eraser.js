@@ -256,3 +256,34 @@ export function applyCleanupActions(svg, actions, { pixelExact = false } = {}) {
   const definitions = defs ? `<defs>${defs}</defs>` : "";
   return `${parts.before}${definitions}${content}${parts.after}`;
 }
+
+/** Keep baked erasures exact after tracing smooths the edited raster. */
+export function applyErasureGuard(svg, actions, { pixelExact = false } = {}) {
+  if (!actions.some((action) => action.mode !== "fill" && action.mode !== "smooth")) return svg;
+  const box = svgViewBox(svg);
+  const parts = svgParts(svg);
+  if (!box || !parts) return svg;
+  const area = `x="${n(box.x)}" y="${n(box.y)}" width="${n(box.width)}" height="${n(box.height)}"`;
+  const marks = [];
+  const coverageDefs = [];
+  let index = 0;
+  for (const action of actions) {
+    if (action.mode === "smooth") continue;
+    const color = action.mode === "fill" ? "#fff" : "#000";
+    if (action.type !== "composite") {
+      marks.push(
+        erasureMarkup(action, box, pixelExact)
+          .replace(/fill="#000"/g, `fill="${color}"`)
+          .replace(/stroke="#000"/g, `stroke="${color}"`),
+      );
+      continue;
+    }
+    const id = `rastertrace-guard-area-${index++}`;
+    coverageDefs.push(
+      `<mask id="${id}" maskUnits="userSpaceOnUse" ${area} mask-type="luminance" style="mask-type:luminance" color-interpolation="sRGB"><rect ${area} fill="#000"/>${compositeMarkup(action.parts, box, "#fff", "#000")}</mask>`,
+    );
+    marks.push(`<rect ${area} fill="${color}" mask="url(#${id})"/>`);
+  }
+  const guard = `<mask id="rastertrace-baked-erasure-guard" maskUnits="userSpaceOnUse" ${area} mask-type="luminance" style="mask-type:luminance" color-interpolation="sRGB"><rect ${area} fill="#fff"/>${marks.join("")}</mask>`;
+  return `${parts.before}<defs>${coverageDefs.join("")}${guard}</defs><g mask="url(#rastertrace-baked-erasure-guard)">${parts.content}</g>${parts.after}`;
+}

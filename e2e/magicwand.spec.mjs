@@ -159,6 +159,76 @@ test("magic wand erases only the clicked connected area", async ({ page }) => {
   expect((await resultPixel(page, [5, 5]))[3]).toBe(255);
 });
 
+test("selection overlay follows the image through zoom and window resize", async ({ page }) => {
+  await loadTwoBlocks(page);
+  await page.locator("#magic-wand").click();
+  await clickResult(page, [30, 40]);
+  await expect(page.locator("#selection-overlay")).toBeVisible();
+
+  const alignment = () =>
+    page.evaluate(() => {
+      const image = document.getElementById("result-view").getBoundingClientRect();
+      const overlay = document.getElementById("selection-overlay").getBoundingClientRect();
+      return Math.max(
+        Math.abs(image.left - overlay.left),
+        Math.abs(image.top - overlay.top),
+        Math.abs(image.right - overlay.right),
+        Math.abs(image.bottom - overlay.bottom),
+      );
+    });
+  await expect.poll(alignment).toBeLessThan(1);
+  for (let i = 0; i < 7; i++) await page.locator("#zoom-in").click();
+  await expect.poll(alignment).toBeLessThan(1);
+  await page.setViewportSize({ width: 1040, height: 720 });
+  await expect.poll(alignment).toBeLessThan(1);
+  for (let i = 0; i < 5; i++) await page.locator("#zoom-out").click();
+  await expect.poll(alignment).toBeLessThan(1);
+});
+
+test("a small marquee deletion stays transparent after retracing", async ({ page }) => {
+  await loadTwoBlocks(page);
+  await page.locator("#smooth-outlines").fill("4");
+  await page.locator("#smooth-outlines").dispatchEvent("change");
+  await expect(page.locator("#status")).toContainText(/Traced \d/, { timeout: 60_000 });
+  await page.locator("#marquee-rect").click();
+  const box = await page.locator("#result-view").boundingBox();
+  const point = (x, y) => ({
+    x: box.x + (box.width * x) / SIZE[0],
+    y: box.y + (box.height * y) / SIZE[1],
+  });
+  const start = point(20, 30);
+  const end = point(23, 33);
+  await page.mouse.move(start.x, start.y);
+  await page.mouse.down();
+  await page.mouse.move(end.x, end.y);
+  await page.mouse.up();
+  await expect(page.locator("#selection-erase")).toBeVisible();
+  await page.evaluate(() => (document.getElementById("status").textContent = ""));
+  await page.locator("#selection-erase").click();
+  await expect(page.locator("#status")).toContainText(/Traced \d/, { timeout: 60_000 });
+  await expect(page.locator("#tracing-veil")).toBeHidden({ timeout: 60_000 });
+  expect((await resultPixel(page, [21, 31]))[3]).toBe(0);
+
+  await page.locator("#blob-fill-tool").click();
+  await page.locator("#blob-fill-hex").fill("#00ff00");
+  await page.locator("#blob-fill-hex").dispatchEvent("change");
+  await page.locator("#eraser-size").fill("240");
+  await page.evaluate(() => (document.getElementById("status").textContent = ""));
+  const fillBox = await page.locator("#result-view").boundingBox();
+  await page.mouse.click(
+    fillBox.x + (fillBox.width * 21.5) / SIZE[0],
+    fillBox.y + (fillBox.height * 31.5) / SIZE[1],
+  );
+  await expect(page.locator("#status")).toContainText(/Traced \d/, { timeout: 60_000 });
+  const svg = await page
+    .locator("#result-view")
+    .evaluate(async (image) => (await fetch(image.src)).text());
+  expect(svg).toMatch(/#00ff00/i);
+  const filled = await resultPixel(page, [21, 31]);
+  expect(filled[3]).toBe(255);
+  expect(filled[1]).toBeGreaterThan(180);
+});
+
 test("shift-click adds a second area and fill paints both", async ({ page }) => {
   await loadTwoBlocks(page);
   await page.keyboard.press("w");

@@ -1,7 +1,7 @@
 // Export pipeline and save handlers: applies export post-processing to
 // the traced SVG, drives the result stats and action buttons, and saves
 // SVG/PNG/PDF/DXF through the File System Access API or a download.
-import { applyCleanupActions } from "./eraser.js?v=14";
+import { applyCleanupActions, applyErasureGuard } from "./eraser.js?v=17";
 import {
   applyExportOptions,
   countPaths,
@@ -154,7 +154,14 @@ export function refreshExport() {
   // Edits already traced are part of svgRaw; newer ones show on top
   // until the retrace that includes them lands.
   const pending = state.eraseStrokes.filter((a) => !state.bakedActions.has(a));
-  state.svg = applyCleanupActions(exportedSvg(), pending, { pixelExact });
+  const baked = state.eraseStrokes.filter((a) => state.bakedActions.has(a));
+  state.svg = applyCleanupActions(
+    applyErasureGuard(exportedSvg(), baked, { pixelExact }),
+    pending,
+    {
+      pixelExact,
+    },
+  );
   hooks.renderSmoothPreview();
 
   // Rendered via <img> + blob URL: sandboxes the generated markup and

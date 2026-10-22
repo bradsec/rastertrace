@@ -38,10 +38,12 @@ self.onmessage = async (event) => {
     stage("Preparing image…");
 
     let hasAlpha = false;
+    let inputTransparent = null;
     for (let i = 3; i < img.data.length; i += 4) {
-      if (img.data[i] < 255) {
-        hasAlpha = true;
-        break;
+      if (img.data[i] < 255) hasAlpha = true;
+      if (img.data[i] === 0) {
+        inputTransparent ??= new Uint8Array(img.width * img.height);
+        inputTransparent[(i - 3) / 4] = 1;
       }
     }
 
@@ -127,6 +129,15 @@ self.onmessage = async (event) => {
     if (reduced && speckle > 1) {
       stage("Removing specks…");
       despeckleColors(img, speckle);
+    }
+
+    // Cleanup erasures and source transparency are hard holes. Smoothing
+    // and color cleanup may vote opaque neighbors into them; restore the
+    // input alpha before tracing so deleted pixels cannot reappear.
+    if (inputTransparent) {
+      for (let p = 0; p < inputTransparent.length; p++) {
+        if (inputTransparent[p]) img.data[p * 4 + 3] = 0;
+      }
     }
 
     stage("Tracing vectors…");
