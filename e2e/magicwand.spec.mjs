@@ -52,6 +52,37 @@ test.beforeEach(async ({ page }) => {
   await page.reload();
 });
 
+test("wand outline follows a fractional SVG edge at high zoom", async ({ page }) => {
+  await loadTwoBlocks(page);
+  await page.evaluate(async () => {
+    const { state } = await import("/js/context.js?v=68");
+    const svg =
+      '<svg xmlns="http://www.w3.org/2000/svg" width="160" height="80" viewBox="0 0 20 10" preserveAspectRatio="none"><rect width="20" height="10" fill="#f3ead8"/><path d="M4.35 2H15.65V8H4.35Z" fill="#d02020"/></svg>';
+    state.svg = svg;
+    state.processedRaster = { width: 20, height: 10, data: new Uint8ClampedArray(20 * 10 * 4) };
+    const view = /** @type {HTMLImageElement} */ (document.getElementById("result-view"));
+    view.src = URL.createObjectURL(new Blob([svg], { type: "image/svg+xml" }));
+    await view.decode();
+  });
+  await page.locator("#magic-wand").click();
+  for (const selector of ["#wand-tolerance", "#wand-expand", "#wand-smooth"]) {
+    await page.locator(selector).fill("0");
+    await page.locator(selector).dispatchEvent("input");
+  }
+  await clickResult(page, [80, 40]);
+  await expect(page.locator("#selection-overlay")).toBeVisible();
+  const edges = await page.evaluate(async () => {
+    const { state } = await import("/js/context.js?v=68");
+    const points = state.selection.parts[0].shape.loops.flat();
+    return [
+      Math.min(...points.map((point) => point.x * 20)),
+      Math.max(...points.map((point) => point.x * 20)),
+    ];
+  });
+  expect(edges[0]).toBeCloseTo(4.35, 1);
+  expect(edges[1]).toBeCloseTo(15.65, 1);
+});
+
 /** The whole rendered result as RGBA at source size. */
 async function resultPixels(page) {
   return page.evaluate(async ([width, height]) => {

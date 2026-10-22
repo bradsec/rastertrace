@@ -3614,7 +3614,8 @@ function straightenPathData(d, tolerance) {
 export function finalizeSvg(svgText, width, height) {
   return groupSvgFills(svgText).replace(
     /(<svg[^>]*?) width="(\d+)" height="(\d+)">/,
-    (_, head, w, h) => `${head} width="${width}" height="${height}" viewBox="0 0 ${w} ${h}">`,
+    (_, head, w, h) =>
+      `${head} width="${width}" height="${height}" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">`,
   );
 }
 

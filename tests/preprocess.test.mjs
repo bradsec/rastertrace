@@ -483,7 +483,16 @@ test("finalizeSvg restores source size and adds viewBox", () => {
   const svg =
     '<svg version="1.1" xmlns="http://www.w3.org/2000/svg" width="200" height="400">\n</svg>';
   const out = finalizeSvg(svg, 100, 200);
-  assert.match(out, /width="100" height="200" viewBox="0 0 200 400"/);
+  assert.match(out, /width="100" height="200" viewBox="0 0 200 400" preserveAspectRatio="none"/);
+});
+
+test("finalizeSvg fills the source viewport when trace rounding changes its ratio", () => {
+  const svg = '<svg width="1558" height="2048"><path d="M0 0H1558V2048H0Z"/></svg>';
+  const out = finalizeSvg(svg, 2240, 2944);
+  assert.match(
+    out,
+    /width="2240" height="2944" viewBox="0 0 1558 2048" preserveAspectRatio="none"/,
+  );
 });
 
 test("finalizeSvg leaves unexpected roots unchanged", () => {

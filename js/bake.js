@@ -4,7 +4,7 @@
 // strokes act on the reduced colors instead, so they leave as masks for
 // the worker.
 import { cleanupMaskSvg } from "./eraser.js?v=17";
-import { parseHexColor } from "./preprocess.js?v=97";
+import { parseHexColor } from "./preprocess.js?v=98";
 
 /** @typedef {{ mode?: string, color?: string, diameter?: number, points?: unknown[], type?: string }} CleanupAction */
 

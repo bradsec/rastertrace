@@ -1,6 +1,6 @@
 // Magic wand: select the contiguous region of one color in the rendered
 // result and outline it as vector loops for the cleanup mask.
-import { ALPHA_THRESHOLD, srgbToOklab } from "./preprocess.js?v=97";
+import { ALPHA_THRESHOLD, srgbToOklab } from "./preprocess.js?v=98";
 
 /**
  * Pixels 4-connected to (nx, ny) whose opaque color is within `tolerance`
@@ -72,24 +72,25 @@ export function floodRegion(imageData, nx, ny, tolerance = 0) {
  * @param {number} [radius]
  */
 export function growMask(mask, width, height, radius = 1) {
-  let out = mask;
-  for (let step = 0; step < radius; step++) out = dilateOnce(out, width, height);
-  return radius > 0 ? out : Uint8Array.from(mask);
-}
-
-function dilateOnce(mask, width, height) {
-  const grown = new Uint8Array(mask.length);
+  if (radius <= 0) return Uint8Array.from(mask);
+  const horizontal = new Uint8Array(mask.length);
   for (let y = 0; y < height; y++) {
+    let count = 0;
+    for (let x = 0; x <= Math.min(radius, width - 1); x++) count += mask[y * width + x];
     for (let x = 0; x < width; x++) {
-      if (!mask[y * width + x]) continue;
-      for (let dy = -1; dy <= 1; dy++) {
-        const yy = y + dy;
-        if (yy < 0 || yy >= height) continue;
-        for (let dx = -1; dx <= 1; dx++) {
-          const xx = x + dx;
-          if (xx >= 0 && xx < width) grown[yy * width + xx] = 1;
-        }
-      }
+      horizontal[y * width + x] = count > 0 ? 1 : 0;
+      if (x - radius >= 0) count -= mask[y * width + x - radius];
+      if (x + radius + 1 < width) count += mask[y * width + x + radius + 1];
+    }
+  }
+  const grown = new Uint8Array(mask.length);
+  for (let x = 0; x < width; x++) {
+    let count = 0;
+    for (let y = 0; y <= Math.min(radius, height - 1); y++) count += horizontal[y * width + x];
+    for (let y = 0; y < height; y++) {
+      grown[y * width + x] = count > 0 ? 1 : 0;
+      if (y - radius >= 0) count -= horizontal[(y - radius) * width + x];
+      if (y + radius + 1 < height) count += horizontal[(y + radius + 1) * width + x];
     }
   }
   return grown;
