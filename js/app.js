@@ -10,7 +10,7 @@ import {
   rotateBitmap,
   sniffImageSize,
   Tracer,
-} from "./pipeline.js?v=99";
+} from "./pipeline.js?v=100";
 import {
   analyzeFlatness,
   detectedColorSettings,
@@ -666,6 +666,7 @@ async function rotate(clockwise) {
       return;
     }
     state.bitmap = bitmap;
+    sourceBitmap.close();
     state.rotation = (state.rotation + (clockwise ? 1 : 3)) % 4;
     [state.sourceWidth, state.sourceHeight] = [state.sourceHeight, state.sourceWidth];
     // Cleanup geometry is image-relative, so it turns with the image. The
@@ -698,6 +699,7 @@ async function invert() {
       return;
     }
     state.bitmap = bitmap;
+    sourceBitmap.close();
     state.inverted = !state.inverted;
     els.invertImage.setAttribute("aria-pressed", String(state.inverted));
     const knockout = parseHexColor(els.knockoutColor.value);

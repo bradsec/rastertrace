@@ -179,10 +179,8 @@ export async function capBitmap(bitmap, maxSide = MAX_TRACE_SIDE) {
 }
 
 /**
- * Rotate a bitmap 90 degrees, closing the original once the rotated copy
- * exists. The caller still holds the original as state.bitmap while this
- * awaits, so a trace or color sample in that window must find it open; on
- * failure it stays open and usable.
+ * Rotate a bitmap 90 degrees. The caller retains ownership of the source
+ * and must close it after replacing it with the returned bitmap.
  */
 export async function rotateBitmap(bitmap, clockwise = true) {
   const canvas = new OffscreenCanvas(bitmap.height, bitmap.width);
@@ -196,7 +194,6 @@ export async function rotateBitmap(bitmap, clockwise = true) {
   }
   ctx.drawImage(bitmap, 0, 0);
   const rotated = await createImageBitmap(canvas);
-  bitmap.close();
   return rotated;
 }
 
@@ -214,9 +211,8 @@ export function invertRGBA(data) {
 }
 
 /**
- * Return a negative copy of the bitmap, closing the original once the copy
- * exists. Mirrors rotateBitmap's contract so app.js can swap state.bitmap
- * the same way.
+ * Return a negative copy of the bitmap. The caller retains ownership of the
+ * source and must close it after replacing it with the returned bitmap.
  */
 export async function invertBitmap(bitmap) {
   const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
@@ -226,7 +222,6 @@ export async function invertBitmap(bitmap) {
   invertRGBA(image.data);
   ctx.putImageData(image, 0, 0);
   const inverted = await createImageBitmap(canvas);
-  bitmap.close();
   return inverted;
 }
 

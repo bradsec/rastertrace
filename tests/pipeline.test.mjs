@@ -332,17 +332,35 @@ for (const [name, run] of [
   ["rotateBitmap", (bitmap) => rotateBitmap(bitmap, true)],
   ["invertBitmap", (bitmap) => invertBitmap(bitmap)],
 ]) {
-  test(`${name} keeps the source open until its replacement exists`, async () => {
+  test(`${name} leaves source ownership with the caller`, async () => {
     const harness = bitmapHarness();
     try {
       const result = run(harness.source);
       await Promise.resolve();
-      // The app still holds the source as state.bitmap while this awaits.
       assert.equal(harness.source.closed, false);
       const replacement = { width: 2, height: 4 };
       harness.settle().resolve(replacement);
       assert.equal(await result, replacement);
-      assert.equal(harness.source.closed, true);
+      assert.equal(harness.source.closed, false);
+    } finally {
+      harness.restore();
+    }
+  });
+
+  test(`${name} keeps the source open after a superseding load fails`, async () => {
+    const harness = bitmapHarness();
+    try {
+      const state = { loadToken: 1, bitmap: harness.source };
+      const result = run(harness.source);
+      state.loadToken++;
+      await Promise.resolve();
+      const replacement = { close() {} };
+      harness.settle().resolve(replacement);
+      assert.equal(await result, replacement);
+      assert.equal(bitmapOperationIsCurrent(state, 1, harness.source), false);
+      replacement.close();
+      assert.equal(state.bitmap, harness.source);
+      assert.equal(harness.source.closed, false);
     } finally {
       harness.restore();
     }
