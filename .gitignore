@@ -23,6 +23,7 @@ _diag.png
 .superpowers/
 .playwright-mcp/
 .playwright-artifacts/
+test-results/
 .claude/
 docs/superpowers/
 .codex/
