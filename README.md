@@ -72,6 +72,8 @@ js/vectorexport.js  DXF and PDF writers from traced SVG (Node-testable)
 js/eraser.js        eraser mask geometry (Node-testable)
 js/bake.js          paints cleanup edits into the raster before tracing; smooth stroke masks
 js/magicwand.js     magic wand region fill and outline (Node-testable)
+js/wand-pipeline.js pure wand selection pipeline (Node-testable)
+js/wand-worker.js   dedicated magic wand pixel worker
 js/pipeline.js      decode, premultiplied rasterize, worker round-trip
 js/worker.js        Web Worker: preprocessing + wasm trace off the main thread
 js/app.js           app core: trace loop, image loading, menus, startup

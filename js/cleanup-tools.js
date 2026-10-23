@@ -4,9 +4,9 @@
 // register before the pan handlers in view.js, so app.js imports this
 // module first.
 import { brushSizeForShortcut, snapPointToAngle, svgViewBox } from "./eraser.js?v=17";
-import { parseHexColor, sampleRasterColor, toHexColor, tracePixels } from "./preprocess.js?v=98";
+import { parseHexColor, sampleRasterColor, toHexColor } from "./preprocess.js?v=98";
 import { els, hooks, state } from "./context.js?v=68";
-import { floodRegion, growMask, maskLoops, unionMasks } from "./magicwand.js?v=51";
+import { maskLoops } from "./magicwand.js?v=51";
 import { refreshExport } from "./exporters.js?v=88";
 
 /** @param {"result" | "source" | "compare"} view */
@@ -225,7 +225,7 @@ document.addEventListener("keydown", (event) => {
     state.selection?.finalized
   ) {
     event.preventDefault();
-    commitSelection("fill");
+    commitSelection("fill").catch((error) => console.error(error));
   } else if (
     !event.ctrlKey &&
     !event.metaKey &&
@@ -233,7 +233,7 @@ document.addEventListener("keydown", (event) => {
     state.selection?.finalized
   ) {
     event.preventDefault();
-    commitSelection("erase");
+    commitSelection("erase").catch((error) => console.error(error));
   } else if (
     (event.ctrlKey || event.metaKey) &&
     (event.key.toLowerCase() === "y" || (event.shiftKey && event.key.toLowerCase() === "z")) &&
@@ -768,11 +768,13 @@ function finishPolygon() {
   finishShape(selection.op, selection.base, toShape(selection));
 }
 
-function commitSelection(mode) {
+async function commitSelection(mode) {
+  const color = els.blobFillColor.value;
+  await wandSelectionQueue;
   const selection = state.selection;
   if (selection?.type !== "composite") return;
   state.eraseRedo = [];
-  const fill = mode === "fill" ? { mode: "fill", color: els.blobFillColor.value } : {};
+  const fill = mode === "fill" ? { mode: "fill", color } : {};
   const { parts } = selection;
   const action =
     parts.length === 1 && parts[0].op === "add" ? parts[0].shape : { type: "composite", parts };
@@ -782,7 +784,7 @@ function commitSelection(mode) {
   hooks.scheduleRetrace();
   els.status.textContent =
     mode === "fill"
-      ? `Selected area filled with ${els.blobFillColor.value}. Ctrl/Cmd+Z restores it.`
+      ? `Selected area filled with ${color}. Ctrl/Cmd+Z restores it.`
       : "Selected area removed. Ctrl/Cmd+Z restores it.";
 }
 
@@ -803,9 +805,14 @@ els.polygonLasso.addEventListener("click", () => {
   setSelectionTool("polygon");
 });
 els.selectionClose.addEventListener("click", finishPolygon);
-els.selectionErase.addEventListener("click", () => commitSelection("erase"));
-els.selectionFill.addEventListener("click", () => commitSelection("fill"));
-els.selectionCancel.addEventListener("click", () => {
+els.selectionErase.addEventListener("click", () =>
+  commitSelection("erase").catch((error) => console.error(error)),
+);
+els.selectionFill.addEventListener("click", () =>
+  commitSelection("fill").catch((error) => console.error(error)),
+);
+els.selectionCancel.addEventListener("click", async () => {
+  await wandSelectionQueue;
   clearSelection();
   els.status.textContent = "Selection cancelled.";
 });
@@ -856,6 +863,7 @@ for (const type of ["pointerup", "pointercancel"]) {
 }
 
 let selectionPointer = null;
+let wandSelectionQueue = Promise.resolve();
 
 function selectionPoint(event, mode = "strict") {
   const rect = els.resultView.getBoundingClientRect();
@@ -890,8 +898,15 @@ function selectionIntersectsImage(selection) {
 }
 
 /** Select the connected region of the clicked color and combine it. */
-async function wandSelect(point, op) {
+function wandSelect(point, op) {
   const svg = state.svg;
+  const selection = wandSelectionQueue.then(() => selectWand(point, op, svg));
+  // Keep later clicks moving; this click still rejects to its caller.
+  wandSelectionQueue = selection.catch(() => {});
+  return selection;
+}
+
+async function selectWand(point, op, svg) {
   let raster;
   try {
     raster = await resultRaster();
@@ -902,8 +917,13 @@ async function wandSelect(point, op) {
   }
   // The tool may have been switched while the result rendered.
   if (state.selectionTool !== "wand" || state.svg !== svg) return;
-  const shape = await regionShape(raster, [point], svg);
-  if (state.selectionTool !== "wand" || state.svg !== svg) return;
+  let shape;
+  let rebuildVersion;
+  do {
+    rebuildVersion = wandRebuildVersion;
+    shape = await regionShape(raster, [point], svg);
+    if (state.selectionTool !== "wand" || state.svg !== svg) return;
+  } while (rebuildVersion !== wandRebuildVersion);
   if (!shape) {
     els.status.textContent =
       "No color here to select: that area is transparent or outside the image.";
@@ -966,85 +986,84 @@ async function renderResultRaster(svg) {
   }
 }
 
+let wandWorker;
+const wandPending = new Map();
+let wandJobId = 0;
+
+function getWandWorker() {
+  if (wandWorker) return wandWorker;
+  wandWorker = new Worker(new URL("./wand-worker.js?v=2", import.meta.url), { type: "module" });
+  wandWorker.onmessage = ({ data }) => {
+    const pending = wandPending.get(data.id);
+    if (!pending) return;
+    wandPending.delete(data.id);
+    if (data.error) pending.reject(new Error(data.error));
+    else pending.resolve(data.result);
+  };
+  const rejectPending = (event) => {
+    const error = new Error(event.message || "Magic wand worker failed");
+    for (const pending of wandPending.values()) pending.reject(error);
+    wandPending.clear();
+    wandWorker.terminate();
+    wandWorker = null;
+  };
+  wandWorker.onerror = rejectPending;
+  wandWorker.onmessageerror = rejectPending;
+  return wandWorker;
+}
+
+function wandJob(phase, args, transfer) {
+  return new Promise((resolve, reject) => {
+    const id = ++wandJobId;
+    wandPending.set(id, { resolve, reject });
+    try {
+      getWandWorker().postMessage({ id, phase, args }, transfer);
+    } catch (error) {
+      wandPending.delete(id);
+      reject(error);
+    }
+  });
+}
+
 /**
  * A wand region from its clicked points. Kept with the points, so changing
  * Tolerance, Expand or Smooth rebuilds the current selection in place.
  */
 async function regionShape(raster, seeds, svg) {
-  let mask = null;
-  let width = 0;
-  let height = 0;
-  for (const seed of seeds) {
-    const region = floodRegion(raster, seed.x, seed.y, wandTolerance());
-    if (!region) continue;
-    ({ width, height } = region);
-    mask = mask ? unionMasks(mask, region.mask) : region.mask;
-  }
-  if (!mask) return null;
-  let x0 = width;
-  let y0 = height;
-  let x1 = 0;
-  let y1 = 0;
-  for (let y = 0; y < height; y++) {
-    for (let x = 0; x < width; x++) {
-      if (!mask[y * width + x]) continue;
-      x0 = Math.min(x0, x);
-      y0 = Math.min(y0, y);
-      x1 = Math.max(x1, x + 1);
-      y1 = Math.max(y1, y + 1);
-    }
-  }
-  const margin = 2 + Math.ceil((Number(els.wandExpand.value) * width) / state.sourceWidth);
-  x0 = Math.max(0, x0 - margin);
-  y0 = Math.max(0, y0 - margin);
-  x1 = Math.min(width, x1 + margin);
-  y1 = Math.min(height, y1 + margin);
-  const cropWidth = x1 - x0;
-  const cropHeight = y1 - y0;
-  const detail = Math.min(8, Math.floor(Math.sqrt(12_000_000 / (cropWidth * cropHeight))));
+  const tolerance = wandTolerance();
+  const expand = Number(els.wandExpand.value);
+  const smooth = Number(els.wandSmooth.value);
+  const sourceWidth = state.sourceWidth;
+  const pixels = raster.data.slice();
+  const coarse = await wandJob(
+    "coarse",
+    [
+      { width: raster.width, height: raster.height, data: pixels },
+      seeds,
+      tolerance,
+      expand,
+      sourceWidth,
+    ],
+    [pixels.buffer],
+  );
+  if (!coarse) return null;
+  const { x0, y0, x1, y1, detail } = coarse;
+  let refined = null;
   if (detail > 1) {
-    let refined = null;
     try {
-      refined = await renderRegionRaster(svg, x0, y0, cropWidth, cropHeight, detail);
+      refined = await renderRegionRaster(svg, x0, y0, x1 - x0, y1 - y0, detail);
     } catch (error) {
       console.error(error);
     }
-    let refinedMask = null;
-    if (refined) {
-      for (const seed of seeds) {
-        const nx = (seed.x * width - x0) / cropWidth;
-        const ny = (seed.y * height - y0) / cropHeight;
-        const region = floodRegion(refined, nx, ny, wandTolerance());
-        if (region) refinedMask = refinedMask ? unionMasks(refinedMask, region.mask) : region.mask;
-      }
-    }
-    if (refinedMask) {
-      mask = refinedMask;
-      width = refined.width;
-      height = refined.height;
-    } else {
-      x0 = y0 = 0;
-      x1 = width;
-      y1 = height;
-    }
-  } else {
-    x0 = y0 = 0;
-    x1 = width;
-    y1 = height;
   }
-  const scale = ((width / (x1 - x0)) * raster.width) / state.sourceWidth;
-  const grown = growMask(mask, width, height, tracePixels(Number(els.wandExpand.value), scale));
-  const loops = maskLoops(grown, width, height, tracePixels(Number(els.wandSmooth.value), scale));
-  return {
-    type: "region",
-    seeds,
-    loops: loops.map((loop) =>
-      loop.map((point) => ({
-        x: (x0 + point.x * (x1 - x0)) / raster.width,
-        y: (y0 + point.y * (y1 - y0)) / raster.height,
-      })),
-    ),
-  };
+  const transfer = [coarse.mask.buffer];
+  if (refined) transfer.push(refined.data.buffer);
+  const loops = await wandJob(
+    "finish",
+    [coarse, refined, seeds, tolerance, expand, smooth, sourceWidth],
+    transfer,
+  );
+  return { type: "region", seeds, loops };
 }
 
 async function renderRegionRaster(svg, x, y, width, height, detail) {
@@ -1137,7 +1156,7 @@ els.preview.addEventListener(
     if (!point) return;
     const op = pressOp(event);
     if (state.selectionTool === "wand") {
-      wandSelect(point, op);
+      wandSelect(point, op).catch((error) => console.error(error));
       return;
     }
     if (state.selectionTool === "polygon") {

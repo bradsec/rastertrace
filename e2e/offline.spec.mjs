@@ -15,6 +15,9 @@ test("the app caches itself and reloads offline", async ({ page, context }) => {
     .toBe(true);
   await page.locator("#try-sample").click();
   await expect(page.locator("#status")).toContainText(/Traced \d/, { timeout: 60_000 });
+  await page.locator("#magic-wand").click();
+  const box = await page.locator("#result-view").boundingBox();
+  await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
 
   const cached = () =>
     page.evaluate(async () => {
@@ -28,7 +31,9 @@ test("the app caches itself and reloads offline", async ({ page, context }) => {
   // only the page's own assets and the worker's imports are checked.
   await expect
     .poll(cached)
-    .toEqual(expect.arrayContaining(["/", "/js/app.js", "/js/preprocess.js"]));
+    .toEqual(
+      expect.arrayContaining(["/", "/js/app.js", "/js/preprocess.js", "/js/wand-pipeline.js"]),
+    );
   expect((await cached()).some((p) => p.endsWith(".wasm"))).toBe(true);
 
   // Playwright's WebKit fails offline navigations with "internal error"

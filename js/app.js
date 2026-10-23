@@ -44,8 +44,8 @@ import {
   setSelectionTool,
   setView,
   showResultOverSource,
-} from "./cleanup-tools.js?v=104";
-import { afterTrace, resetPalette } from "./palette-ui.js?v=88";
+} from "./cleanup-tools.js?v=110";
+import { afterTrace, resetPalette } from "./palette-ui.js?v=94";
 import {
   applyExportProfile,
   applyMeasurementUnit,
@@ -76,8 +76,8 @@ import {
   updateTraceFields,
   updateTransparencyFields,
   userPresets,
-} from "./settings.js?v=106";
-import { actualSizeView, resetView } from "./view.js?v=104";
+} from "./settings.js?v=112";
+import { actualSizeView, resetView } from "./view.js?v=110";
 
 const SAMPLE_FILES = [
   "synthwave.png",
