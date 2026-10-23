@@ -25,6 +25,14 @@ jobs:
 
   e2e:
     runs-on: ubuntu-latest
+    # Shards finish in about 7 min; a hung step should fail, not run on.
+    timeout-minutes: 20
+    # The image ships the browsers and their system packages. Installing
+    # them with --with-deps took 40 s on some shards and up to 40 min on
+    # others. Keep the tag in step with @playwright/test in package.json.
+    container:
+      image: mcr.microsoft.com/playwright:v1.62.1-noble
+      options: --user 1001
     strategy:
       fail-fast: false
       matrix:
@@ -39,7 +47,6 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npx playwright install --with-deps chromium webkit
       - run: npm run test:responsive -- --shard=${{ matrix.shard }}/4
       - if: failure()
         uses: actions/upload-artifact@v7
