@@ -48,13 +48,20 @@ async function cacheFirst(request) {
   const isHtmlFallback = (response.headers.get("content-type") || "").includes("text/html");
   if (response.ok && !isHtmlFallback) {
     await cache.put(request, response.clone());
-    // A new ?v= means the old version of the same file is dead weight.
     const url = new URL(request.url);
-    if (url.search) {
+    const version = url.searchParams.get("v");
+    if (version && /^\d+$/.test(version)) {
       const staleEntries = [];
       for (const cached of await cache.keys()) {
         const cachedUrl = new URL(cached.url);
-        if (cachedUrl.pathname === url.pathname && cachedUrl.search !== url.search) {
+        const cachedVersion = cachedUrl.searchParams.get("v");
+        // An older response may finish last, so only newer versions evict older ones.
+        if (
+          cachedUrl.pathname === url.pathname &&
+          cachedVersion &&
+          /^\d+$/.test(cachedVersion) &&
+          BigInt(cachedVersion) < BigInt(version)
+        ) {
           staleEntries.push(cache.delete(cached));
         }
       }
