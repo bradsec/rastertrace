@@ -2465,11 +2465,8 @@ dialog::backdrop {
     min-height: 44px;
     gap: 10px;
   }
-  .statusbar .repo-link {
+  .statusbar .repo-link svg {
     display: none;
-  }
-  .statusbar .app-version {
-    display: inline;
   }
   .statusbar .status-zoom {
     height: 34px;
@@ -2706,16 +2703,13 @@ dialog::backdrop {
   #download-dxf {
     display: none;
   }
-  .statusbar .repo-link {
-    display: none;
-  }
 }
 
 @media (max-width: 520px) {
   .brand {
     margin-right: 0;
   }
-  .statusbar .app-version {
+  .statusbar .repo-link {
     display: none;
   }
   #copy-svg {
