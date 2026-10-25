@@ -1,6 +1,6 @@
 // Magic wand: select the contiguous region of one color in the rendered
 // result and outline it as vector loops for the cleanup mask.
-import { srgbToOklab } from "./preprocess.js?v=102";
+import { srgbToOklab } from "./color.js?v=1";
 import { ALPHA_THRESHOLD } from "./raster.js?v=1";
 
 /**

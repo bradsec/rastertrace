@@ -12,10 +12,10 @@
  * @typedef {Exclude<NonNullable<typeof state.selection>, { type: "composite" }>} ShapeSelection
  */
 import { brushSizeForShortcut, snapPointToAngle, svgViewBox } from "./eraser.js?v=19";
-import { parseHexColor, sampleRasterColor, toHexColor } from "./preprocess.js?v=102";
+import { parseHexColor, sampleRasterColor, toHexColor } from "./color.js?v=1";
 import { els, hooks, state } from "./context.js?v=70";
-import { maskLoops } from "./magicwand.js?v=56";
-import { refreshExport } from "./exporters.js?v=95";
+import { maskLoops } from "./magicwand.js?v=57";
+import { refreshExport } from "./exporters.js?v=96";
 
 /** @param {"result" | "source" | "compare"} view */
 export function setView(view) {
@@ -1105,7 +1105,7 @@ let wandJobId = 0;
 
 function getWandWorker() {
   if (wandWorker) return wandWorker;
-  const worker = new Worker(new URL("./wand-worker.js?v=7", import.meta.url), { type: "module" });
+  const worker = new Worker(new URL("./wand-worker.js?v=8", import.meta.url), { type: "module" });
   wandWorker = worker;
   worker.onmessage = ({ data }) => {
     const pending = wandPending.get(data.id);

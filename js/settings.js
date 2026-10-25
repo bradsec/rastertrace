@@ -1,11 +1,11 @@
 // Settings: measurement preferences, the live control values, export
 // profiles and presets, and localStorage persistence across reloads.
+import { parseHexColor } from "./color.js?v=1";
 import {
   DEFAULTS,
   ENCLOSED_NO_LIMIT,
   EXPORT_PROFILES,
   mergePresets,
-  parseHexColor,
   PRESETS,
   sanitizePresets,
   sanitizeSettings,
@@ -14,10 +14,10 @@ import {
   toGrayscaleColor,
   USER_PRESET_PREFIX,
   userPresetName,
-} from "./preprocess.js?v=102";
+} from "./preprocess.js?v=103";
 import { els, preferences } from "./context.js?v=70";
-import { refreshExport, updatePhysicalHeightOut } from "./exporters.js?v=95";
-import { setEyedropper } from "./cleanup-tools.js?v=118";
+import { refreshExport, updatePhysicalHeightOut } from "./exporters.js?v=96";
+import { setEyedropper } from "./cleanup-tools.js?v=119";
 
 /**
  * @returns {HTMLInputElement}

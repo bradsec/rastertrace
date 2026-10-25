@@ -2,8 +2,8 @@
 // that picks a traced color to edit. Edits recolor fills only; they
 // only retrace when switching layering.
 import { els, hooks, state } from "./context.js?v=70";
-import { deactivateCleanupTools, setView, showResultOverSource } from "./cleanup-tools.js?v=118";
-import { refreshExport } from "./exporters.js?v=95";
+import { deactivateCleanupTools, setView, showResultOverSource } from "./cleanup-tools.js?v=119";
+import { refreshExport } from "./exporters.js?v=96";
 import {
   mergeEdits,
   mergeGroups,
@@ -15,8 +15,8 @@ import {
   rasterPalette,
   stencilFill,
   svgPalette,
-} from "./palette.js?v=56";
-import { parseHexColor, toHexColor } from "./preprocess.js?v=102";
+} from "./palette.js?v=57";
+import { parseHexColor, toHexColor } from "./color.js?v=1";
 
 // Local lookup: adding it to els would bump context.js at every importer.
 const paletteHiddenNote = /** @type {HTMLElement} */ (

@@ -1,4 +1,4 @@
-import { coarseRegion, finishRegion } from "./wand-pipeline.js?v=6";
+import { coarseRegion, finishRegion } from "./wand-pipeline.js?v=7";
 
 self.onmessage = ({ data }) => {
   const { id, phase, args } = data;

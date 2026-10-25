@@ -1,6 +1,16 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
+  oklabToSrgb,
+  parseAse,
+  parseHexColor,
+  parseSwatchText,
+  sampleRasterColor,
+  srgbToOklab,
+  SWATCHES_MAX,
+  toHexColor,
+} from "../js/color.js";
+import {
   analyzeFlatness,
   applyExportOptions,
   applyStencilInk,
@@ -27,10 +37,6 @@ import {
   mergePresets,
   modeFilter,
   nameColorGroups,
-  oklabToSrgb,
-  parseAse,
-  parseHexColor,
-  parseSwatchText,
   physicalWidthValue,
   PRESETS,
   PRESETS_MAX,
@@ -41,19 +47,15 @@ import {
   removeBackground,
   removeSpecks,
   resolveSettings,
-  sampleRasterColor,
   sanitizePresets,
   sanitizeSettings,
   SIMPLIFY_LEVELS,
   simplifyLevel,
   snapToImageColor,
-  srgbToOklab,
   straightenPaths,
-  SWATCHES_MAX,
   thresholdImage,
   toGrayscale,
   toGrayscaleColor,
-  toHexColor,
 } from "../js/preprocess.js";
 import {
   assertRasterBudget,
