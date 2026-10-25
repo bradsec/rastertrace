@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { DEFAULTS, sanitizeSettings, smoothAlpha } from "../js/preprocess.js";
+import { smoothAlpha } from "../js/preprocess.js";
+import { DEFAULTS, sanitizeSettings } from "../js/settings-schema.js";
 
 const RED = [200, 30, 30];
 
