@@ -232,7 +232,7 @@ export function renderPalette() {
             badge.className = "swatch-hidden-badge";
             badge.setAttribute("aria-hidden", "true");
             const icon = document.createElement("span");
-            icon.className = "material-icon icon-visibility_off";
+            icon.className = "icon icon-eye-off";
             badge.append(icon);
             button.append(badge);
           }

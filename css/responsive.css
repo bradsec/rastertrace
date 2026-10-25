@@ -16,17 +16,17 @@
     padding-inline: 6px;
     font-size: var(--fs-sm);
   }
-  .topbar-actions > .header-action span:not(.material-icon) {
+  .topbar-actions > .header-action span:not(.icon) {
     font-size: 0;
   }
-  .topbar-actions > .header-action span:not(.material-icon)::after {
+  .topbar-actions > .header-action span:not(.icon)::after {
     content: "Open";
     font-size: var(--fs-sm);
   }
-  .save-action span:not(.material-icon) {
+  .save-action span:not(.icon) {
     font-size: 0;
   }
-  .save-action span:not(.material-icon)::after {
+  .save-action span:not(.icon)::after {
     content: "SVG";
     font-size: var(--fs-sm);
   }

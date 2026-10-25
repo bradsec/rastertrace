@@ -13,8 +13,8 @@
     background: Canvas;
     color: CanvasText;
   }
-  .swatch.hidden-color .swatch-hidden-badge .material-icon,
-  #palette-hidden-note .material-icon {
+  .swatch.hidden-color .swatch-hidden-badge .icon,
+  #palette-hidden-note .icon {
     background: CanvasText;
   }
   #palette-hidden-note {
@@ -26,13 +26,13 @@
     background: CanvasText;
     outline: 1px solid Canvas;
   }
-  .material-icon {
+  .icon {
     background: ButtonText;
   }
-  button:disabled .material-icon {
+  button:disabled .icon {
     background: GrayText;
   }
-  button[aria-pressed="true"] .material-icon {
+  button[aria-pressed="true"] .icon {
     background: HighlightText;
   }
   input[type="range"] {

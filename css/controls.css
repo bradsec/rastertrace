@@ -270,7 +270,7 @@
   color: var(--text);
   pointer-events: none;
 }
-.swatch-hidden-badge .material-icon {
+.swatch-hidden-badge .icon {
   width: 10px;
   height: 10px;
 }
@@ -282,7 +282,7 @@
   color: var(--accent-hover);
   font-size: 12px;
 }
-#palette-hidden-note .material-icon {
+#palette-hidden-note .icon {
   width: 12px;
   height: 12px;
 }
@@ -571,32 +571,33 @@ input[type="checkbox"] {
 
 .panel > summary::after {
   content: "";
-  width: 7px;
-  height: 7px;
-  border-right: 1.5px solid currentColor;
-  border-bottom: 1.5px solid currentColor;
+  width: 14px;
+  height: 14px;
+  flex: none;
+  background: currentColor;
+  -webkit-mask: url("../assets/icons/lucide/chevron-down.svg") center / contain no-repeat;
+  mask: url("../assets/icons/lucide/chevron-down.svg") center / contain no-repeat;
   color: var(--text-faint);
-  transform: rotate(45deg) translate(-1px, -1px);
   transition: transform 160ms ease-out;
 }
 
 .panel[open] > summary::after {
-  transform: rotate(225deg) translate(-1px, -1px);
+  transform: rotate(180deg);
 }
 
 details.advanced > summary::after {
   content: "";
-  width: 6px;
-  height: 6px;
+  width: 12px;
+  height: 12px;
   margin-right: 1px;
-  border-right: 1.5px solid currentColor;
-  border-bottom: 1.5px solid currentColor;
+  background: currentColor;
+  -webkit-mask: url("../assets/icons/lucide/chevron-down.svg") center / contain no-repeat;
+  mask: url("../assets/icons/lucide/chevron-down.svg") center / contain no-repeat;
   color: var(--text-faint);
-  transform: rotate(45deg) translate(-1px, -1px);
   transition: transform 160ms ease-out;
 }
 details.advanced[open] > summary::after {
-  transform: rotate(225deg) translate(-1px, -1px);
+  transform: rotate(180deg);
 }
 
 .panel > summary:hover {

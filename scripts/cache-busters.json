@@ -24,32 +24,32 @@
     "sha": "ea9adc546e5869917b4ddba8300c258b6f5a5d6ee723e0dddc2d6fa213d429f8"
   },
   "css/controls.css": {
-    "v": 1,
-    "sha": "f676ad6987cafc4b71b288cf3012958296e56e6a2ce720ff1d49a93ec8082131"
+    "v": 3,
+    "sha": "93720fe137e0533e720701f03ac6a02bee4d3a175d355ad4be45f904304093ab"
   },
   "css/dialogs.css": {
     "v": 1,
     "sha": "b49708255721af9363a6c3f3fed9a2e8ad0a65bf8b97af62fe5b3f2c8c28edce"
   },
   "css/forced-colors.css": {
-    "v": 1,
-    "sha": "d33f4dd75c97b2811574aefb172b7e72c782909d88fbbc944d2fad32ecf5023f"
+    "v": 2,
+    "sha": "c873c040b6f42b9c99deeef9c2072164b3aecf167c2e90e4d0097360c34f66d4"
   },
   "css/layout.css": {
-    "v": 1,
-    "sha": "50120dac2e65df2589561d66be59ce962b963f9e4425a735d0c8dfea3d953cf4"
+    "v": 2,
+    "sha": "b688c4b3254ae677780b2644b3556664925920e153ba9f9d5f94d45d6014ca7e"
   },
   "css/preview.css": {
     "v": 1,
     "sha": "67147b233ede6fd1354f6b453c1e9130861dbe7ad13824dd6b8092487335402b"
   },
   "css/responsive.css": {
-    "v": 1,
-    "sha": "a5bebd82f7d193271dfeea8bd0e0af4f068f1f7a0a7c09c56b2088c697eb0cf5"
+    "v": 2,
+    "sha": "8cd05f2cdb41d349cb7a48665065196e4c244ec5c32b10234cecbc56a94c0a98"
   },
   "css/tool-rail.css": {
-    "v": 1,
-    "sha": "9eca3485d9683ad88b39a05d5422580e5b8ec1f879a16152bbf7bfabc5bf6c99"
+    "v": 3,
+    "sha": "5b081a6c1ab61bfc4ff36b3b3d7723053c7a3131022cb8d76e72a52e55fe6c6e"
   },
   "favicon-16x16.png": {
     "v": 2,
@@ -64,8 +64,8 @@
     "sha": "c791ac290668f1933993695c39260283c51955aad4524eed259bbfb501e43f72"
   },
   "js/app.js": {
-    "v": 230,
-    "sha": "53ff43e8a5a2591b32b7726284f133672fd0ddf9ab821ddbda0d11281259a0df"
+    "v": 231,
+    "sha": "6f7369ac5e357e149bea688c5c50bbe506ca46cce7f592c692b5494f0f637a48"
   },
   "js/background.js": {
     "v": 2,
@@ -104,8 +104,8 @@
     "sha": "5f193cee5fc360325cc8ffe35ac6e510066ad919dc261b9882b5e6a939d5be4e"
   },
   "js/palette-ui.js": {
-    "v": 107,
-    "sha": "7cb6206ac46ff40a147b0e55405064f62c4b7f5ef96242d597ea02c32e821386"
+    "v": 108,
+    "sha": "4e068c632952164be14f380d518132c7ff0bd2e8f8f54192bc905f37f3b2b66f"
   },
   "js/palette.js": {
     "v": 58,

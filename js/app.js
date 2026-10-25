@@ -39,7 +39,7 @@ import {
   setView,
   showResultOverSource,
 } from "./cleanup-tools.js?v=123";
-import { afterTrace, resetPalette } from "./palette-ui.js?v=107";
+import { afterTrace, resetPalette } from "./palette-ui.js?v=108";
 import {
   applyExportProfile,
   applyMeasurementUnit,

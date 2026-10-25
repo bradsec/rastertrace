@@ -12,7 +12,7 @@
     "lint": "oxlint js tests scripts e2e playwright.config.mjs --import-plugin --jsdoc-plugin --deny-warnings",
     "format": "oxfmt --write .",
     "format:check": "oxfmt --check .",
-    "check:icons": "node scripts/check-material-icons.mjs",
+    "check:icons": "node scripts/check-lucide-icons.mjs",
     "check:cache-busters": "node scripts/check-cache-busters.mjs",
     "fix:cache-busters": "node scripts/check-cache-busters.mjs --fix",
     "test:responsive": "playwright test",
@@ -20,8 +20,8 @@
     "build:wasm": "cd wasm && RUSTFLAGS=\"--remap-path-prefix=${CARGO_HOME:-$HOME/.cargo}/registry=/registry\" wasm-pack build --target web --out-dir ../pkg --release && rm -f ../pkg/.gitignore"
   },
   "devDependencies": {
-    "@material-design-icons/svg": "^0.14.15",
     "@playwright/test": "1.62.1",
+    "lucide-static": "^1.61.0",
     "oxfmt": "0.60.0",
     "oxlint": "1.75.0",
     "typescript": "^7.0.2"

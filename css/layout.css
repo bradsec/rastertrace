@@ -100,10 +100,6 @@
   outline: none;
   box-shadow: var(--ring);
 }
-.fold-icon {
-  width: 16px;
-  height: 16px;
-}
 .rail-body {
   display: grid;
   align-content: start;

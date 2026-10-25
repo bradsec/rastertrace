@@ -104,7 +104,7 @@ test("service-worker activation preserves caches owned by sibling applications",
       },
     });
     await activation;
-    assert.deepEqual(deleted, ["rastertrace-v4"]);
+    assert.deepEqual(deleted, ["rastertrace-v4", "rastertrace-v5"]);
   } finally {
     Object.assign(globalThis, original);
   }

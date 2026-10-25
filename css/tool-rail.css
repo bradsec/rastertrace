@@ -139,71 +139,109 @@ body:has(.tool-rail .rail-tool[aria-pressed="true"]:not(#move-tool)) .rotate-gro
   margin-left: auto;
 }
 
-.cleanup-tool-icon {
+.icon-circle-dashed {
+  --icon: url("../assets/icons/lucide/circle-dashed.svg");
+}
+.icon-eraser {
+  --icon: url("../assets/icons/lucide/eraser.svg");
+}
+.icon-grid-2x2 {
+  --icon: url("../assets/icons/lucide/grid-2x2.svg");
+}
+.icon-hand {
+  --icon: url("../assets/icons/lucide/hand.svg");
+}
+.icon-lasso-select {
+  --icon: url("../assets/icons/lucide/lasso-select.svg");
+}
+.icon-minus {
+  --icon: url("../assets/icons/lucide/minus.svg");
+}
+.icon-panel-left-close {
+  --icon: url("../assets/icons/lucide/panel-left-close.svg");
+}
+.icon-panel-right-close {
+  --icon: url("../assets/icons/lucide/panel-right-close.svg");
+}
+.icon-plus {
+  --icon: url("../assets/icons/lucide/plus.svg");
+}
+.icon-spline {
+  --icon: url("../assets/icons/lucide/spline.svg");
+}
+.icon-square-dashed {
+  --icon: url("../assets/icons/lucide/square-dashed.svg");
+}
+.icon-square-dashed-plus {
+  --icon: url("../assets/icons/lucide/square-dashed-plus.svg");
+}
+.icon-square-dashed-x {
+  --icon: url("../assets/icons/lucide/square-dashed-x.svg");
+}
+.icon {
   display: block;
   width: 18px;
   height: 18px;
-}
-.material-icon {
-  display: block;
-  width: 17px;
-  height: 17px;
   flex: none;
   background: currentColor;
   -webkit-mask: var(--icon) center / contain no-repeat;
   mask: var(--icon) center / contain no-repeat;
   forced-color-adjust: none;
 }
-.icon-visibility_off {
-  --icon: url("../assets/icons/material/visibility_off.svg");
+.rail-fold .icon {
+  width: 16px;
+  height: 16px;
+}
+.icon-eye-off {
+  --icon: url("../assets/icons/lucide/eye-off.svg");
 }
 .icon-brush {
-  --icon: url("../assets/icons/material/brush.svg");
+  --icon: url("../assets/icons/lucide/brush.svg");
 }
-.icon-colorize {
-  --icon: url("../assets/icons/material/colorize.svg");
+.icon-pipette {
+  --icon: url("../assets/icons/lucide/pipette.svg");
 }
-.icon-undo {
-  --icon: url("../assets/icons/material/undo.svg");
+.icon-undo-2 {
+  --icon: url("../assets/icons/lucide/undo-2.svg");
 }
-.icon-redo {
-  --icon: url("../assets/icons/material/redo.svg");
+.icon-redo-2 {
+  --icon: url("../assets/icons/lucide/redo-2.svg");
 }
-.icon-restore {
-  --icon: url("../assets/icons/material/restore.svg");
+.icon-history {
+  --icon: url("../assets/icons/lucide/history.svg");
 }
-.icon-folder_open {
-  --icon: url("../assets/icons/material/folder_open.svg");
+.icon-folder-open {
+  --icon: url("../assets/icons/lucide/folder-open.svg");
 }
-.icon-content_copy {
-  --icon: url("../assets/icons/material/content_copy.svg");
+.icon-copy {
+  --icon: url("../assets/icons/lucide/copy.svg");
 }
-.icon-image {
-  --icon: url("../assets/icons/material/image.svg");
+.icon-file-image {
+  --icon: url("../assets/icons/lucide/file-image.svg");
 }
-.icon-picture_as_pdf {
-  --icon: url("../assets/icons/material/picture_as_pdf.svg");
+.icon-file-text {
+  --icon: url("../assets/icons/lucide/file-text.svg");
 }
-.icon-architecture {
-  --icon: url("../assets/icons/material/architecture.svg");
+.icon-drafting-compass {
+  --icon: url("../assets/icons/lucide/drafting-compass.svg");
 }
-.icon-auto_fix_high {
-  --icon: url("../assets/icons/material/auto_fix_high.svg");
+.icon-wand-sparkles {
+  --icon: url("../assets/icons/lucide/wand-sparkles.svg");
 }
 .icon-save {
-  --icon: url("../assets/icons/material/save.svg");
+  --icon: url("../assets/icons/lucide/save.svg");
 }
-.icon-upload_file {
-  --icon: url("../assets/icons/material/upload_file.svg");
+.icon-upload {
+  --icon: url("../assets/icons/lucide/upload.svg");
 }
-.icon-rotate_left {
-  --icon: url("../assets/icons/material/rotate_left.svg");
+.icon-rotate-ccw-square {
+  --icon: url("../assets/icons/lucide/rotate-ccw-square.svg");
 }
-.icon-rotate_right {
-  --icon: url("../assets/icons/material/rotate_right.svg");
+.icon-rotate-cw-square {
+  --icon: url("../assets/icons/lucide/rotate-cw-square.svg");
 }
-.icon-invert_colors {
-  --icon: url("../assets/icons/material/invert_colors.svg");
+.icon-contrast {
+  --icon: url("../assets/icons/lucide/contrast.svg");
 }
 .eraser-size,
 .wand-option {
@@ -283,7 +321,9 @@ body:has(.tool-rail .rail-tool[aria-pressed="true"]:not(#move-tool)) .rotate-gro
   height: 32px !important;
   border: 0;
   border-radius: 0;
-  background: url("../assets/icons/material/colorize.svg") center / contain no-repeat;
+  background: currentColor;
+  -webkit-mask: url("../assets/icons/lucide/pipette.svg") center / contain no-repeat;
+  mask: url("../assets/icons/lucide/pipette.svg") center / contain no-repeat;
   box-shadow: none;
   filter: drop-shadow(0 0 1px #fff) drop-shadow(0 0 1px #fff)
     drop-shadow(0 1px 1px rgb(0 0 0 / 90%));

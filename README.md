@@ -72,7 +72,7 @@ css/tool-rail.css   cleanup tools and options
 css/dialogs.css     statusbar and dialogs
 css/responsive.css  small screens and touch
 css/forced-colors.css  high contrast colors
-assets/icons/       locally bundled Material SVG icons
+assets/icons/       locally bundled Lucide SVG icons
 assets/samples/     built-in sample images (PNG) and their SVG sources
 js/raster.js        alpha cutoff and trace size limits (Node-testable)
 js/color.js         hex, sRGB/Oklab conversion, swatch file parsing (Node-testable)
@@ -113,7 +113,7 @@ npm run typecheck        # check JavaScript and DOM types
 npm run lint             # run Oxlint
 npm run format:check     # verify Oxfmt formatting
 npm run format           # apply Oxfmt formatting
-npm run check:icons      # verify bundled Material icons match the pinned package
+npm run check:icons      # verify bundled Lucide icons match the installed package
 npm run check:cache-busters # verify every ?v= URL changed with its file
 npm run fix:cache-busters   # bump stale ?v= URLs (cascading to importers) and record them
 npm run serve            # http://localhost:8137
@@ -142,12 +142,12 @@ If rastertrace is useful to you, please consider starring the repository to help
 
 Shipped runtime libraries and assets:
 
-| Component                                                                            | Purpose                                                                | Licence (SPDX)    |
-| ------------------------------------------------------------------------------------ | ---------------------------------------------------------------------- | ----------------- |
-| [vtracer](https://github.com/visioncortex/vtracer)                                   | Raster-to-vector tracing                                               | MIT OR Apache-2.0 |
-| [visioncortex](https://github.com/visioncortex/visioncortex)                         | Image processing and geometry used by vtracer                          | MIT OR Apache-2.0 |
-| [wasm-bindgen](https://github.com/wasm-bindgen/wasm-bindgen)                         | Rust/WebAssembly bindings for JavaScript                               | MIT OR Apache-2.0 |
-| [Material Design Icons](https://github.com/google/material-design-icons), Google LLC | Bundled SVG interface icons, sourced from `@material-design-icons/svg` | Apache-2.0        |
+| Component                                                    | Purpose                                                   | Licence (SPDX)                |
+| ------------------------------------------------------------ | --------------------------------------------------------- | ----------------------------- |
+| [vtracer](https://github.com/visioncortex/vtracer)           | Raster-to-vector tracing                                  | MIT OR Apache-2.0             |
+| [visioncortex](https://github.com/visioncortex/visioncortex) | Image processing and geometry used by vtracer             | MIT OR Apache-2.0             |
+| [wasm-bindgen](https://github.com/wasm-bindgen/wasm-bindgen) | Rust/WebAssembly bindings for JavaScript                  | MIT OR Apache-2.0             |
+| [Lucide](https://lucide.dev), Lucide Icons and Contributors  | Bundled SVG interface icons, sourced from `lucide-static` | ISC and MIT (Feather-derived) |
 
 vtracer and visioncortex are dual-licensed; rastertrace uses them under the MIT option. Fonts use system fallbacks; no font files are bundled or downloaded.
 

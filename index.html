@@ -54,13 +54,13 @@
     </script>
 
     <link rel="stylesheet" href="css/base.css?v=1" />
-    <link rel="stylesheet" href="css/layout.css?v=1" />
-    <link rel="stylesheet" href="css/controls.css?v=1" />
+    <link rel="stylesheet" href="css/layout.css?v=2" />
+    <link rel="stylesheet" href="css/controls.css?v=3" />
     <link rel="stylesheet" href="css/preview.css?v=1" />
-    <link rel="stylesheet" href="css/tool-rail.css?v=1" />
+    <link rel="stylesheet" href="css/tool-rail.css?v=3" />
     <link rel="stylesheet" href="css/dialogs.css?v=1" />
-    <link rel="stylesheet" href="css/responsive.css?v=1" />
-    <link rel="stylesheet" href="css/forced-colors.css?v=1" />
+    <link rel="stylesheet" href="css/responsive.css?v=2" />
+    <link rel="stylesheet" href="css/forced-colors.css?v=2" />
   </head>
   <body>
     <header class="app-header">
@@ -152,8 +152,7 @@
       </div>
       <div class="topbar-actions" role="group" aria-label="Quick actions">
         <button class="header-action" type="button" data-action="open-image">
-          <span class="material-icon icon-folder_open" aria-hidden="true"></span
-          ><span>Open image</span>
+          <span class="icon icon-folder-open" aria-hidden="true"></span><span>Open image</span>
         </button>
         <span class="action-divider" aria-hidden="true"></span>
         <div class="export-actions" role="group" aria-label="Export result">
@@ -164,8 +163,7 @@
             disabled
             title="Copy the SVG markup to the clipboard"
           >
-            <span class="material-icon icon-content_copy" aria-hidden="true"></span
-            ><span>Copy</span>
+            <span class="icon icon-copy" aria-hidden="true"></span><span>Copy</span>
           </button>
           <button
             type="button"
@@ -174,7 +172,7 @@
             disabled
             title="Save a PNG at the trace resolution, choosing its name and location"
           >
-            <span class="material-icon icon-image" aria-hidden="true"></span><span>PNG</span>
+            <span class="icon icon-file-image" aria-hidden="true"></span><span>PNG</span>
           </button>
           <button
             type="button"
@@ -183,8 +181,7 @@
             disabled
             title="Save a vector PDF, choosing its name and location"
           >
-            <span class="material-icon icon-picture_as_pdf" aria-hidden="true"></span
-            ><span>PDF</span>
+            <span class="icon icon-file-text" aria-hidden="true"></span><span>PDF</span>
           </button>
           <button
             type="button"
@@ -193,7 +190,7 @@
             disabled
             title="Save DXF geometry, choosing its name and location"
           >
-            <span class="material-icon icon-architecture" aria-hidden="true"></span><span>DXF</span>
+            <span class="icon icon-drafting-compass" aria-hidden="true"></span><span>DXF</span>
           </button>
           <button
             type="button"
@@ -202,7 +199,7 @@
             disabled
             title="Save the SVG, choosing its name and location"
           >
-            <span class="material-icon icon-save" aria-hidden="true"></span><span>Save SVG</span>
+            <span class="icon icon-save" aria-hidden="true"></span><span>Save SVG</span>
           </button>
         </div>
       </div>
@@ -226,7 +223,7 @@
             PNG, JPEG, WebP, GIF or BMP. Converted to SVG on your machine; no upload.
           </p>
           <button type="button" id="pick-file" class="button button-primary">
-            <span class="material-icon icon-upload_file" aria-hidden="true"></span>Choose image
+            <span class="icon icon-upload" aria-hidden="true"></span>Choose image
           </button>
           <button type="button" id="try-sample" class="button button-ghost">
             Try a sample image
@@ -264,21 +261,7 @@
               aria-label="Hide profile, colors and palette"
               title="Hide panel (Ctrl+\ for both)"
             >
-              <svg
-                class="fold-icon"
-                viewBox="0 0 16 16"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="1.5"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                aria-hidden="true"
-                focusable="false"
-              >
-                <rect x="1.5" y="2.5" width="13" height="11" rx="2" />
-                <path d="M6 2.5v11" />
-                <path d="M10.5 6 8.5 8l2 2" />
-              </svg>
+              <span class="icon icon-panel-left-close" aria-hidden="true"></span>
             </button>
           </div>
           <div id="left-panel-body" class="rail-body">
@@ -513,7 +496,7 @@
                   </button>
                 </div>
                 <p id="palette-hidden-note" hidden>
-                  <span class="material-icon icon-visibility_off" aria-hidden="true"></span>
+                  <span class="icon icon-eye-off" aria-hidden="true"></span>
                   <span id="palette-hidden-count"></span>
                 </p>
                 <div id="palette-grid" class="palette-grid" role="list" hidden></div>
@@ -651,21 +634,7 @@
               aria-label="Hide settings"
               title="Hide panel (Ctrl+\ for both)"
             >
-              <svg
-                class="fold-icon"
-                viewBox="0 0 16 16"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="1.5"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                aria-hidden="true"
-                focusable="false"
-              >
-                <rect x="1.5" y="2.5" width="13" height="11" rx="2" />
-                <path d="M10 2.5v11" />
-                <path d="M5.5 6l2 2-2 2" />
-              </svg>
+              <span class="icon icon-panel-right-close" aria-hidden="true"></span>
             </button>
           </div>
           <div id="right-panel-body" class="rail-body">
@@ -1126,7 +1095,7 @@
                 disabled
                 title="Pick fill color from the source image"
               >
-                <span class="material-icon icon-colorize" aria-hidden="true"></span>
+                <span class="icon icon-pipette" aria-hidden="true"></span>
               </button>
               <div class="selection-mode" role="group" aria-label="Selection mode">
                 <button
@@ -1137,19 +1106,7 @@
                   aria-pressed="true"
                   title="New selection"
                 >
-                  <svg
-                    class="cleanup-tool-icon"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    aria-hidden="true"
-                    focusable="false"
-                  >
-                    <rect x="5" y="5" width="14" height="14" rx="1" stroke-dasharray="3 2.5" />
-                  </svg>
+                  <span class="icon icon-square-dashed" aria-hidden="true"></span>
                 </button>
                 <button
                   type="button"
@@ -1159,20 +1116,7 @@
                   aria-pressed="false"
                   title="Add to selection (hold Shift)"
                 >
-                  <svg
-                    class="cleanup-tool-icon"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    aria-hidden="true"
-                    focusable="false"
-                  >
-                    <rect x="3" y="3" width="12" height="12" rx="1" stroke-dasharray="3 2.5" />
-                    <path d="M18 13v8M14 17h8" />
-                  </svg>
+                  <span class="icon icon-square-dashed-plus" aria-hidden="true"></span>
                 </button>
                 <button
                   type="button"
@@ -1182,20 +1126,7 @@
                   aria-pressed="false"
                   title="Subtract from selection (hold Alt/Option)"
                 >
-                  <svg
-                    class="cleanup-tool-icon"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    aria-hidden="true"
-                    focusable="false"
-                  >
-                    <rect x="3" y="3" width="12" height="12" rx="1" stroke-dasharray="3 2.5" />
-                    <path d="M14 17h8" />
-                  </svg>
+                  <span class="icon icon-square-dashed-x" aria-hidden="true"></span>
                 </button>
               </div>
               <label
@@ -1290,7 +1221,7 @@
                 title="Rotate 90 degrees counter-clockwise"
                 aria-label="Rotate 90 degrees counter-clockwise"
               >
-                <span class="material-icon icon-rotate_left" aria-hidden="true"></span>
+                <span class="icon icon-rotate-ccw-square" aria-hidden="true"></span>
               </button>
               <button
                 type="button"
@@ -1299,7 +1230,7 @@
                 title="Rotate 90 degrees clockwise"
                 aria-label="Rotate 90 degrees clockwise"
               >
-                <span class="material-icon icon-rotate_right" aria-hidden="true"></span>
+                <span class="icon icon-rotate-cw-square" aria-hidden="true"></span>
               </button>
               <button
                 type="button"
@@ -1309,7 +1240,7 @@
                 title="Invert colors (negative), useful for stencils"
                 aria-label="Invert image colors"
               >
-                <span class="material-icon icon-invert_colors" aria-hidden="true"></span>
+                <span class="icon icon-contrast" aria-hidden="true"></span>
               </button>
             </div>
           </div>
@@ -1322,20 +1253,7 @@
               aria-label="All cleanup tools"
               aria-expanded="false"
             >
-              <svg
-                class="cleanup-tool-icon"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                aria-hidden="true"
-                focusable="false"
-              >
-                <rect x="4" y="4" width="6" height="6" rx="1" />
-                <rect x="14" y="4" width="6" height="6" rx="1" />
-                <rect x="4" y="14" width="6" height="6" rx="1" />
-                <rect x="14" y="14" width="6" height="6" rx="1" />
-              </svg>
+              <span class="icon icon-grid-2x2" aria-hidden="true"></span>
             </button>
             <button
               type="button"
@@ -1345,24 +1263,7 @@
               aria-pressed="true"
               title="Move: drag to pan, scroll or pinch to zoom (H or Esc)"
             >
-              <svg
-                class="cleanup-tool-icon"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                aria-hidden="true"
-                focusable="false"
-              >
-                <path d="M18 11V6a2 2 0 0 0-4 0v5" />
-                <path d="M14 10V4a2 2 0 0 0-4 0v2" />
-                <path d="M10 10.5V6a2 2 0 0 0-4 0v8" />
-                <path
-                  d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"
-                />
-              </svg>
+              <span class="icon icon-hand" aria-hidden="true"></span>
             </button>
             <span class="rail-divider" aria-hidden="true"></span>
             <button
@@ -1374,23 +1275,7 @@
               disabled
               title="Erase parts of the vector result (E)"
             >
-              <svg
-                class="cleanup-tool-icon"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                aria-hidden="true"
-                focusable="false"
-              >
-                <path
-                  d="m14.5 5.2 4.3 4.3a2 2 0 0 1 0 2.8l-6.9 6.9a2.7 2.7 0 0 1-3.8 0l-3.3-3.3a2.7 2.7 0 0 1 0-3.8l6.9-6.9a2 2 0 0 1 2.8 0Z"
-                />
-                <path d="m7.2 9.8 7 7" />
-                <path d="M10.8 20h8.7" />
-              </svg>
+              <span class="icon icon-eraser" aria-hidden="true"></span>
             </button>
             <button
               type="button"
@@ -1401,7 +1286,7 @@
               disabled
               title="Paint vector color over the result (B)"
             >
-              <span class="material-icon icon-brush" aria-hidden="true"></span>
+              <span class="icon icon-brush" aria-hidden="true"></span>
             </button>
             <button
               type="button"
@@ -1412,20 +1297,7 @@
               disabled
               title="Brush over rough or stepped edges to smooth them (S)"
             >
-              <svg
-                class="cleanup-tool-icon"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                aria-hidden="true"
-                focusable="false"
-              >
-                <path d="M3 20v-3h3v-3h3v-2" />
-                <path d="M9 12c2-4 6-7 12-8" />
-              </svg>
+              <span class="icon icon-spline" aria-hidden="true"></span>
             </button>
             <span class="rail-divider" aria-hidden="true"></span>
             <button
@@ -1437,18 +1309,7 @@
               disabled
               title="Rectangular marquee (M)"
             >
-              <svg
-                class="cleanup-tool-icon"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                aria-hidden="true"
-                focusable="false"
-              >
-                <rect x="3.5" y="5" width="17" height="14" rx="1" stroke-dasharray="3 2.5" />
-              </svg>
+              <span class="icon icon-square-dashed" aria-hidden="true"></span>
             </button>
             <button
               type="button"
@@ -1459,18 +1320,7 @@
               disabled
               title="Elliptical marquee (Shift+M)"
             >
-              <svg
-                class="cleanup-tool-icon"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                aria-hidden="true"
-                focusable="false"
-              >
-                <ellipse cx="12" cy="12" rx="8.5" ry="7" stroke-dasharray="3 2.5" />
-              </svg>
+              <span class="icon icon-circle-dashed" aria-hidden="true"></span>
             </button>
             <button
               type="button"
@@ -1481,22 +1331,7 @@
               disabled
               title="Polygonal lasso (L)"
             >
-              <svg
-                class="cleanup-tool-icon"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                aria-hidden="true"
-                focusable="false"
-              >
-                <path d="M5 6.5 18.5 4 20 15.5 9 20 4 13Z" stroke-dasharray="3 2.5" />
-                <circle cx="5" cy="6.5" r="1.25" fill="currentColor" stroke="none" />
-                <circle cx="18.5" cy="4" r="1.25" fill="currentColor" stroke="none" />
-                <circle cx="20" cy="15.5" r="1.25" fill="currentColor" stroke="none" />
-              </svg>
+              <span class="icon icon-lasso-select" aria-hidden="true"></span>
             </button>
             <button
               type="button"
@@ -1507,7 +1342,7 @@
               disabled
               title="Magic wand: select a connected area of one color (W)"
             >
-              <span class="material-icon icon-auto_fix_high" aria-hidden="true"></span>
+              <span class="icon icon-wand-sparkles" aria-hidden="true"></span>
             </button>
             <span class="rail-spacer" aria-hidden="true"></span>
             <button
@@ -1518,7 +1353,7 @@
               disabled
               title="Undo cleanup (Ctrl/Cmd+Z)"
             >
-              <span class="material-icon icon-undo" aria-hidden="true"></span>
+              <span class="icon icon-undo-2" aria-hidden="true"></span>
             </button>
             <button
               type="button"
@@ -1528,7 +1363,7 @@
               disabled
               title="Redo cleanup (Ctrl/Cmd+Shift+Z)"
             >
-              <span class="material-icon icon-redo" aria-hidden="true"></span>
+              <span class="icon icon-redo-2" aria-hidden="true"></span>
             </button>
             <button
               type="button"
@@ -1537,7 +1372,7 @@
               disabled
               title="Remove all manual cleanup and restore the traced result"
             >
-              <span class="material-icon icon-restore" aria-hidden="true"></span
+              <span class="icon icon-history" aria-hidden="true"></span
               ><span class="visually-hidden">Restore</span>
             </button>
           </nav>
@@ -1995,7 +1830,7 @@
           aria-label="Zoom out"
           title="Zoom out (-)"
         >
-          &minus;
+          <span class="icon icon-minus" aria-hidden="true"></span>
         </button>
         <button
           type="button"
@@ -2015,7 +1850,7 @@
           aria-label="Zoom in"
           title="Zoom in (+)"
         >
-          +
+          <span class="icon icon-plus" aria-hidden="true"></span>
         </button>
       </div>
     </footer>
@@ -2172,6 +2007,6 @@
         location.reload();
       };
     </script>
-    <script type="module" src="js/app.js?v=230" onerror="window.recoverRasterTraceBoot()"></script>
+    <script type="module" src="js/app.js?v=231" onerror="window.recoverRasterTraceBoot()"></script>
   </body>
 </html>

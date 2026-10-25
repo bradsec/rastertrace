@@ -309,7 +309,7 @@ test("hide color toggles transparency and restores the original fill", async ({ 
   await expect(page.locator("#palette-hide")).toHaveText("Show color");
   await expect.poll(() => resultSvg(page)).toContain('fill="none"');
   await expect(swatch).toHaveClass(/hidden-color/);
-  await expect(swatch.locator(".swatch-hidden-badge .icon-visibility_off")).toBeVisible();
+  await expect(swatch.locator(".swatch-hidden-badge .icon-eye-off")).toBeVisible();
   await expect(page.locator("#palette-hidden-note")).toBeVisible();
   await expect(page.locator("#palette-hidden-note")).toHaveText("1 color hidden");
   await expect(page.locator("#palette-summary")).toContainText("1 hidden");
