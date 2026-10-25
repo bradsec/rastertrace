@@ -1,6 +1,6 @@
 // Magic wand: select the contiguous region of one color in the rendered
 // result and outline it as vector loops for the cleanup mask.
-import { ALPHA_THRESHOLD, srgbToOklab } from "./preprocess.js?v=100";
+import { ALPHA_THRESHOLD, srgbToOklab } from "./preprocess.js?v=101";
 
 /**
  * Pixels 4-connected to (nx, ny) whose opaque color is within `tolerance`

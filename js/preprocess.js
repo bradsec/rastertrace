@@ -35,6 +35,8 @@ const REFERENCE_SCALE = 2;
  * with a large source's downscale would let edge noise through as specks
  * and ragged outlines. A set value never rounds away to nothing; 0 stays
  * off.
+ * @param {number} value
+ * @param {number} scale
  */
 export function tracePixels(value, scale) {
   if (value <= 0) return 0;
@@ -45,6 +47,9 @@ export function tracePixels(value, scale) {
  * Effective scale factor for tracing: the requested upscale, capped so
  * the longest side never exceeds maxSide. Below 1 the image is
  * downscaled before tracing.
+ * @param {number} width
+ * @param {number} height
+ * @param {number} upscale
  */
 export function fitTraceScale(width, height, upscale, maxSide = MAX_TRACE_SIDE) {
   return Math.min(upscale, maxSide / Math.max(width, height));
@@ -53,10 +58,16 @@ export function fitTraceScale(width, height, upscale, maxSide = MAX_TRACE_SIDE) 
 /**
  * Throw a readable error when width x height at the given upscale factor
  * exceeds MAX_TRACE_PIXELS. Returns the upscaled pixel count otherwise.
+ * @param {number} width
+ * @param {number} height
+ * @param {number} upscale
  */
 export function assertRasterBudget(width, height, upscale) {
   const pixels = width * upscale * height * upscale;
   if (pixels > MAX_TRACE_PIXELS) {
+    /**
+     * @param {number} n
+     */
     const mp = (n) => `${Math.round(n / 1e6)} MP`;
     throw new Error(
       `Image is too large to trace at ${upscale}x (${mp(pixels)}; limit ${mp(MAX_TRACE_PIXELS)}). Lower the upscale factor or use a smaller image.`,
@@ -134,7 +145,11 @@ export const SIMPLIFY_LEVELS = Object.freeze([
   { lengthThreshold: 10, spliceThreshold: 90 },
 ]);
 
-/** Index of the Simplify level with exactly these tolerances, or -1. */
+/**
+ * Index of the Simplify level with exactly these tolerances, or -1.
+ * @param {number} lengthThreshold
+ * @param {number} spliceThreshold
+ */
 export function simplifyLevel(lengthThreshold, spliceThreshold) {
   return SIMPLIFY_LEVELS.findIndex(
     (l) => l.lengthThreshold === lengthThreshold && l.spliceThreshold === spliceThreshold,
@@ -213,7 +228,11 @@ export function profileColorSettings(profile, analysis) {
   };
 }
 
-/** The tracer's color difference: the sum of the RGB channel differences. */
+/**
+ * The tracer's color difference: the sum of the RGB channel differences.
+ * @param {ArrayLike<number>} a
+ * @param {ArrayLike<number>} b
+ */
 function colorDistance(a, b) {
   return Math.abs(a[0] - b[0]) + Math.abs(a[1] - b[1]) + Math.abs(a[2] - b[2]);
 }
@@ -223,13 +242,22 @@ function colorDistance(a, b) {
  * their own once Merge applies: each is dropped when within `layerDiff`
  * of a more common color already kept, as quantize seeds flat art. Never
  * below the Max colors minimum of 2.
+ * @param {number[][]} solids
+ * @param {number} layerDiff
  */
 export function distinctColorCount(solids, layerDiff) {
   return Math.max(2, distinctColors(solids, layerDiff).length);
 }
 
-/** The `solids` distinctColorCount keeps, most common first. */
+/**
+ * The `solids` distinctColorCount keeps, most common first.
+ * @param {number[][]} solids
+ * @param {number} layerDiff
+ */
 export function distinctColors(solids, layerDiff) {
+  /**
+   * @type {number[][]}
+   */
   const kept = [];
   for (const color of solids) {
     if (kept.every((other) => colorDistance(color, other) > layerDiff)) kept.push(color);
@@ -443,6 +471,9 @@ export const EXPORT_PROFILES = Object.freeze({
   },
 });
 
+/**
+ * @param {unknown} value
+ */
 function stripInvalidXmlCharacters(value) {
   let result = "";
   for (const character of String(value)) {
@@ -502,6 +533,9 @@ export function applyExportOptions(svgText, { physicalWidth, physicalUnit, title
 
 // Compact decimal for compressed path data: at most 4 places, trailing
 // zeros trimmed, "0.5" as ".5", "-0" as "0".
+/**
+ * @param {number} n
+ */
 function compactNum(n) {
   let s = n
     .toFixed(4)
@@ -518,6 +552,7 @@ function compactNum(n) {
  * trims number formatting. Paths with any other command or transform are
  * left untouched. The output is for the SVG download only; it no longer
  * matches the absolute shape parseSvgPaths expects.
+ * @param {string} svgText
  */
 export function compressSvgPaths(svgText) {
   return svgText.replace(/<path\b[^>]*\/>/g, (path) => {
@@ -540,6 +575,11 @@ export function compressSvgPaths(svgText) {
   });
 }
 
+/**
+ * @param {string} d
+ * @param {number} dx
+ * @param {number} dy
+ */
 function compressPathData(d, dx, dy) {
   const tokens = d.match(/-?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?|[A-Za-z]/g) || [];
   let out = "";
@@ -556,12 +596,18 @@ function compressPathData(d, dx, dy) {
   let i = 0;
   const read = () => Number(tokens[i++]);
 
+  /**
+   * @param {string} letter
+   */
   const cmd = (letter) => {
     if (letter === lastCmd && (letter === "l" || letter === "c" || letter === "s")) return;
     out += letter;
     lastCmd = letter;
     lastNum = "";
   };
+  /**
+   * @param {number} n
+   */
   const num = (n) => {
     const s = compactNum(n);
     if (lastNum && !s.startsWith("-") && !(s.startsWith(".") && lastNum.includes("."))) {
@@ -638,14 +684,23 @@ function compressPathData(d, dx, dy) {
         const c2y = read() + dy;
         const x = read() + dx;
         const y = read() + dy;
+        /**
+         * @type {boolean | null}
+         */
         const smooth =
           prevC2 &&
           Math.abs(2 * ex - prevC2.x - c1x) < 5e-5 &&
           Math.abs(2 * ey - prevC2.y - c1y) < 5e-5;
+        /**
+         * @type {number[]}
+         */
         const coords = smooth ? [c2x, c2y, x, y] : [c1x, c1y, c2x, c2y, x, y];
         cmd(smooth ? "s" : "c");
         const emitted = [];
         for (let k = 0; k < coords.length; k += 2) {
+          /**
+           * @type {number}
+           */
           const rx = Number(compactNum(coords[k] - ex));
           const ry = Number(compactNum(coords[k + 1] - ey));
           num(rx);
@@ -670,6 +725,8 @@ function compressPathData(d, dx, dy) {
  * black, everything else white. Alpha is untouched. Run after
  * toGrayscale so r is luma; this makes the stencil threshold a user
  * control instead of vtracer's fixed cut at 128.
+ * @param {ImageData} img
+ * @param {number} threshold
  */
 export function thresholdImage(img, threshold) {
   const d = img.data;
@@ -685,6 +742,8 @@ export function thresholdImage(img, threshold) {
  * Paint pixels below the alpha threshold with the given opaque color.
  * Binary (stencil) tracing keys on brightness only and ignores alpha, so
  * transparent areas must become background-colored before the trace.
+ * @param {ImageData} img
+ * @param {number[]} rgb
  */
 export function fillTransparent(img, [r, g, b]) {
   const d = img.data;
@@ -703,6 +762,8 @@ export function fillTransparent(img, [r, g, b]) {
  * white on transparency, one ink like the black stencil, so nothing extra
  * prints or cuts. Binary stencil traces have exactly one fill value in
  * the whole document, so a blanket replace is safe. No-op for "black".
+ * @param {string} svgText
+ * @param {string} ink
  */
 export function applyStencilInk(svgText, ink) {
   if (ink !== "white") return svgText;
@@ -711,11 +772,17 @@ export function applyStencilInk(svgText, ink) {
 
 // Validators for persisted settings. localStorage is untrusted input:
 // each entry admits one control's value range and nothing else.
+/**
+ * @param {unknown} value
+ */
 export function physicalWidthValue(value) {
   const width = Number(value);
   return Number.isFinite(width) && width > 0 && width <= 100000 ? width : null;
 }
 
+/**
+ * @type {Record<string, (v: any) => boolean>}
+ */
 const SETTING_CHECKS = {
   profile: (v) =>
     v === "" || v in EXPORT_PROFILES || (typeof v === "string" && userPresetName(v) !== null),
@@ -769,6 +836,7 @@ const SETTING_CHECKS = {
  */
 export function sanitizeSettings(raw) {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {};
+  /** @type {Record<string, any>} */
   const out = {};
   for (const [key, check] of Object.entries(SETTING_CHECKS)) {
     if (Object.prototype.hasOwnProperty.call(raw, key) && check(raw[key])) {
@@ -786,7 +854,10 @@ export const USER_PRESET_PREFIX = "user:";
 // off when applied, so neither is stored inside it.
 const PRESET_SESSION_KEYS = ["profile", "autoDetect"];
 
-/** Trimmed preset name without control characters, or null when unusable. */
+/**
+ * Trimmed preset name without control characters, or null when unusable.
+ * @param {unknown} value
+ */
 export function presetName(value) {
   if (typeof value !== "string") return null;
   // oxlint-disable-next-line no-control-regex -- stripping them is the point
@@ -794,13 +865,20 @@ export function presetName(value) {
   return name && name.length <= PRESET_NAME_MAX ? name : null;
 }
 
-/** Preset name from a "user:<name>" profile value, or null. */
+/**
+ * Preset name from a "user:<name>" profile value, or null.
+ * @param {string} profile
+ */
 export function userPresetName(profile) {
   return profile.startsWith(USER_PRESET_PREFIX)
     ? presetName(profile.slice(USER_PRESET_PREFIX.length))
     : null;
 }
 
+/**
+ * @param {string} a
+ * @param {string} b
+ */
 const sameName = (a, b) => a.toLowerCase() === b.toLowerCase();
 
 /**
@@ -808,9 +886,11 @@ const sameName = (a, b) => a.toLowerCase() === b.toLowerCase();
  * { presets }. Names compare case-insensitively and the first one wins;
  * each preset's settings pass sanitizeSettings. Capped at PRESETS_MAX.
  * @returns {{ name: string, settings: object }[]}
+ * @param {any} raw untrusted, e.g. parsed JSON
  */
 export function sanitizePresets(raw) {
   const entries = Array.isArray(raw) ? raw : Array.isArray(raw?.presets) ? raw.presets : [];
+  /** @type {{ name: string, settings: Record<string, any> }[]} */
   const out = [];
   for (const entry of entries) {
     if (out.length >= PRESETS_MAX) break;
@@ -827,6 +907,9 @@ export function sanitizePresets(raw) {
  * Add `incoming` presets to `list` without mutating it. A same-named
  * preset is replaced in place (or skipped with replace: false); new names
  * append while the list is under PRESETS_MAX.
+ * @param {{ name: string, settings: object }[]} list
+ * @param {{ name: string, settings: object }[]} incoming
+ * @param {{ replace?: boolean }} [options]
  */
 export function mergePresets(list, incoming, { replace = true } = {}) {
   const presets = [...list];
@@ -880,11 +963,17 @@ export function parseSwatchText(text) {
   return [...new Set(colors)].slice(0, SWATCHES_MAX);
 }
 
-/** CIE Lab (D50, as Adobe stores it) to sRGB [0-255], clamped. */
+/**
+ * CIE Lab (D50, as Adobe stores it) to sRGB [0-255], clamped.
+ * @param {number[]} lab
+ */
 function labD50ToSrgb([L, a, b]) {
   const fy = (L + 16) / 116;
   const fx = fy + a / 500;
   const fz = fy - b / 200;
+  /**
+   * @param {number} t
+   */
   const inv = (t) => (t ** 3 > 216 / 24389 ? t ** 3 : (116 * t - 16) / (24389 / 27));
   const x = 0.96422 * inv(fx);
   const y = 1 * inv(fy);
@@ -893,6 +982,9 @@ function labD50ToSrgb([L, a, b]) {
   const lr = 3.1338561 * x - 1.6168667 * y - 0.4906146 * z;
   const lg = -0.9787684 * x + 1.9161415 * y + 0.033454 * z;
   const lb = 0.0719453 * x - 0.2289914 * y + 1.4052427 * z;
+  /**
+   * @param {number} v
+   */
   const gam = (v) => {
     const c = v <= 0.0031308 ? 12.92 * v : 1.055 * Math.max(0, v) ** (1 / 2.4) - 0.055;
     return Math.max(0, Math.min(255, Math.round(c * 255)));
@@ -909,6 +1001,7 @@ function labD50ToSrgb([L, a, b]) {
  * @returns {{ swatches: string[], approximate: boolean }}
  */
 export function parseAse(bytes) {
+  /** @type {() => never} */
   const fail = () => {
     throw new Error("Not a readable Adobe swatch (.ase) file.");
   };
@@ -929,13 +1022,22 @@ export function parseAse(bytes) {
       let p = start + 2 + view.getUint16(start) * 2;
       const model = String.fromCharCode(...bytes.subarray(p, p + 4));
       p += 4;
+      /**
+       * @param {number} i
+       */
       const f = (i) => {
         const value = view.getFloat32(p + i * 4);
         // NaN would format as "#NANNANNAN" and pass for a swatch.
         if (!Number.isFinite(value)) fail();
         return value;
       };
+      /**
+       * @param {number} v
+       */
       const unit = (v) => Math.max(0, Math.min(255, Math.round(v * 255)));
+      /**
+       * @type {number[]}
+       */
       let rgb;
       if (model === "RGB ") {
         rgb = [unit(f(0)), unit(f(1)), unit(f(2))];
@@ -967,7 +1069,11 @@ export function parseAse(bytes) {
   return { swatches: [...new Set(colors)].slice(0, SWATCHES_MAX), approximate };
 }
 
-/** Parse "#RRGGBB" or "RRGGBB" into [r, g, b], or null. */
+/**
+ * Parse "#RRGGBB" or "RRGGBB" into [r, g, b], or null.
+ * @param {unknown} value any input; non-strings never match
+ * @returns {[number, number, number] | null}
+ */
 export function parseHexColor(value) {
   const m = /^#?([0-9a-fA-F]{6})$/.exec(String(value).trim());
   if (!m) return null;
@@ -975,11 +1081,19 @@ export function parseHexColor(value) {
   return [(n >> 16) & 0xff, (n >> 8) & 0xff, n & 0xff];
 }
 
-/** Format [r, g, b] as "#RRGGBB". */
+/**
+ * Format [r, g, b] as "#RRGGBB".
+ * @param {Iterable<number>} rgb
+ */
 export function toHexColor([r, g, b]) {
   return "#" + [r, g, b].map((c) => c.toString(16).padStart(2, "0").toUpperCase()).join("");
 }
 
+/**
+ * @param {{ width: number, height: number, data: Uint8ClampedArray } | null} imageData
+ * @param {number} normalizedX
+ * @param {number} normalizedY
+ */
 export function sampleRasterColor(imageData, normalizedX, normalizedY) {
   if (!imageData?.width || !imageData?.height || !imageData.data) return null;
   const x = Math.min(imageData.width - 1, Math.max(0, Math.floor(normalizedX * imageData.width)));
@@ -993,6 +1107,7 @@ export function sampleRasterColor(imageData, normalizedX, normalizedY) {
  * uniform: Euclidean distances here track how different two colors look,
  * unlike raw sRGB where dark and saturated regions are over-weighted.
  */
+/** @type {Float64Array | undefined} */
 let SRGB_LINEAR;
 function linearLut() {
   if (!SRGB_LINEAR) {
@@ -1021,7 +1136,10 @@ export function srgbToOklab([r, g, b]) {
   ];
 }
 
-/** Oklab [L, a, b] back to sRGB [0-255], clamped and rounded. */
+/**
+ * Oklab [L, a, b] back to sRGB [0-255], clamped and rounded.
+ * @param {number[]} lab
+ */
 export function oklabToSrgb([L, a, b]) {
   const l = (L + 0.3963377774 * a + 0.2158037573 * b) ** 3;
   const m = (L - 0.1055613458 * a - 0.0638541728 * b) ** 3;
@@ -1029,6 +1147,9 @@ export function oklabToSrgb([L, a, b]) {
   const lr = 4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s;
   const lg = -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s;
   const lb = -0.0041960863 * l - 0.7034186147 * m + 1.707614701 * s;
+  /**
+   * @param {number} v
+   */
   const gam = (v) => {
     const c = v <= 0.0031308 ? 12.92 * v : 1.055 * Math.max(0, v) ** (1 / 2.4) - 0.055;
     return Math.max(0, Math.min(255, Math.round(c * 255)));
@@ -1043,11 +1164,19 @@ export function oklabToSrgb([L, a, b]) {
  * dominant bin: single corner pixels are one JPEG artifact or watermark
  * away from the wrong answer, and binning absorbs compression noise.
  * @returns {[number, number, number] | null}
+ * @param {ImageData} img
  */
 export function detectBackgroundColor(img) {
   const { data, width, height } = img;
+  /**
+   * @type {number[]} byte offsets of sampled pixels
+   */
   const samples = [];
   let total = 0;
+  /**
+   * @param {number} x
+   * @param {number} y
+   */
   const take = (x, y) => {
     total += 1;
     const i = (y * width + x) * 4;
@@ -1077,6 +1206,9 @@ export function detectBackgroundColor(img) {
   // background.
   if (samples.length < total / 2) return null;
 
+  /**
+   * @param {number} i
+   */
   const bin = (i) => ((data[i] >> 4) << 8) | ((data[i + 1] >> 4) << 4) | (data[i + 2] >> 4);
   const bins = new Map();
   let bestKey = -1;
@@ -1107,6 +1239,11 @@ export function detectBackgroundColor(img) {
 /**
  * Write the Oklab coordinates of an sRGB color into `out` (length 3).
  * Allocation-free for per-pixel use; same math as srgbToOklab.
+ * @param {Float64Array} lut
+ * @param {number} r
+ * @param {number} g
+ * @param {number} b
+ * @param {Float64Array | number[]} out
  */
 function oklabInto(lut, r, g, b, out) {
   const lr = lut[r];
@@ -1120,7 +1257,11 @@ function oklabInto(lut, r, g, b, out) {
   out[2] = 0.0259040371 * l + 0.7827717662 * m - 0.808675766 * s;
 }
 
-/** Fuzz-scale distance between two Oklab colors (see makeFuzzMatch). */
+/**
+ * Fuzz-scale distance between two Oklab colors (see makeFuzzMatch).
+ * @param {ArrayLike<number>} a
+ * @param {ArrayLike<number>} b
+ */
 function fuzzDistance(a, b) {
   const dL = a[0] - b[0];
   const dA = (a[1] - b[1]) * 2;
@@ -1135,12 +1276,19 @@ function fuzzDistance(a, b) {
  * protected while letting pure lightness noise (shadows, JPEG artifacts)
  * count as background. Allocation-free per call: runs per pixel, and
  * remembers the last color, since flat art repeats it along whole runs.
+ * @param {number[]} target
+ * @param {number} fuzz
  */
 function makeFuzzMatch(target, fuzz) {
   const [L1, A1, B1] = srgbToOklab(target);
   const lut = linearLut();
   let lastKey = -1;
   let lastResult = false;
+  /**
+   * @param {number} r
+   * @param {number} g
+   * @param {number} b
+   */
   return (r, g, b) => {
     const key = (r << 16) | (g << 8) | b;
     if (key === lastKey) return lastResult;
@@ -1162,6 +1310,9 @@ function makeFuzzMatch(target, fuzz) {
 /**
  * Set alpha to 0 wherever the image matches color within fuzz
  * (perceptual distance, see makeFuzzMatch). Mutates img in place.
+ * @param {ImageData} img
+ * @param {number[]} color
+ * @param {number} fuzz
  */
 export function knockOutColor(img, color, fuzz) {
   const { data } = img;
@@ -1178,6 +1329,8 @@ export function knockOutColor(img, color, fuzz) {
  * between a user-set minimum and maximum, because no fixed limit
  * separates letter counters (small) from same-color subject areas such
  * as a blank screen (large).
+ * @param {number} size
+ * @param {number} scale
  */
 export function enclosedAreaLimit(size, scale) {
   return Math.max(1, Math.round((size * scale) ** 2));
@@ -1208,6 +1361,11 @@ const GRADIENT_DRIFT_SCALE = 4;
  * of matching the seed directly, so vignettes and lit backdrops go too
  * (see GRADIENT_STEP_SCALE); enclosed regions still match the seed.
  * Mutates img in place.
+ * @param {ImageData} img
+ * @param {number[]} color
+ * @param {number} fuzz
+ * @param {number} enclosedMinArea
+ * @param {{ gradient?: boolean, enclosedMaxArea?: number }} [options]
  */
 export function knockOutConnected(
   img,
@@ -1218,6 +1376,9 @@ export function knockOutConnected(
 ) {
   const { data, width, height } = img;
   const fuzzMatch = makeFuzzMatch(color, fuzz);
+  /**
+   * @param {number} i
+   */
   const matches = (i) =>
     data[i + 3] >= ALPHA_THRESHOLD && fuzzMatch(data[i], data[i + 1], data[i + 2]);
 
@@ -1229,6 +1390,10 @@ export function knockOutConnected(
   const toLab = new Float64Array(3);
   const stepLimit = fuzz * GRADIENT_STEP_SCALE;
   const driftLimit = fuzz * GRADIENT_DRIFT_SCALE;
+  /**
+   * @param {ArrayLike<number>} from Oklab color of the pixel the fill came from
+   * @param {number} i
+   */
   const steps = (from, i) => {
     if (data[i + 3] < ALPHA_THRESHOLD) return false;
     oklabInto(lut, data[i], data[i + 1], data[i + 2], toLab);
@@ -1237,10 +1402,17 @@ export function knockOutConnected(
 
   const stack = new Uint32Array(width * height);
   let stackSize = 0;
+  /**
+   * @param {number} p
+   */
   const take = (p) => {
     data[p * 4 + 3] = 0;
     stack[stackSize++] = p;
   };
+  /**
+   * @param {number} x
+   * @param {number} y
+   */
   const seedPush = (x, y) => {
     const p = y * width + x;
     if (matches(p * 4)) take(p);
@@ -1314,6 +1486,10 @@ export function knockOutConnected(
  * Edge knockout seeded by the detected border color (see
  * detectBackgroundColor and knockOutConnected). Returns the seed color,
  * or null when the border is already transparent. Mutates img in place.
+ * @param {ImageData} img
+ * @param {number} fuzz
+ * @param {number} enclosedMinArea
+ * @param {{ gradient?: boolean, enclosedMaxArea?: number }} [options]
  */
 export function knockOutEdges(
   img,
@@ -1332,6 +1508,9 @@ export function knockOutEdges(
  * or null when nothing is within maxDistance. Intended for quantized
  * images, where snapping the knockout color to the palette removes the
  * whole cluster instead of only pixels inside the fuzz radius.
+ * @param {ImageData} img
+ * @param {number[]} rgb
+ * @param {number} maxDistance
  */
 export function snapToImageColor(img, [r, g, b], maxDistance) {
   const { data } = img;
@@ -1366,6 +1545,11 @@ export function snapToImageColor(img, [r, g, b], maxDistance) {
  * `enclosedMaxArea` (edges and contiguous only), and `gradient` lets those modes follow a gradient backdrop (see
  * knockOutConnected). Returns the removed color, or null when nothing
  * was removed.
+ * @param {ImageData} img
+ * @param {string | number[]} transparent "auto", "edges" or an [r, g, b] color
+ * @param {number} fuzz
+ * @param {boolean} quantized
+ * @param {{ contiguous?: boolean, enclosedMinArea?: number, enclosedMaxArea?: number, gradient?: boolean }} [options]
  */
 export function removeBackground(
   img,
@@ -1405,6 +1589,10 @@ export function removeBackground(
  * before quantizing. Grows at most `rings` pixels in from the cutout, and
  * only through reclaimed pixels, so the subject cannot be eaten.
  * Mutates img in place.
+ * @param {ImageData} img
+ * @param {Uint8ClampedArray} original
+ * @param {number[]} seed
+ * @param {number} rings
  */
 export function reclaimFringe(img, original, seed, rings) {
   const { data, width, height } = img;
@@ -1460,6 +1648,9 @@ export const FRINGE_RINGS = 2;
  * clustered rather than seeded.
  * Returns the removed color, or null. Mutates img in place.
  * @param {(label: string) => void} [stage] progress reporter
+ * @param {ImageData} img
+ * @param {number} colors
+ * @param {Record<string, any>} background
  */
 export function reduceAndRemoveBackground(img, colors, background, stage = () => {}) {
   const {
@@ -1531,12 +1722,17 @@ export function reduceAndRemoveBackground(img, colors, background, stage = () =>
  * opaque color around it, so quantized images keep their palette.
  * Transparent regions touching the border are background, never holes.
  * 4-connected. Mutates img in place.
+ * @param {ImageData} img
+ * @param {number} size
  */
 export function removeSpecks(img, size) {
   const maxArea = size * size;
   if (maxArea <= 1) return img;
   const { data, width, height } = img;
   const n = width * height;
+  /**
+   * @param {number} p
+   */
   const opaque = (p) => data[p * 4 + 3] >= ALPHA_THRESHOLD;
   const seen = new Uint8Array(n);
   const queue = new Uint32Array(n);
@@ -1625,6 +1821,9 @@ const BLEND_BAND_END = 0.15;
  * outlines (the original matches its fill) and gradient bands (its fill
  * is itself between the two) stay. `original` holds the colors before
  * reduction. Mutates img.
+ * @param {ImageData} img
+ * @param {Uint8ClampedArray} original
+ * @param {number} reach
  */
 export function unblendEdges(img, original, reach) {
   if (reach < 1) return img;
@@ -1801,6 +2000,8 @@ const SLIVER_DISTANCE = 40;
  * between two colors; lines on one color and outlines between two fills
  * stay. Repeats until nothing changes (at most 4 passes), since merged
  * specks can leave new ones. 4-connected, exact colors. Mutates img.
+ * @param {ImageData} img
+ * @param {number} size
  */
 export function despeckleColors(img, size) {
   const minArea = size * size;
@@ -1915,8 +2116,16 @@ export function despeckleColors(img, size) {
   return img;
 }
 
-/** Whether color `c` lies near the RGB segment from `a` to `b` (blend). */
+/**
+ * Whether color `c` lies near the RGB segment from `a` to `b` (blend).
+ * @param {number} c packed 0xRRGGBB
+ * @param {number} a packed 0xRRGGBB
+ * @param {number} b packed 0xRRGGBB
+ */
 function betweenColors(c, a, b) {
+  /**
+   * @param {number} key
+   */
   const rgb = (key) => [(key >> 16) & 0xff, (key >> 8) & 0xff, key & 0xff];
   const [cr, cg, cb] = rgb(c);
   const [ar, ag, ab] = rgb(a);
@@ -1937,6 +2146,8 @@ function betweenColors(c, a, b) {
  * the background-blend fringe left along subject boundaries after a
  * knockout, whatever color the fringe is; thin features shrink by the
  * same amount, so the amount is user-controlled. Mutates img in place.
+ * @param {ImageData} img
+ * @param {number} passes
  */
 export function erodeAlpha(img, passes) {
   const { data, width, height } = img;
@@ -1966,12 +2177,21 @@ export function erodeAlpha(img, passes) {
  * Two passes of a separable running-sum box blur with a (2r+1) window,
  * in place. Values past the edges repeat the nearest edge value.
  * @param {Float32Array} values
+ * @param {number} width
+ * @param {number} height
+ * @param {number} radius
  */
 function boxBlur(values, width, height, radius) {
   const window = 2 * radius + 1;
   // One line at a time, padded by `radius` repeats of each end so the
   // running sum needs no bounds checks (slow in WebKit).
   const line = new Float32Array(width + 2 * radius + 1);
+  /**
+   * @param {number} length
+   * @param {number} count
+   * @param {number} stride
+   * @param {number} step
+   */
   const blur = (length, count, stride, step) => {
     for (let l = 0; l < count; l++) {
       const base = l * stride;
@@ -1992,6 +2212,9 @@ function boxBlur(values, width, height, radius) {
   // stride apart misses the cache on every read.
   const source = new Float32Array(values.length);
   const sums = new Float64Array(width);
+  /**
+   * @param {number} y
+   */
   const row = (y) => Math.min(height - 1, Math.max(0, y)) * width;
   const blurColumns = () => {
     source.set(values);
@@ -2023,6 +2246,8 @@ function boxBlur(values, width, height, radius) {
  * and features thinner than it vanish. Pixels outside the image count as
  * their nearest edge pixel, so the canvas border is not eaten. Newly
  * opaque pixels take the color of an adjacent opaque pixel. Mutates img.
+ * @param {ImageData} img
+ * @param {number} radius
  */
 export function smoothAlpha(img, radius) {
   if (radius <= 0) return img;
@@ -2074,11 +2299,17 @@ export function smoothAlpha(img, radius) {
  * or the mask's edge (chamfer 3-4, so diagonals cost about √2). Unset
  * bits are 0.
  * @param {Uint8Array} bits
+ * @param {number} width
+ * @param {number} height
  */
 function maskDepth(bits, width, height) {
   const far = 3 * (width + height);
   const depth = new Int32Array(width * height);
   for (let p = 0; p < depth.length; p++) depth[p] = bits[p] ? far : 0;
+  /**
+   * @param {number} x
+   * @param {number} y
+   */
   const at = (x, y) => (x < 0 || y < 0 || x >= width || y >= height ? 0 : depth[y * width + x]);
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
@@ -2126,6 +2357,7 @@ const SMOOTH_PASSES = 3;
  * colors appear. `regions` hold a stroke's mask in image pixels: { x, y,
  * width, height, bits (1 inside), radius }. Mutates img in place.
  * @param {{ x: number, y: number, width: number, height: number, bits: Uint8Array, radius: number }[]} regions
+ * @param {ImageData} img
  */
 export function smoothLabels(img, regions, passes = SMOOTH_PASSES) {
   const { data, width, height } = img;
@@ -2213,6 +2445,8 @@ export function smoothLabels(img, regions, passes = SMOOTH_PASSES) {
  * (trace pixels), clearing the pixel-level steps and noise reduced flat
  * art leaves along its edges. One pass keeps lines a few pixels wide that
  * repeated votes would thin. Mutates img in place.
+ * @param {ImageData} img
+ * @param {number} radius
  */
 export function smoothOutlines(img, radius) {
   if (radius <= 0) return img;
@@ -2231,6 +2465,9 @@ export function smoothOutlines(img, radius) {
  * than 2*depth) keep their original color. With `keepPalette` a fringe
  * pixel takes the most common deeper color instead of their average, so a
  * color-reduced image gains no new colors. Mutates img in place.
+ * @param {ImageData} img
+ * @param {number} depth
+ * @param {{ keepPalette?: boolean }} [options]
  */
 export function defringeAlpha(img, depth, { keepPalette = false } = {}) {
   if (depth <= 0) return img;
@@ -2247,12 +2484,21 @@ export function defringeAlpha(img, depth, { keepPalette = false } = {}) {
     }
   }
   if (queue.length === 0 || queue.length === n) return img;
+  /**
+   * @type {number[][]}
+   */
   const rings = [];
   for (let d = 1; d <= depth && queue.length; d++) {
+    /**
+     * @type {number[]}
+     */
     const next = [];
     for (const p of queue) {
       const x = p % width;
       const y = (p / width) | 0;
+      /**
+       * @param {number} q
+       */
       const grow = (q) => {
         if (dist[q] === -1) {
           dist[q] = d;
@@ -2321,6 +2567,7 @@ export function defringeAlpha(img, depth, { keepPalette = false } = {}) {
 /**
  * Threshold alpha to 0 or 255 so anti-aliased edge fringe cannot fragment
  * the trace into junk paths. Mutates img in place.
+ * @param {ImageData} img
  */
 export function binarizeAlpha(img) {
   const { data } = img;
@@ -2330,7 +2577,10 @@ export function binarizeAlpha(img) {
   return img;
 }
 
-/** Luminance (Rec. 601) grayscale conversion, alpha preserved. In place. */
+/**
+ * Luminance (Rec. 601) grayscale conversion, alpha preserved. In place.
+ * @param {ImageData} img
+ */
 export function toGrayscale(img) {
   const { data } = img;
   for (let i = 0; i < data.length; i += 4) {
@@ -2340,7 +2590,10 @@ export function toGrayscale(img) {
   return img;
 }
 
-/** Most common opaque color, sampled with a stride for speed. */
+/**
+ * Most common opaque color, sampled with a stride for speed.
+ * @param {ImageData} img
+ */
 export function dominantOpaqueColor(img) {
   const { data } = img;
   const pixelCount = data.length / 4;
@@ -2413,6 +2666,7 @@ const SIMILAR_LINE_SHARE = 0.02;
  * common enough to be a thin line. Anti-alias blends sit only on edges,
  * so they rarely have interior pixels. colorCount counts the solids, so
  * small accents past 95% coverage still get a palette slot.
+ * @param {ImageData} img
  */
 export function analyzeFlatness(img) {
   const { solidShare, ...exact } = exactFlatness(img);
@@ -2446,6 +2700,8 @@ const SHADE_REACH = 12;
  * color that is a mix of two other detected colors is dropped when its
  * pixels rarely fill areas and mostly lie where those two colors meet. `solids` are ordered most common first; the
  * least common are tested first and only kept colors serve as ends.
+ * @param {ImageData} img
+ * @param {number[][]} solids
  */
 function withoutBlendShades(img, solids) {
   if (solids.length < 3) return solids;
@@ -2455,6 +2711,10 @@ function withoutBlendShades(img, solids) {
   let stride = Math.max(1, Math.ceil(pixelCount / 200_000));
   if (stride % 2 === 0) stride += 1;
   const row = width * 4;
+  /**
+   * @param {number} i
+   * @param {number} j
+   */
   const step = (i, j) =>
     Math.abs(data[i] - data[j]) +
     Math.abs(data[i + 1] - data[j + 1]) +
@@ -2469,6 +2729,11 @@ function withoutBlendShades(img, solids) {
   steps.sort((a, b) => a - b);
   const flatStep = Math.max(6, 2 * (steps[steps.length >> 1] ?? 0));
   const tolerance2 = SHADE_TOLERANCE * SHADE_TOLERANCE;
+  /**
+   * @param {number[]} c
+   * @param {number[]} a
+   * @param {number[]} b
+   */
   const along = (c, a, b) => {
     const dr = b[0] - a[0];
     const dg = b[1] - a[1];
@@ -2480,6 +2745,10 @@ function withoutBlendShades(img, solids) {
       (c[0] - a[0] - t * dr) ** 2 + (c[1] - a[1] - t * dg) ** 2 + (c[2] - a[2] - t * db) ** 2;
     return { t, residual2 };
   };
+  /**
+   * @param {number} i
+   * @param {number[][]} colors
+   */
   const nearest = (i, colors) => {
     let best = -1;
     let bestDistance = Infinity;
@@ -2494,6 +2763,10 @@ function withoutBlendShades(img, solids) {
     return best;
   };
   // Share of the color's pixels whose four neighbors match their own.
+  /**
+   * @param {number[][]} colors
+   * @param {number} k
+   */
   const measure = (colors, k) => {
     let count = 0;
     let interior = 0;
@@ -2517,6 +2790,12 @@ function withoutBlendShades(img, solids) {
   };
   // Share of the color's pixels with both `a` and `b` within SHADE_REACH:
   // a soft edge's shade lies in the band where they meet.
+  /**
+   * @param {number[][]} colors
+   * @param {number} k
+   * @param {number} a
+   * @param {number} b
+   */
   const between = (colors, k, a, b) => {
     let count = 0;
     let found = 0;
@@ -2563,7 +2842,7 @@ function withoutBlendShades(img, solids) {
         shade =
           measure(kept, k) < SHADE_MIN_INTERIOR &&
           between(kept, k, kept.indexOf(ends[m]), kept.indexOf(ends[j])) >= SHADE_MIN_BETWEEN;
-        if (globalThis.SHADE_DEBUG)
+        if (/** @type {any} */ (globalThis).SHADE_DEBUG)
           console.log(
             "CAND",
             JSON.stringify(color),
@@ -2588,6 +2867,7 @@ function withoutBlendShades(img, solids) {
  * those samples are grouped into perceptual (Oklab) clusters. Returns
  * null when the clusters do not describe flat art: too many, too wide
  * (smooth gradients), or too little of the image inside areas (photos).
+ * @param {ImageData} img
  */
 function similarFlatness(img) {
   const { data, width } = img;
@@ -2595,6 +2875,10 @@ function similarFlatness(img) {
   const height = pixelCount / width;
   let stride = Math.max(1, Math.ceil(pixelCount / 200_000));
   if (stride % 2 === 0) stride += 1;
+  /**
+   * @param {number} i
+   * @param {number} j
+   */
   const distance = (i, j) =>
     Math.abs(data[i] - data[j]) +
     Math.abs(data[i + 1] - data[j + 1]) +
@@ -2609,6 +2893,10 @@ function similarFlatness(img) {
   const tolerance = Math.max(SIMILAR_MIN_TOLERANCE, 3 * (steps[steps.length >> 1] ?? 0));
 
   // 5-bit bins hold running sums so each cluster gets its mean color.
+  /**
+   * @param {Map<number, number[]>} bins
+   * @param {number} i
+   */
   const bin = (bins, i) => {
     const key = ((data[i] >> 3) << 10) | ((data[i + 1] >> 3) << 5) | (data[i + 2] >> 3);
     let entry = bins.get(key);
@@ -2646,6 +2934,9 @@ function similarFlatness(img) {
 
   // Greedy by frequency: a bin joins the nearest cluster seed within
   // SIMILAR_CLUSTER_DISTANCE, else seeds a cluster of its own.
+  /**
+   * @param {Map<number, number[]>} bins
+   */
   const cluster = (bins) => {
     const clusters = [];
     for (const [r, g, b, count] of [...bins.values()].sort((x, y) => y[3] - x[3])) {
@@ -2683,6 +2974,10 @@ function similarFlatness(img) {
   if (covered < insideCount * 0.9 || spread >= SIMILAR_MAX_SPREAD) return null;
   // Thin lines have no inside samples: a common color anywhere that is
   // not near an area color still counts.
+  /**
+   * @param {{ lab: number[] }} a
+   * @param {{ lab: number[] }} b
+   */
   const near = (a, b) =>
     Math.hypot(a.lab[0] - b.lab[0], a.lab[1] - b.lab[1], a.lab[2] - b.lab[2]) <
     SIMILAR_CLUSTER_DISTANCE;
@@ -2718,11 +3013,15 @@ function similarFlatness(img) {
 /**
  * analyzeFlatness on exact colors (described above), plus `solidShare`:
  * the share of samples whose exact color is one of the solids.
+ * @param {ImageData} img
  */
 function exactFlatness(img) {
   const { data, width } = img;
   const pixelCount = data.length / 4;
   const height = pixelCount / width;
+  /**
+   * @param {number} i
+   */
   const keyAt = (i) => (data[i] << 16) | (data[i + 1] << 8) | data[i + 2];
   // Odd pixel stride so sampling does not lock to even image widths and
   // hit the same columns every row.
@@ -2767,6 +3066,9 @@ function exactFlatness(img) {
     }
     if (counted && i >= 16) break;
   }
+  /**
+   * @param {number} key
+   */
   const toRgb = (key) => [(key >> 16) & 0xff, (key >> 8) & 0xff, key & 0xff];
   if (counts.size <= 32 && topCoverage < 0.9) {
     return {
@@ -2821,6 +3123,8 @@ function exactFlatness(img) {
  * Oklab: a fixed palette (brand colors, stocked inks) in place of
  * quantize's automatic one. Transparent pixels get the dominant opaque
  * color's swatch, as quantize backfills them. Mutates img in place.
+ * @param {ImageData} img
+ * @param {string[]} swatches
  */
 export function mapToPalette(img, swatches) {
   const palette = swatches.map((hex) => {
@@ -2829,6 +3133,11 @@ export function mapToPalette(img, swatches) {
   });
   /** @type {Map<number, [number, number, number]>} */
   const nearest = new Map();
+  /**
+   * @param {number} r
+   * @param {number} g
+   * @param {number} b
+   */
   const snap = (r, g, b) => {
     const key = (r << 16) | (g << 8) | b;
     let hit = nearest.get(key);
@@ -2845,7 +3154,7 @@ export function mapToPalette(img, swatches) {
       // Callers pass at least one swatch, so the loop always picks one.
       nearest.set(key, /** @type {[number, number, number]} */ (hit));
     }
-    return hit;
+    return /** @type {[number, number, number]} */ (hit);
   };
   const { data } = img;
   const dominant = dominantOpaqueColor(img);
@@ -2919,6 +3228,11 @@ export function quantize(img, colors, { layerDiff = 0, seeds = null, keep = null
   if (exact.size <= colors + kept.length) return false;
   const backfill = dominantOpaqueColor(img);
 
+  /**
+   * @param {number} r
+   * @param {number} g
+   * @param {number} b
+   */
   const binOf = (r, g, b) =>
     ((r >> QUANT_SHIFT) << (2 * QUANT_BITS)) |
     ((g >> QUANT_SHIFT) << QUANT_BITS) |
@@ -2962,6 +3276,9 @@ export function quantize(img, colors, { layerDiff = 0, seeds = null, keep = null
 
   // Median cut: repeatedly split the box with the largest channel range.
   // A box's widest channel is computed once, when the box is created.
+  /**
+   * @param {Int32Array} members
+   */
   const makeBox = (members) => {
     let range = -1;
     let channel = 0;
@@ -2996,10 +3313,17 @@ export function quantize(img, colors, { layerDiff = 0, seeds = null, keep = null
   // Rare colors take no slot either: when Max colors exceeds the art's
   // real colors, spare slots would go to edge blends and add fills.
   const opaqueCount = count.reduce((total, w) => total + w, 0);
+  /**
+   * @type {number[]}
+   */
   const common = [];
   let commonCount = 0;
   const candidates = colors <= FLAT_SEED_MAX_COLORS ? Array.from(all) : [];
   candidates.sort((a, b) => count[b] - count[a]);
+  /**
+   * @param {number} e
+   * @param {number} p
+   */
   const near = (e, p) =>
     (lab[0][e] - lab[0][p]) ** 2 + (lab[1][e] - lab[1][p]) ** 2 + (lab[2][e] - lab[2][p]) ** 2 <
       FLAT_SEED_MIN_DISTANCE ** 2 || colorDistance(means[e], means[p]) <= layerDiff;
@@ -3063,6 +3387,9 @@ export function quantize(img, colors, { layerDiff = 0, seeds = null, keep = null
       });
       const { width } = img;
       const height = data.length / 4 / width;
+      /**
+       * @param {number} p
+       */
       const group = (p) => {
         const i = p * 4;
         return data[i + 3] < ALPHA_THRESHOLD
@@ -3174,10 +3501,17 @@ export function quantize(img, colors, { layerDiff = 0, seeds = null, keep = null
   }
   // Whether entry e lies between two palette colors other than p, as a
   // soft edge's blend does (RGB, with withoutBlendShades' tolerances).
+  /**
+   * @type {number[][]}
+   */
   const paletteRgb = [];
   for (let p = 0; p < k; p++) {
     paletteRgb.push(oklabToSrgb([palette[p * 3], palette[p * 3 + 1], palette[p * 3 + 2]]));
   }
+  /**
+   * @param {number} e
+   * @param {number} p
+   */
   const mixOfOthers = (e, p) => {
     const c = means[e];
     for (let a = 0; a < k; a++) {
@@ -3318,6 +3652,7 @@ export function quantize(img, colors, { layerDiff = 0, seeds = null, keep = null
  * Kills sensor/compression noise while preserving edges exactly, unlike
  * a blur which grays the very boundaries the tracer follows. Alpha is
  * untouched and transparent neighbors are excluded from the window.
+ * @param {ImageData} img
  */
 export function medianFilter(img, passes = 1) {
   const { data, width, height } = img;
@@ -3374,6 +3709,7 @@ export function medianFilter(img, passes = 1) {
  * left along region boundaries after quantization, which otherwise traces
  * into hundreds of tiny paths. Alpha is untouched. Returns a new buffer
  * written back into img.
+ * @param {ImageData} img
  */
 export function modeFilter(img) {
   const { data, width, height } = img;
@@ -3430,8 +3766,12 @@ export function modeFilter(img) {
  * separated by whitespace count as adjacent, and only adjacent runs
  * merge: stacked output relies on document order for z-order, so
  * non-adjacent same-fill paths must stay where they are.
+ * @param {string} svgText
  */
 export function groupSvgFills(svgText) {
+  /**
+   * @param {string} path
+   */
   const fillOf = (path) => (path.match(/\sfill="([^"]*)"/) || [])[1] || null;
   const matches = [...svgText.matchAll(/<path\b[^>]*\/>/g)];
   let out = "";
@@ -3525,7 +3865,12 @@ export function nameColorGroups(svgText, { mosaic = false } = {}) {
   );
 }
 
-/** Perpendicular distance from point p to the line through a and b. */
+/**
+ * Perpendicular distance from point p to the line through a and b.
+ * @param {{ x: number, y: number }} p
+ * @param {{ x: number, y: number }} a
+ * @param {{ x: number, y: number }} b
+ */
 function distanceToChord(p, a, b) {
   const vx = b.x - a.x;
   const vy = b.y - a.y;
@@ -3534,6 +3879,9 @@ function distanceToChord(p, a, b) {
   return Math.abs((p.x - a.x) * vy - (p.y - a.y) * vx) / len;
 }
 
+/**
+ * @param {number} n
+ */
 const num = (n) => String(Number(n));
 
 /**
@@ -3543,6 +3891,8 @@ const num = (n) => String(Number(n));
  * into one line. Corners survive because merging stops as soon as a
  * point leaves the tolerance band. Output keeps the tracer's absolute
  * M/L/C/Z shape, so parseSvgPaths and the eraser keep working.
+ * @param {string} svgText
+ * @param {number} tolerance
  */
 export function straightenPaths(svgText, tolerance) {
   if (!(tolerance > 0)) return svgText;
@@ -3551,6 +3901,10 @@ export function straightenPaths(svgText, tolerance) {
   });
 }
 
+/**
+ * @param {string} d
+ * @param {number} tolerance
+ */
 function straightenPathData(d, tolerance) {
   const tokens = d.match(/-?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?|[A-Za-z]/g) || [];
   let out = "";
@@ -3559,6 +3913,9 @@ function straightenPathData(d, tolerance) {
   let cmd = null;
   let point = { x: 0, y: 0 };
   // Lines buffered for merging: linePoints[0] is the run's anchor.
+  /**
+   * @type {{ x: number, y: number }[]}
+   */
   let linePoints = [];
   const read = () => Number(tokens[i++]);
 
@@ -3636,6 +3993,9 @@ function straightenPathData(d, tolerance) {
  * with a viewBox, hiding the internal upscale factor, and group same-fill
  * paths to shrink the file. Returns the root unchanged when it does not
  * match the expected vtracer shape.
+ * @param {string} svgText
+ * @param {number} width
+ * @param {number} height
  */
 export function finalizeSvg(svgText, width, height) {
   return groupSvgFills(svgText).replace(
@@ -3649,6 +4009,7 @@ export function finalizeSvg(svgText, width, height) {
  * True when a worker/module failure message indicates a stale or
  * mismatched cached module (deploy caught mid-propagation, service
  * worker pinned the bad copy) rather than a tracing error.
+ * @param {string} message
  */
 export function isStaleModuleError(message) {
   return /importing binding|does not provide an export|SyntaxError|import.* module/i.test(
@@ -3656,7 +4017,10 @@ export function isStaleModuleError(message) {
   );
 }
 
-/** Count path elements in an SVG string. */
+/**
+ * Count path elements in an SVG string.
+ * @param {string} svgText
+ */
 export function countPaths(svgText) {
   return (svgText.match(/<path\b/g) || []).length;
 }
@@ -3665,8 +4029,11 @@ export function countPaths(svgText) {
  * Resolve preset + explicit values the same way the CLI does:
  * explicit user values win over preset values, preset over defaults.
  * `explicit` holds only the keys the user actually set.
+ * @param {string | number | null | undefined} preset PRESETS key
+ * @param {Record<string, unknown>} [explicit]
  */
 export function resolveSettings(preset, explicit = {}) {
+  /** @type {Record<string, unknown>} */
   const merged = { ...DEFAULTS, ...(preset ? PRESETS[preset] : {}) };
   for (const [key, value] of Object.entries(explicit)) {
     if (value !== undefined && value !== null) merged[key] = value;
