@@ -19,9 +19,37 @@
     "v": 3,
     "sha": "6486ec188e8134f3f19111232f03848b04d5592262022c311946bbfcdfc25c45"
   },
-  "css/styles.css": {
-    "v": 121,
-    "sha": "75a3e32988ac8838f11dcc57b765a669f6881ae0fd8911d4e9e69a054a7d3345"
+  "css/base.css": {
+    "v": 1,
+    "sha": "ea9adc546e5869917b4ddba8300c258b6f5a5d6ee723e0dddc2d6fa213d429f8"
+  },
+  "css/controls.css": {
+    "v": 1,
+    "sha": "f676ad6987cafc4b71b288cf3012958296e56e6a2ce720ff1d49a93ec8082131"
+  },
+  "css/dialogs.css": {
+    "v": 1,
+    "sha": "b49708255721af9363a6c3f3fed9a2e8ad0a65bf8b97af62fe5b3f2c8c28edce"
+  },
+  "css/forced-colors.css": {
+    "v": 1,
+    "sha": "d33f4dd75c97b2811574aefb172b7e72c782909d88fbbc944d2fad32ecf5023f"
+  },
+  "css/layout.css": {
+    "v": 1,
+    "sha": "50120dac2e65df2589561d66be59ce962b963f9e4425a735d0c8dfea3d953cf4"
+  },
+  "css/preview.css": {
+    "v": 1,
+    "sha": "67147b233ede6fd1354f6b453c1e9130861dbe7ad13824dd6b8092487335402b"
+  },
+  "css/responsive.css": {
+    "v": 1,
+    "sha": "a5bebd82f7d193271dfeea8bd0e0af4f068f1f7a0a7c09c56b2088c697eb0cf5"
+  },
+  "css/tool-rail.css": {
+    "v": 1,
+    "sha": "9eca3485d9683ad88b39a05d5422580e5b8ec1f879a16152bbf7bfabc5bf6c99"
   },
   "favicon-16x16.png": {
     "v": 2,

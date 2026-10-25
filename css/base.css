@@ -1,0 +1,451 @@
+/* Base tokens, app header, main area, and buttons. */
+/* rastertrace: compact desktop-tool UI shared with the image app family.
+   Neutral dark ramp, one orange accent, one radius scale. */
+:root {
+  --fs-xs: 11px;
+  --fs-sm: 12px;
+  --fs-md: 13px;
+  --fs-lg: 18px;
+  --bg: #111419;
+  --surface-1: #181c22;
+  --surface-2: #20252c;
+  --surface-3: #282e37;
+  --surface-hover: #313946;
+  --border: #343c47;
+  --border-strong: #4f5b69;
+  /* 3:1 against every surface up to --surface-3 (WCAG 1.4.11). */
+  --border-input: #6e7c8d;
+  --border-hairline: #0d1013;
+  --text: #e9ecef;
+  --text-dim: #c7cdd5;
+  --text-faint: #98a3b0;
+  --accent: #ff9a00;
+  --accent-hover: #ffb13b;
+  --accent-press: #d97706;
+  --accent-soft: rgb(255 154 0 / 18%);
+  --accent-ink: #181109;
+  --error: #f0766b;
+  --success: #62c598;
+  --r-xs: 4px;
+  --r-sm: 6px;
+  --r: 8px;
+  --r-lg: 12px;
+  --shadow-1: 0 1px 2px rgb(0 0 0 / 24%);
+  --shadow-2: 0 4px 16px rgb(0 0 0 / 40%);
+  --shadow-3: 0 16px 48px rgb(0 0 0 / 50%);
+  --disabled-opacity: 0.4;
+  --check-a: #303741;
+  --check-b: #242a32;
+  --ring: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent);
+  --font-ui:
+    ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  /* Side inset shared by every rail section, so content lines up. */
+  --rail-pad: 16px;
+  /* Rail controls; header and toolbar controls. Coarse pointers raise
+     both to 44px below. */
+  --control-h: 32px;
+  --control-h-sm: 28px;
+  font-family: var(--font-ui);
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* hidden must beat any class display value */
+[hidden] {
+  display: none !important;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+}
+
+/* Double-tap zoom on iOS turns quick taps on buttons into page zooms.
+   manipulation drops it but keeps pinch zoom and scrolling. */
+html {
+  touch-action: manipulation;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+  overflow: hidden;
+}
+
+/* Hidden from view but kept in layout, so iOS Safari allows a programmatic
+   click() on the file input (it blocks click on display:none inputs). */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+:focus-visible {
+  /* Transparent until forced colors repaint it: box-shadow is dropped there. */
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+  box-shadow: var(--ring);
+}
+
+/* Short state transitions so hover and pressed changes do not snap. */
+:where(button, summary, select, input) {
+  transition:
+    background-color 120ms ease-out,
+    border-color 120ms ease-out,
+    color 120ms ease-out,
+    box-shadow 120ms ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  :where(button, summary, select, input) {
+    transition: none;
+  }
+}
+
+/* ---------- App header and menus ---------- */
+.app-header {
+  position: relative;
+  z-index: 20;
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr) max-content;
+  flex: 0 0 50px;
+  min-width: 0;
+  align-items: center;
+  gap: 16px;
+  padding: 0 12px;
+  background: var(--surface-1);
+  border-bottom: 1px solid var(--border-hairline);
+  box-shadow: inset 0 -1px rgb(255 255 255 / 5%);
+}
+
+.menubar,
+.topbar-actions,
+.export-actions {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+}
+.menubar {
+  height: 100%;
+  gap: 2px;
+}
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  margin: 0 8px 0 0;
+  color: var(--text);
+  font-size: var(--fs-md);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.brand-mark {
+  display: block;
+  width: 22px;
+  height: 22px;
+  flex: none;
+}
+.app-menu {
+  position: relative;
+  height: 100%;
+}
+.app-menu summary {
+  display: flex;
+  height: 100%;
+  align-items: center;
+  padding: 0 8px;
+  border-radius: var(--r);
+  color: var(--text-dim);
+  font: var(--fs-md)/1.4 var(--font-ui);
+  list-style: none;
+  user-select: none;
+  cursor: pointer;
+}
+.app-menu summary::-webkit-details-marker {
+  display: none;
+}
+.app-menu summary:hover,
+.app-menu[open] summary {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+.menu-popover {
+  position: absolute;
+  top: calc(100% - 4px);
+  left: 0;
+  display: grid;
+  width: max-content;
+  max-width: calc(100vw - 16px);
+  padding: 4px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r);
+  background: var(--surface-3);
+  box-shadow: var(--shadow-3);
+  font: var(--fs-md)/1.4 var(--font-ui);
+  /* Above later header siblings: disabled tools' opacity creates stacking
+     contexts that otherwise paint over the popover when the toolbar wraps
+     under the menu bar on narrow screens. */
+  z-index: 2;
+}
+.menu-popover button,
+.menu-popover > a {
+  display: flex;
+  width: 100%;
+  min-height: 30px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 4px 8px;
+  border: 0;
+  border-radius: var(--r-xs);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.menu-popover button:hover,
+.menu-popover > a:hover {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+.menu-popover button span {
+  min-width: 38px;
+  color: var(--text-faint);
+  font-size: var(--fs-xs);
+  text-align: right;
+}
+.menu-popover button:hover span {
+  color: var(--text-dim);
+}
+.menu-popover button:disabled {
+  opacity: var(--disabled-opacity);
+  cursor: default;
+}
+.menu-popover button:disabled:hover {
+  background: transparent;
+  color: inherit;
+}
+.menu-popover hr {
+  width: 100%;
+  margin: 4px 0;
+  border: 0;
+  border-top: 1px solid var(--border);
+}
+.header-tool {
+  display: grid;
+  min-width: 30px;
+  height: var(--control-h-sm);
+  place-items: center;
+  padding: 0 8px;
+  border: 0;
+  border-right: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text-dim);
+  font: 500 var(--fs-md)/1 var(--font-ui);
+  cursor: pointer;
+}
+.header-tool:last-child {
+  border-right: 0;
+}
+.header-tool:hover {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+.header-tool:active {
+  background: var(--surface-1);
+}
+.header-tool:disabled {
+  opacity: var(--disabled-opacity);
+  cursor: default;
+}
+.header-tool:disabled:hover {
+  background: var(--surface-2);
+  color: var(--text-dim);
+}
+.header-tool.zoom-level {
+  min-width: 52px;
+  color: var(--text);
+  font-size: var(--fs-xs);
+  font-variant-numeric: tabular-nums;
+}
+.topbar-actions {
+  gap: 4px;
+  justify-self: end;
+  margin-left: auto;
+}
+.export-actions {
+  gap: 4px;
+}
+.action-divider {
+  width: 1px;
+  height: 20px;
+  margin: 0 2px;
+  background: var(--border);
+}
+.header-action,
+.primary-action {
+  display: inline-flex;
+  height: var(--control-h-sm);
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 8px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-sm);
+  background: var(--surface-2);
+  color: var(--text-dim);
+  font: inherit;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.header-action:hover {
+  border-color: var(--border-strong);
+  background: var(--surface-hover);
+  color: var(--text);
+}
+.header-action:active,
+.primary-action:active {
+  transform: translateY(1px);
+}
+.header-action:disabled {
+  opacity: var(--disabled-opacity);
+  cursor: default;
+}
+.primary-action {
+  padding-inline: 10px;
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-weight: 600;
+}
+.primary-action:hover {
+  border-color: var(--accent-hover);
+  background: var(--accent-hover);
+}
+.primary-action:disabled {
+  opacity: var(--disabled-opacity);
+  cursor: default;
+}
+
+/* ---------- Main ---------- */
+main {
+  flex: 1;
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+}
+
+/* ---------- Empty state ---------- */
+/* Center the drop zone in the whole window, not the top 55%. */
+main:has(> #empty-state:not([hidden])) {
+  display: grid;
+}
+.stage-empty {
+  display: grid;
+  min-height: 55vh;
+  place-items: center;
+  padding: 20px 16px;
+}
+
+.dropzone {
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+  width: min(560px, 100%);
+  padding: 40px 24px;
+  border: 2px dashed var(--border-strong);
+  border-radius: var(--r);
+  background: var(--surface-1);
+  text-align: center;
+}
+
+.dropzone {
+  cursor: pointer;
+}
+.tap-copy {
+  display: none;
+}
+
+.dropzone.dragover {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.dropzone-mark {
+  display: block;
+  width: 52px;
+  height: 52px;
+}
+.dropzone-title {
+  margin: 0;
+  font-size: var(--fs-lg);
+  font-weight: 600;
+}
+.dropzone-hint {
+  margin: 0;
+  color: var(--text-dim);
+  max-width: 40ch;
+}
+
+/* ---------- Buttons ---------- */
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: var(--control-h);
+  padding: 0 12px;
+  border-radius: var(--r-sm);
+  border: 1px solid transparent;
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.button-primary {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+.button-primary:hover {
+  background: var(--accent-hover);
+}
+.button-primary:active {
+  background: var(--accent-press);
+}
+
+.button-secondary {
+  background: var(--surface-2);
+  color: var(--text);
+  border-color: var(--border-strong);
+}
+.button-secondary:hover {
+  border-color: var(--text-faint);
+}
+
+.button[disabled],
+.button[aria-disabled="true"] {
+  opacity: var(--disabled-opacity);
+  pointer-events: none;
+}

@@ -20,7 +20,9 @@ const scanned = [
   ...readdirSync(new URL("js/", root))
     .filter((f) => f.endsWith(".js"))
     .map((f) => `js/${f}`),
-  "css/styles.css",
+  ...readdirSync(new URL("css/", root))
+    .filter((f) => f.endsWith(".css"))
+    .map((f) => `css/${f}`),
 ];
 const sources = Object.fromEntries(scanned.map((file) => [file, read(file).toString("utf8")]));
 let manifest = {};

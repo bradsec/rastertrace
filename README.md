@@ -64,7 +64,14 @@ Convert raster images to clean, scalable SVG vectors entirely in your browser. [
 ```
 index.html          app shell
 sw.js               service worker: offline cache for the static app
-css/styles.css      design tokens + layout
+css/base.css        design tokens, header, main, buttons
+css/layout.css      workspace and side panel rails
+css/controls.css    preview strip and accordion controls
+css/preview.css     preview and settings guide
+css/tool-rail.css   cleanup tools and options
+css/dialogs.css     statusbar and dialogs
+css/responsive.css  small screens and touch
+css/forced-colors.css  high contrast colors
 assets/icons/       locally bundled Material SVG icons
 assets/samples/     built-in sample images (PNG) and their SVG sources
 js/raster.js        alpha cutoff and trace size limits (Node-testable)

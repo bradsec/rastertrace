@@ -1,0 +1,243 @@
+/* Workspace layout and side panel rails. */
+
+/* ---------- Workspace ---------- */
+.workspace {
+  --left-w: 264px;
+  --right-w: 304px;
+  --rail-w: 44px;
+  display: grid;
+  grid-template-columns: var(--left-w) minmax(0, 1fr) var(--right-w);
+  grid-template-areas: "left canvas right";
+  height: calc(100dvh - 76px);
+  min-height: 0;
+  align-items: stretch;
+}
+
+.controls {
+  grid-area: left;
+  display: grid;
+  align-content: start;
+  gap: 0;
+  min-height: 0;
+  overflow-y: auto;
+  /* Scrolling past either end stays in the panel instead of dragging the
+     whole page on iOS. */
+  overscroll-behavior: contain;
+  padding: 0;
+  background: var(--surface-1);
+  border-right: 1px solid var(--border);
+  box-shadow: inset -1px 0 rgb(255 255 255 / 2%);
+}
+
+@media (min-width: 901px) {
+  .workspace.left-folded {
+    --left-w: var(--rail-w);
+  }
+  .workspace.right-folded {
+    --right-w: var(--rail-w);
+  }
+}
+
+.controls-right {
+  grid-area: right;
+  border-right: 0;
+  border-left: 1px solid var(--border);
+  box-shadow: inset 1px 0 rgb(255 255 255 / 2%);
+}
+.panel-note {
+  margin: 0;
+  color: var(--text-faint);
+  font-size: var(--fs-xs);
+  line-height: 1.4;
+}
+/* ---------- Side panel rails ---------- */
+.rail-head {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 44px;
+  padding: 0 8px 0 var(--rail-pad);
+  background: var(--surface-1);
+  border-bottom: 1px solid var(--border);
+}
+.rail-title {
+  flex: 1 1 auto;
+  margin: 0;
+  color: var(--text-dim);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  line-height: 16px;
+  text-transform: uppercase;
+}
+.rail-action {
+  min-height: var(--control-h-sm);
+  padding-inline: 8px;
+  font-size: var(--fs-sm);
+}
+.rail-fold {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: var(--control-h-sm);
+  height: var(--control-h-sm);
+  padding: 0;
+  border: 0;
+  border-radius: var(--r-sm);
+  color: var(--text-dim);
+  background: transparent;
+  cursor: pointer;
+}
+.rail-fold:hover {
+  color: var(--text);
+  background: var(--surface-hover);
+}
+.rail-fold:focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
+}
+.fold-icon {
+  width: 16px;
+  height: 16px;
+}
+.rail-body {
+  display: grid;
+  align-content: start;
+  min-width: 0;
+}
+@media (min-width: 901px) {
+  /* A folded panel keeps only its fold button, with the title running down
+     the rail so it still says what is there. */
+  .workspace.left-folded .controls-left,
+  .workspace.right-folded .controls-right {
+    overflow: hidden;
+  }
+  .workspace.left-folded .controls-left .rail-head,
+  .workspace.right-folded .controls-right .rail-head {
+    flex-direction: column;
+    gap: 10px;
+    padding: 8px 0;
+    border-bottom: 0;
+  }
+  .workspace.left-folded .controls-left .rail-fold,
+  .workspace.right-folded .controls-right .rail-fold {
+    order: -1;
+    transform: scaleX(-1);
+  }
+  .workspace.left-folded .controls-left .rail-title,
+  .workspace.right-folded .controls-right .rail-title {
+    writing-mode: vertical-rl;
+    flex: none;
+  }
+  .workspace.left-folded .controls-left .rail-body,
+  .workspace.right-folded .controls-right .rail-body,
+  .workspace.right-folded .controls-right .rail-action {
+    display: none;
+  }
+}
+
+/* The profile list is a listbox: every profile shows at once, like a
+   presets panel, and My profiles join it as an option group. */
+#export-profile {
+  height: auto;
+  max-height: 340px;
+  padding: 4px;
+  overflow-y: auto;
+  border-radius: var(--r-sm);
+  background: var(--surface-2);
+}
+#export-profile option,
+#export-profile optgroup {
+  padding: 6px 8px;
+  border-radius: var(--r-xs);
+  color: var(--text);
+}
+#export-profile optgroup {
+  color: var(--text-faint);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+}
+#export-profile option:checked {
+  color: var(--text);
+  background: var(--accent-soft) linear-gradient(var(--accent-soft), var(--accent-soft));
+}
+#save-preset {
+  justify-self: start;
+}
+#stencil-threshold-slot:not([hidden]) {
+  display: grid;
+  padding: 0 var(--rail-pad) 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+/* Columns never grow past the panel: an auto column takes its widest
+   child's text width (a select at 16px touch size), and on iOS that
+   overflow lets the whole panel drag sideways. */
+.field {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+
+.field label,
+.field legend {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: var(--fs-md);
+  font-weight: 500;
+  padding: 0;
+}
+.label-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+/* Values stay quiet: orange is reserved for the primary action, the
+   current selection and focus. */
+.field output {
+  font-variant-numeric: tabular-nums;
+  color: var(--text-dim);
+}
+
+.choice {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 400 !important;
+  justify-content: flex-start !important;
+  min-height: 24px;
+}
+
+.button-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.icon-button {
+  min-height: var(--control-h);
+  min-width: var(--control-h);
+  padding: 0;
+}
+/* Quiet icon actions that sit beside a primary control. */
+.button-ghost {
+  background: transparent;
+  color: var(--text-dim);
+}
+.button-ghost:hover {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+/* View toggle and the rotate and invert actions share one row. */
+.sheet-tabs {
+  display: none;
+}

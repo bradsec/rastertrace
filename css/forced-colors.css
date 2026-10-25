@@ -1,0 +1,88 @@
+/* Forced colors rules. */
+
+/* ---------- Forced colors (Windows High Contrast) ---------- */
+/* Box shadows are removed in forced colors, so focus and pressed states
+   that rely on them need an outline or system colors instead. */
+@media (forced-colors: active) {
+  .swatch.hidden-color,
+  .palette-chip.hidden-color {
+    opacity: 1;
+  }
+  .swatch-hidden-badge {
+    forced-color-adjust: none;
+    background: Canvas;
+    color: CanvasText;
+  }
+  .swatch.hidden-color .swatch-hidden-badge .material-icon,
+  #palette-hidden-note .material-icon {
+    background: CanvasText;
+  }
+  #palette-hidden-note {
+    color: CanvasText;
+  }
+  .swatch.hidden-color::before,
+  .palette-chip.hidden-color::before {
+    forced-color-adjust: none;
+    background: CanvasText;
+    outline: 1px solid Canvas;
+  }
+  .material-icon {
+    background: ButtonText;
+  }
+  button:disabled .material-icon {
+    background: GrayText;
+  }
+  button[aria-pressed="true"] .material-icon {
+    background: HighlightText;
+  }
+  input[type="range"] {
+    forced-color-adjust: none;
+  }
+  input[type="range"]::-webkit-slider-runnable-track {
+    background: CanvasText;
+  }
+  input[type="range"]::-moz-range-track,
+  input[type="range"]::-moz-range-progress {
+    background: CanvasText;
+  }
+  input[type="range"]::-webkit-slider-thumb,
+  input[type="range"]:hover::-webkit-slider-thumb {
+    background: Highlight;
+    border-color: Canvas;
+  }
+  input[type="range"]::-moz-range-thumb,
+  input[type="range"]:hover::-moz-range-thumb {
+    background: Highlight;
+    border-color: Canvas;
+  }
+  /* Overrides the per-component outline: none rules. */
+  :focus-visible {
+    outline: 2px solid Highlight !important;
+    outline-offset: 2px;
+  }
+  .preview:focus-visible {
+    outline-offset: -2px;
+  }
+  /* Component pressed rules are more specific and their colors get forced
+     to Canvas, which hides the state. Opting out of adjustment drops the
+     Canvas text backplate that otherwise hides HighlightText. */
+  button[aria-pressed="true"] {
+    forced-color-adjust: none;
+    background: Highlight !important;
+    color: HighlightText !important;
+    border-color: Highlight !important;
+  }
+  .backdrop-toggle::before {
+    forced-color-adjust: none;
+  }
+  /* Swatches show traced colors, which forced colors would otherwise erase. */
+  .palette-grid .swatch,
+  .palette-chip {
+    forced-color-adjust: none;
+    border-color: CanvasText;
+  }
+  .palette-grid .swatch[aria-pressed="true"] {
+    outline: 3px solid Highlight;
+    outline-offset: 1px;
+  }
+}

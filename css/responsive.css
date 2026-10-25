@@ -1,0 +1,396 @@
+/* Small screen and touch device rules. */
+
+/* ---------- Small screens ---------- */
+@media (max-width: 1180px) {
+  .brand > span:last-child {
+    display: none;
+  }
+  .topbar-actions {
+    gap: 4px;
+  }
+  .export-actions {
+    gap: 4px;
+  }
+  .header-action,
+  .primary-action {
+    padding-inline: 6px;
+    font-size: var(--fs-sm);
+  }
+  .topbar-actions > .header-action span:not(.material-icon) {
+    font-size: 0;
+  }
+  .topbar-actions > .header-action span:not(.material-icon)::after {
+    content: "Open";
+    font-size: var(--fs-sm);
+  }
+  .save-action span:not(.material-icon) {
+    font-size: 0;
+  }
+  .save-action span:not(.material-icon)::after {
+    content: "SVG";
+    font-size: var(--fs-sm);
+  }
+  #download-pdf,
+  #download-dxf {
+    display: none;
+  }
+}
+
+@media (max-width: 900px) {
+  body {
+    overflow: auto;
+  }
+  .app-header {
+    gap: 4px;
+    padding-inline: 8px;
+  }
+  .trace-stats {
+    display: none;
+  }
+  /* Panels stack under the preview here, so there is nothing to fold. */
+  .rail-fold {
+    display: none;
+  }
+  /* Status and zoom stay on screen while the settings scroll (WCAG 4.1.3:
+     a hidden live region is never announced). */
+  html {
+    scroll-padding-bottom: 56px;
+  }
+  .statusbar {
+    position: sticky;
+    bottom: 0;
+    z-index: 5;
+    flex-basis: auto;
+    min-height: 44px;
+    gap: 10px;
+  }
+  .statusbar .repo-link svg {
+    display: none;
+  }
+  .statusbar .status-zoom {
+    height: 34px;
+  }
+  .statusbar .status-zoom .header-tool {
+    height: 32px;
+    min-width: 40px;
+    font-size: var(--fs-md);
+  }
+  .statusbar .status-zoom .zoom-level {
+    min-width: 52px;
+  }
+  .app-menu summary {
+    padding-inline: 8px;
+  }
+
+  main {
+    padding: 16px 12px;
+  }
+
+  .workspace {
+    grid-template-columns: 1fr;
+    grid-template-areas: "canvas" "left" "right";
+    height: auto;
+    min-height: 0;
+    gap: 20px;
+  }
+
+  /* Task order on mobile: result first, tweak below, guide last */
+  .preview-pane {
+    order: 1;
+    min-height: 420px;
+    padding: 0;
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+  }
+  .controls {
+    order: 2;
+    overflow-y: visible;
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    overflow: hidden;
+  }
+  .controls-right {
+    order: 3;
+  }
+
+  .preview {
+    height: 55dvh;
+    min-height: 220px;
+    max-height: none;
+  }
+  /* The preview pane runs under the sticky status bar, further still when
+     the wand's sliders add toolbar rows, so pin the selection buttons to
+     the viewport just above the bar. */
+  .selection-actions {
+    position: fixed;
+    bottom: 60px;
+    z-index: 6;
+  }
+  /* A fitted preview has nothing to pan: let one finger scroll the page
+     past it. Two-finger pinches still reach view.js. */
+  .preview.fitted:not(.erasing, .blob-filling, .blob-picking, .smoothing, .selecting) {
+    touch-action: pan-y;
+  }
+}
+
+@media (max-width: 680px) {
+  /* The tool rail floats over the preview, folded to the chosen tool, the
+     tray toggle, undo and redo; the toggle opens a tray of every tool. */
+  .preview-pane > .preview {
+    grid-column: 1 / -1;
+  }
+  .tool-rail {
+    z-index: 5;
+    align-self: start;
+    justify-self: start;
+    margin: 8px;
+    padding: 4px;
+    gap: 4px;
+    overflow: visible;
+    background: rgb(24 28 34 / 94%);
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+    box-shadow: var(--shadow-2);
+  }
+  .rail-tool {
+    width: 44px;
+    height: 44px;
+  }
+  .tray-toggle {
+    display: grid;
+  }
+  .rail-divider,
+  .rail-spacer,
+  .tool-rail:not(.open)
+    .rail-tool:not(
+      .tray-toggle,
+      [aria-pressed="true"],
+      #eraser-undo,
+      #eraser-redo,
+      #eraser-clear:enabled
+    ) {
+    display: none;
+  }
+  .tool-rail.open {
+    display: grid;
+    grid-template-columns: repeat(4, 44px);
+  }
+  .tray-toggle[aria-expanded="true"] {
+    border-color: var(--accent);
+    color: var(--text);
+  }
+  /* The active tool's options open in a sheet pinned above the status bar,
+     like the selection actions, and above those when they show. */
+  body:has(.tool-rail .rail-tool[aria-pressed="true"]:not(#move-tool)) .tool-options {
+    position: fixed;
+    z-index: 6;
+    left: 8px;
+    right: 8px;
+    bottom: 60px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px 12px;
+    padding: 10px 12px;
+    background: rgb(24 28 34 / 97%);
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+    box-shadow: var(--shadow-2);
+  }
+  body:has(#selection-actions:not([hidden])) .tool-options {
+    bottom: 128px;
+  }
+  .tool-options > .selection-mode {
+    flex: 1 1 100%;
+  }
+  /* Name and value on one line, the slider full width under them. */
+  .tool-options > :is(.wand-option, .eraser-size) {
+    flex: 1 1 0;
+    flex-wrap: wrap;
+    gap: 2px 6px;
+  }
+  .tool-options > :is(.wand-option, .eraser-size) > span {
+    flex: 1 1 auto;
+  }
+  .tool-options > :is(.wand-option, .eraser-size) input {
+    order: 1;
+    flex: 1 1 100%;
+    width: 100%;
+  }
+  .tool-options > :is(.wand-option, .eraser-size) output {
+    min-width: 0;
+  }
+  /* Rotate and invert live in the View menu here. */
+  .canvas-strip .rotate-group,
+  .backdrop-label {
+    display: none;
+  }
+  /* One settings section at a time, picked from tabs under the preview. */
+  .sheet-tabs {
+    position: sticky;
+    top: 0;
+    z-index: 4;
+    order: 2;
+    display: flex;
+    gap: 2px;
+    margin-inline: -12px;
+    padding: 4px 12px;
+    overflow-x: auto;
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+    scrollbar-width: none;
+  }
+  .sheet-tabs::-webkit-scrollbar {
+    display: none;
+  }
+  .sheet-tabs button {
+    flex: none;
+    min-height: 44px;
+    padding: 0 12px;
+    border: 0;
+    border-radius: var(--r-sm);
+    color: var(--text-faint);
+    background: transparent;
+    font: inherit;
+    font-size: var(--fs-md);
+    cursor: pointer;
+  }
+  .sheet-tabs button[aria-pressed="true"] {
+    color: var(--text);
+    font-weight: 600;
+    box-shadow: inset 0 -2px 0 var(--accent);
+  }
+  .sheet-tabs button:focus-visible {
+    outline: none;
+    box-shadow: var(--ring);
+  }
+  /* Named grid rows would pin the left column above the tabs; flow by order. */
+  .workspace {
+    grid-template-areas: none;
+  }
+  .workspace > * {
+    grid-area: auto;
+  }
+  .controls {
+    order: 3;
+  }
+  .controls-right {
+    order: 4;
+  }
+  .rail-head,
+  [data-sheet] > summary {
+    display: none;
+  }
+  .workspace:not([data-sheet="presets"]) [data-sheet="presets"],
+  .workspace:not([data-sheet="palette"]) [data-sheet="palette"],
+  .workspace:not([data-sheet="background"]) [data-sheet="background"],
+  .workspace:not([data-sheet="colors"]) [data-sheet="colors"],
+  .workspace:not([data-sheet="tracing"]) [data-sheet="tracing"],
+  .workspace:not([data-sheet="export"]) [data-sheet="export"] {
+    display: none;
+  }
+  /* Colors spans both columns: the colors panel left, cleanup right. */
+  .workspace:not([data-sheet="presets"], [data-sheet="palette"], [data-sheet="colors"])
+    .controls-left,
+  .workspace[data-sheet="presets"] .controls-right,
+  .workspace[data-sheet="palette"] .controls-right {
+    display: none;
+  }
+  .topbar-actions > .header-action,
+  .action-divider,
+  #download-pdf,
+  #download-dxf {
+    display: none;
+  }
+}
+
+@media (max-width: 520px) {
+  .brand {
+    margin-right: 0;
+  }
+  .statusbar .repo-link {
+    display: none;
+  }
+  #copy-svg {
+    display: none;
+  }
+}
+
+/* ---------- Touch devices ---------- */
+/* 44px targets for coarse pointers (Apple HIG; WCAG 2.5.8's floor is
+   24px). Width breakpoints alone gave landscape tablets desktop sizes. */
+@media (pointer: coarse) {
+  input[type="range"]::-webkit-slider-thumb {
+    width: 22px;
+    height: 22px;
+    margin-top: -9px;
+  }
+  input[type="range"]::-moz-range-thumb {
+    width: 22px;
+    height: 22px;
+  }
+  .drop-copy {
+    display: none;
+  }
+  .tap-copy {
+    display: inline;
+  }
+  .header-tool,
+  .header-action,
+  .primary-action,
+  .app-menu summary,
+  .menu-popover button,
+  .menu-popover a,
+  .panel > summary,
+  details.advanced > summary,
+  .button,
+  .color-row .button,
+  .toggle,
+  select {
+    min-height: 44px;
+  }
+  .header-tool,
+  .icon-button {
+    min-width: 44px;
+  }
+  .rail-tool {
+    width: 44px;
+    height: 44px;
+  }
+  .blob-color input[type="text"] {
+    width: 92px;
+  }
+  /* iOS Safari zooms the page when a focused field's text is under 16px. */
+  input[type="text"],
+  input[type="number"],
+  .blob-color input[type="text"],
+  .dialog-form input[type="text"],
+  select {
+    font-size: 16px;
+  }
+  .app-header {
+    flex-basis: 60px;
+  }
+  .statusbar {
+    flex-basis: 48px;
+    min-height: 48px;
+  }
+  .statusbar .status-zoom {
+    height: 46px;
+  }
+  .statusbar .status-zoom .header-tool {
+    height: 44px;
+    font-size: 13px;
+  }
+  .workspace {
+    height: calc(100dvh - 108px);
+  }
+}
+
+/* The page scrolls under 900px, so the touch workspace height above
+   must not cap the stacked layout. */
+@media (pointer: coarse) and (max-width: 900px) {
+  .workspace {
+    height: auto;
+  }
+}

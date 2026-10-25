@@ -1,0 +1,616 @@
+/* Cleanup tool rail and tool options. */
+
+/* ---------- Cleanup tool rail ---------- */
+/* Tools sit in a column on the preview's left edge; the active tool's
+   options join the strip above the preview. */
+.tool-rail {
+  grid-column: 1;
+  grid-row: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-height: 0;
+  padding: 6px;
+  overflow-y: auto;
+  scrollbar-width: none;
+  background: var(--surface-1);
+  border-right: 1px solid var(--border);
+}
+.tool-rail::-webkit-scrollbar {
+  display: none;
+}
+.rail-tool {
+  display: grid;
+  flex: none;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: var(--r);
+  background: transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+}
+.rail-tool:hover {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+.rail-tool:focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
+}
+.rail-tool[aria-pressed="true"] {
+  border-color: var(--accent);
+  background: var(--surface-3);
+  color: var(--text);
+}
+.rail-tool:disabled {
+  opacity: var(--disabled-opacity);
+  cursor: default;
+}
+.rail-tool:disabled:hover {
+  background: transparent;
+  color: var(--text-dim);
+}
+.rail-divider {
+  flex: none;
+  width: 24px;
+  height: 1px;
+  margin: 4px 0;
+  background: var(--border);
+}
+.rail-spacer {
+  flex: 1 0 8px;
+}
+/* The tray toggle only exists for the phone's folded rail. */
+.tray-toggle {
+  display: none;
+}
+
+/* ---------- Tool options in the preview strip ---------- */
+.tool-options {
+  display: contents;
+}
+/* Hidden until their tool is chosen; outranks each option's own display. */
+.canvas-strip .tool-options > * {
+  display: none;
+}
+.option-tool[aria-pressed="true"] {
+  color: var(--text);
+  background: var(--surface-3);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+.option-tool {
+  min-width: 34px;
+  padding-inline: 8px;
+}
+.selection-mode {
+  align-items: center;
+}
+/* Each tool shows only its own options. */
+body:has(
+    #eraser-tool[aria-pressed="true"],
+    #blob-fill-tool[aria-pressed="true"],
+    #smooth-tool[aria-pressed="true"]
+  )
+  .tool-options
+  > .eraser-size,
+body:has(#blob-fill-tool[aria-pressed="true"], #blob-fill-pick[aria-pressed="true"])
+  .tool-options
+  > :is(.blob-color, #blob-fill-pick),
+body:has(
+    #marquee-rect[aria-pressed="true"],
+    #marquee-ellipse[aria-pressed="true"],
+    #polygon-lasso[aria-pressed="true"],
+    #magic-wand[aria-pressed="true"]
+  )
+  .tool-options
+  > .selection-mode,
+body:has(#magic-wand[aria-pressed="true"]) .tool-options > .wand-option {
+  display: inline-flex;
+}
+body:has(#blob-fill-pick[aria-pressed="true"], #blob-fill-tool[aria-pressed="true"])
+  .tool-options
+  > #blob-fill-pick {
+  display: grid;
+}
+/* A selection's Fill uses the brush color, so it shows beside the
+   selection tools too. Phones keep their panel to the active tool. */
+@media (min-width: 681px) {
+  body:has(#selection-actions:not([hidden]) #selection-fill:not([hidden]))
+    .tool-options
+    > .blob-color {
+    display: inline-flex;
+  }
+  body:has(#selection-actions:not([hidden]) #selection-fill:not([hidden]))
+    .tool-options
+    > #blob-fill-pick {
+    display: grid;
+  }
+}
+/* View controls step aside for tool options; Result/Source and the
+   backdrop stay. */
+body:has(.tool-rail .rail-tool[aria-pressed="true"]:not(#move-tool)) .rotate-group {
+  display: none;
+}
+.canvas-strip .view-toggle {
+  margin-left: auto;
+}
+
+.cleanup-tool-icon {
+  display: block;
+  width: 18px;
+  height: 18px;
+}
+.material-icon {
+  display: block;
+  width: 17px;
+  height: 17px;
+  flex: none;
+  background: currentColor;
+  -webkit-mask: var(--icon) center / contain no-repeat;
+  mask: var(--icon) center / contain no-repeat;
+  forced-color-adjust: none;
+}
+.icon-visibility_off {
+  --icon: url("../assets/icons/material/visibility_off.svg");
+}
+.icon-brush {
+  --icon: url("../assets/icons/material/brush.svg");
+}
+.icon-colorize {
+  --icon: url("../assets/icons/material/colorize.svg");
+}
+.icon-undo {
+  --icon: url("../assets/icons/material/undo.svg");
+}
+.icon-redo {
+  --icon: url("../assets/icons/material/redo.svg");
+}
+.icon-restore {
+  --icon: url("../assets/icons/material/restore.svg");
+}
+.icon-folder_open {
+  --icon: url("../assets/icons/material/folder_open.svg");
+}
+.icon-content_copy {
+  --icon: url("../assets/icons/material/content_copy.svg");
+}
+.icon-image {
+  --icon: url("../assets/icons/material/image.svg");
+}
+.icon-picture_as_pdf {
+  --icon: url("../assets/icons/material/picture_as_pdf.svg");
+}
+.icon-architecture {
+  --icon: url("../assets/icons/material/architecture.svg");
+}
+.icon-auto_fix_high {
+  --icon: url("../assets/icons/material/auto_fix_high.svg");
+}
+.icon-save {
+  --icon: url("../assets/icons/material/save.svg");
+}
+.icon-upload_file {
+  --icon: url("../assets/icons/material/upload_file.svg");
+}
+.icon-rotate_left {
+  --icon: url("../assets/icons/material/rotate_left.svg");
+}
+.icon-rotate_right {
+  --icon: url("../assets/icons/material/rotate_right.svg");
+}
+.icon-invert_colors {
+  --icon: url("../assets/icons/material/invert_colors.svg");
+}
+.eraser-size,
+.wand-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-dim);
+  font-size: var(--fs-xs);
+  white-space: nowrap;
+}
+.eraser-size input,
+.wand-option input {
+  width: 86px;
+}
+.wand-option input {
+  width: 72px;
+}
+.eraser-size output,
+.wand-option output {
+  min-width: 38px;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+.blob-color {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.blob-color input[type="color"] {
+  width: 28px;
+  height: 24px;
+  padding: 2px;
+  border: 1px solid var(--border);
+  background: var(--surface-1);
+}
+.blob-color input[type="text"] {
+  width: 68px;
+  height: var(--control-h-sm);
+  padding: 4px 6px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-xs);
+  color: var(--text);
+  background: var(--surface-1);
+  font: var(--fs-xs) var(--font-mono);
+}
+.blob-color input[type="text"]:focus {
+  border-color: var(--accent);
+  outline: none;
+}
+.blob-color input:disabled {
+  opacity: var(--disabled-opacity);
+}
+
+.eraser-cursor {
+  position: absolute;
+  z-index: 11;
+  left: 0;
+  top: 0;
+  width: 32px;
+  height: 32px;
+  border: 1px solid rgb(255 255 255 / 92%);
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px rgb(0 0 0 / 85%);
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+}
+.preview.blob-filling .eraser-cursor {
+  border-color: var(--blob-cursor-color, #000);
+  background: var(--blob-cursor-color, #000);
+  opacity: 0.72;
+  box-shadow:
+    0 0 0 1px rgb(255 255 255 / 92%),
+    0 0 0 2px rgb(0 0 0 / 85%);
+}
+.preview.blob-picking .eraser-cursor {
+  width: 32px !important;
+  height: 32px !important;
+  border: 0;
+  border-radius: 0;
+  background: url("../assets/icons/material/colorize.svg") center / contain no-repeat;
+  box-shadow: none;
+  filter: drop-shadow(0 0 1px #fff) drop-shadow(0 0 1px #fff)
+    drop-shadow(0 1px 1px rgb(0 0 0 / 90%));
+  opacity: 1;
+  transform: translate(-4px, -28px);
+}
+
+.preview.blob-picking .eraser-cursor::after {
+  position: absolute;
+  bottom: 1px;
+  left: 1px;
+  width: 3px;
+  height: 3px;
+  border: 1px solid #fff;
+  border-radius: 50%;
+  background: #000;
+  box-shadow: 0 0 0 1px rgb(0 0 0 / 85%);
+  content: "";
+}
+
+.selection-overlay {
+  position: absolute;
+  z-index: 10;
+  overflow: visible;
+  pointer-events: none;
+}
+
+/* Smooth strokes waiting for the trace that applies them. */
+.smooth-overlay {
+  position: absolute;
+  z-index: 9;
+  overflow: hidden;
+  pointer-events: none;
+}
+.smooth-overlay path {
+  fill: none;
+  stroke: var(--accent);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0.35;
+}
+.preview.smoothing .eraser-cursor {
+  border-style: dashed;
+}
+
+.selection-ants-dark,
+.selection-ants-light {
+  fill: transparent;
+  stroke-width: 1.5px;
+  stroke-dasharray: 5 5;
+  vector-effect: non-scaling-stroke;
+}
+
+.selection-ants-dark {
+  stroke: #17191d;
+  animation: marching-ants-dark 0.6s linear infinite;
+}
+
+.selection-ants-light {
+  stroke: #f7f8f9;
+  animation: marching-ants-light 0.6s linear infinite;
+}
+
+@keyframes marching-ants-dark {
+  from {
+    stroke-dashoffset: 0;
+  }
+  to {
+    stroke-dashoffset: -10;
+  }
+}
+
+@keyframes marching-ants-light {
+  from {
+    stroke-dashoffset: 5;
+  }
+  to {
+    stroke-dashoffset: -5;
+  }
+}
+
+.pan-stage {
+  position: relative;
+  z-index: 1;
+  transform-origin: 0 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+}
+
+.checkerboard {
+  background-image: conic-gradient(
+    var(--check-b) 90deg,
+    var(--check-a) 90deg 180deg,
+    var(--check-b) 180deg 270deg,
+    var(--check-a) 270deg
+  );
+  background-size: 20px 20px;
+}
+
+.green-screen {
+  background: #00b140;
+}
+.white-screen {
+  background: #fff;
+}
+.black-screen {
+  background: #000;
+}
+
+.preview img {
+  min-width: 0;
+  min-height: 0;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  display: block;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+/* Compare stacks both images in the stage's one cell at the same size,
+   so they line up; view.js clips each to its side of the divider. */
+.preview.comparing .pan-stage img {
+  grid-area: 1 / 1;
+  width: 100%;
+  height: 100%;
+}
+
+/* Names the image on screen whenever it is not the plain result, so
+   Source is not mistaken for the trace. In Compare each name sits on
+   its side of the divider. */
+.view-label {
+  position: absolute;
+  top: 8px;
+  z-index: 3;
+  display: none;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: rgb(0 0 0 / 0.7);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 18px;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.preview.showing-source #view-label-source {
+  display: block;
+  left: 50%;
+  transform: translateX(-50%);
+}
+.preview.comparing #view-label-source {
+  display: block;
+  right: calc(100% - var(--compare-split, 50%) + 10px);
+}
+.preview.comparing #view-label-result {
+  display: block;
+  left: calc(var(--compare-split, 50%) + 10px);
+}
+.preview.comparing .view-label-detail {
+  display: none;
+}
+
+.compare-divider {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  z-index: 3;
+  width: 24px;
+  transform: translateX(-50%);
+  cursor: ew-resize;
+  touch-action: none;
+}
+.compare-divider[hidden] {
+  display: none;
+}
+.compare-divider::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 2px;
+  transform: translateX(-50%);
+  background: #fff;
+  box-shadow: 0 0 0 1px rgb(0 0 0 / 0.45);
+}
+.compare-handle {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 44px;
+  height: 44px;
+  transform: translate(-50%, -50%);
+  border: 2px solid #fff;
+  border-radius: 50%;
+  background: rgb(0 0 0 / 0.55);
+  box-shadow: var(--shadow-1);
+  touch-action: none;
+}
+.compare-handle::before,
+.compare-handle::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  border: 6px solid transparent;
+  transform: translateY(-50%);
+}
+.compare-handle::before {
+  left: 5px;
+  border-right-color: #fff;
+}
+.compare-handle::after {
+  right: 5px;
+  border-left-color: #fff;
+}
+.compare-handle:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+/* Touch hits only the handle: one finger on the line still scrolls the
+   page past a fitted preview, or pans a zoomed one. */
+@media (pointer: coarse) {
+  .compare-divider {
+    pointer-events: none;
+  }
+  .compare-handle {
+    pointer-events: auto;
+  }
+}
+
+.zoom-controls {
+  display: inline-flex;
+  flex: 0 0 auto;
+  overflow: hidden;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-sm);
+  background: var(--surface-2);
+  box-shadow: var(--shadow-1);
+}
+.zoom-level {
+  font-size: var(--fs-sm);
+  min-width: 56px;
+}
+
+.tracing-veil {
+  position: absolute;
+  z-index: 4;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgb(17 20 25 / 72%);
+  font-weight: 600;
+}
+
+.tracing-veil p {
+  animation: pulse 1.2s ease-in-out infinite;
+}
+.veil-elapsed {
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+  font-weight: 400;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tracing-veil p {
+    animation: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .panel > summary::after {
+    transition: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .selection-ants-dark {
+    animation: none;
+    stroke-dashoffset: 0;
+  }
+  .selection-ants-light {
+    animation: none;
+    stroke-dashoffset: 5;
+  }
+}
+
+/* Floats over the page so an error never changes the layout height. */
+.error {
+  position: fixed;
+  left: 50%;
+  bottom: 40px;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: max-content;
+  max-width: calc(100% - 32px);
+  padding: 10px 10px 10px 14px;
+  transform: translateX(-50%);
+  border: 1px solid var(--error);
+  border-radius: var(--r);
+  background: var(--surface-3);
+  box-shadow: var(--shadow-2);
+}
+.error[hidden] {
+  display: none;
+}
+.error p {
+  margin: 0;
+  color: var(--error);
+  font-weight: 600;
+}
+.error .button {
+  flex: 0 0 auto;
+}

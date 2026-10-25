@@ -1,0 +1,174 @@
+/* Statusbar and dialogs. */
+
+/* ---------- Statusbar footer ---------- */
+.statusbar {
+  display: flex;
+  flex: 0 0 26px;
+  align-items: center;
+  gap: 14px;
+  min-height: 26px;
+  padding: 0 10px;
+  background: var(--surface-1);
+  border-top: 1px solid var(--border-hairline);
+  color: var(--text-dim);
+  font-size: var(--fs-xs);
+}
+
+.statusbar p {
+  margin: 0;
+}
+.statusbar .status-zoom {
+  height: 22px;
+  border-radius: var(--r-xs);
+  box-shadow: none;
+}
+.statusbar .status-zoom .header-tool {
+  height: 20px;
+  min-width: 24px;
+  padding-inline: 4px;
+  font-size: var(--fs-xs);
+}
+.statusbar .status-zoom .zoom-level {
+  min-width: 44px;
+}
+.trace-stats {
+  flex: none;
+  color: var(--text-faint);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.statusbar #status {
+  min-width: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.statusbar .repo-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-dim);
+  text-decoration: none;
+}
+.statusbar .repo-link:hover {
+  color: var(--accent);
+}
+
+dialog {
+  width: min(400px, calc(100% - 28px));
+  max-height: calc(100dvh - 40px);
+  margin: auto;
+  padding: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-lg);
+  background: var(--surface-3);
+  color: var(--text);
+  box-shadow: var(--shadow-3);
+}
+
+dialog::backdrop {
+  background: rgb(7 9 12 / 72%);
+}
+.dialog-form {
+  display: grid;
+  gap: 16px;
+  padding: 20px;
+  font: var(--fs-md)/1.4 var(--font-ui);
+}
+.dialog-form p {
+  margin: 0;
+  color: var(--text-dim);
+}
+.dialog-form label {
+  display: grid;
+  gap: 6px;
+  color: var(--text-dim);
+}
+.dialog-form select {
+  width: 100%;
+}
+.dialog-form .preference-help {
+  color: var(--text-faint);
+  font-size: var(--fs-xs);
+}
+.dialog-heading {
+  display: grid;
+  gap: 4px;
+}
+.dialog-heading h2,
+.dialog-heading p {
+  margin: 0;
+}
+/* Guide headings take initial focus so long dialogs open at the top;
+   they are not controls, so no ring. */
+.dialog-heading h2[tabindex="-1"]:focus-visible {
+  box-shadow: none;
+}
+.dialog-heading h2 {
+  font-size: var(--fs-lg);
+  font-weight: 600;
+}
+.dialog-heading p {
+  color: var(--text-dim);
+  font-size: var(--fs-sm);
+}
+.dialog-form a {
+  color: var(--accent-hover);
+  text-decoration: none;
+}
+.dialog-form a:hover {
+  text-decoration: underline;
+}
+.dialog-form input[type="text"] {
+  width: 100%;
+  min-height: var(--control-h);
+  padding: 4px 8px;
+  border: 1px solid var(--border-input);
+  border-radius: var(--r-sm);
+  background: var(--surface-2);
+  color: var(--text);
+  font: inherit;
+}
+.preset-list {
+  display: grid;
+  gap: 6px;
+  max-height: 50dvh;
+  margin: 0;
+  padding: 0;
+  overflow: auto;
+  list-style: none;
+}
+.preset-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  overflow-wrap: anywhere;
+}
+.preset-list:empty {
+  display: none;
+}
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 4px;
+}
+/* Same look as .button-secondary. */
+.dialog-actions button {
+  min-height: var(--control-h);
+  padding: 0 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-sm);
+  background: var(--surface-2);
+  color: var(--text);
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+}
+.dialog-actions button:hover {
+  background: var(--surface-hover);
+}

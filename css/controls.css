@@ -1,0 +1,673 @@
+/* Preview strip controls and accordion panels. */
+
+/* ---------- Strip above the preview ---------- */
+.canvas-strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 14px;
+  min-height: 44px;
+  padding: 6px 12px;
+  background: var(--surface-1);
+  border-bottom: 1px solid var(--border);
+}
+.canvas-strip .view-toggle .toggle {
+  padding-inline: 12px;
+}
+.canvas-strip .button-row {
+  gap: 2px;
+}
+.backdrop-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.backdrop-label {
+  margin-right: 4px;
+  color: var(--text-faint);
+  font-size: var(--fs-sm);
+}
+/* Each swatch is the backdrop color; the pressed ring shows it is on. */
+.backdrop-toggle {
+  --backdrop: #00b140;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-sm);
+  background: var(--backdrop);
+  cursor: pointer;
+}
+#white-screen {
+  --backdrop: #fff;
+}
+#black-screen {
+  --backdrop: #000;
+}
+.backdrop-toggle:hover {
+  border-color: var(--text-dim);
+}
+.backdrop-toggle[aria-pressed="true"] {
+  border-color: var(--bg);
+  box-shadow: 0 0 0 2px var(--accent);
+}
+.backdrop-toggle:focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
+}
+
+/* Path mode reads as one segmented control; the radios stay the inputs. */
+.segmented {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0;
+}
+.segmented legend {
+  margin-bottom: 6px;
+}
+.segmented .choice {
+  position: relative;
+  justify-content: center !important;
+  min-height: var(--control-h);
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  background: var(--surface-2);
+  cursor: pointer;
+}
+.segmented .choice + .choice {
+  border-left: 0;
+}
+.segmented .choice:first-of-type {
+  border-radius: var(--r-sm) 0 0 var(--r-sm);
+}
+.segmented .choice:last-of-type {
+  border-radius: 0 var(--r-sm) var(--r-sm) 0;
+}
+/* The invisible radio covers its segment, so clicks and taps land on it. */
+.segmented .choice input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.segmented .choice:has(input:checked) {
+  color: var(--text);
+  background: var(--surface-3);
+  box-shadow: inset 0 -2px 0 var(--accent);
+}
+.segmented .choice:has(input:focus-visible) {
+  z-index: 1;
+  box-shadow: var(--ring);
+}
+.segmented .choice:has(input:disabled) {
+  opacity: var(--disabled-opacity);
+  cursor: default;
+}
+
+.panel-step {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border: 1px solid var(--border-strong);
+  border-radius: 50%;
+  color: var(--text-faint);
+  font-size: 10px;
+  letter-spacing: 0;
+}
+
+.subfield {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 4px;
+}
+.color-row {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+.color-row input[type="color"] {
+  width: 56px;
+  flex-shrink: 0;
+}
+.color-row .button {
+  min-height: var(--control-h);
+  padding: 0 10px;
+  font-size: var(--fs-md);
+  flex: 1;
+}
+.color-row .button[aria-pressed="true"] {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+#physical-size-field .color-row {
+  justify-content: flex-end;
+}
+#physical-size-field .color-row input[type="number"] {
+  flex: 0 1 96px;
+  width: 96px;
+}
+#physical-size-field .color-row select {
+  flex: 0 0 88px;
+  width: 88px;
+}
+.icon-button[aria-pressed="true"] {
+  background: var(--surface-hover);
+  color: var(--text);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+.preview.picking {
+  cursor: crosshair;
+}
+.preview.picking img {
+  cursor: crosshair;
+}
+.palette-grid {
+  display: grid;
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+  gap: 6px;
+  margin-top: 8px;
+}
+.palette-grid .swatch,
+.palette-chip {
+  border: 1px solid var(--border-input);
+  border-radius: var(--r-sm);
+}
+.palette-grid .swatch {
+  position: relative;
+  aspect-ratio: 1;
+  min-height: 0;
+  padding: 0;
+  cursor: pointer;
+}
+.palette-grid .swatch:focus-visible,
+.palette-edit-row:focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
+}
+.palette-grid .swatch[aria-pressed="true"] {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+.palette-grid .swatch.edited::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 7px;
+  height: 7px;
+  border: 1px solid var(--bg);
+  border-radius: 50%;
+  background: var(--accent);
+}
+.swatch.hidden-color,
+.palette-chip.hidden-color {
+  position: relative;
+  opacity: 0.55;
+}
+.swatch.hidden-color::before,
+.palette-chip.hidden-color::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 5%;
+  width: 90%;
+  height: 3px;
+  background: var(--text);
+  box-shadow: 0 0 0 1px #000;
+  transform: translateY(-50%) rotate(-45deg);
+  pointer-events: none;
+}
+/* Selected for merging: a ring outside the swatch, distinct from the
+   editing ring. */
+.palette-grid .swatch.selected {
+  box-shadow:
+    0 0 0 2px var(--bg),
+    0 0 0 4px var(--accent);
+}
+/* A merged swatch shows how many traced colors it covers. */
+.swatch-merge-badge {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 3px;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  background: var(--surface-3);
+  color: var(--text);
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 14px;
+  text-align: center;
+  pointer-events: none;
+}
+#palette-merge {
+  width: 100%;
+}
+/* Pick keeps its label on one line; Select takes only what it needs. */
+#palette-pick {
+  flex: 1;
+}
+#palette-select {
+  flex: none;
+}
+.swatch-hidden-badge {
+  position: absolute;
+  bottom: 1px;
+  right: 1px;
+  display: grid;
+  place-items: center;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--surface-3);
+  color: var(--text);
+  pointer-events: none;
+}
+.swatch-hidden-badge .material-icon {
+  width: 10px;
+  height: 10px;
+}
+#palette-hidden-note {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin: 8px 0 0;
+  color: var(--accent-hover);
+  font-size: 12px;
+}
+#palette-hidden-note .material-icon {
+  width: 12px;
+  height: 12px;
+}
+.swatch-field {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+}
+.swatch-field .palette-grid {
+  margin-top: 0;
+}
+.swatch-field .palette-grid:empty,
+.swatch-field .palette-hint:empty {
+  display: none;
+}
+.swatch-input {
+  flex: 1;
+  min-width: 0;
+  min-height: var(--control-h);
+  padding: 4px 8px;
+  border: 1px solid var(--border-input);
+  border-radius: var(--r-sm);
+  background: var(--surface-2);
+  color: var(--text);
+  font: var(--fs-sm) var(--font-mono);
+}
+.swatch-field .color-row .button {
+  flex: 1;
+}
+.swatch-field .color-row .button#swatch-add {
+  flex: 0 0 auto;
+}
+.palette-hint {
+  margin: 8px 0 0;
+  font-size: var(--fs-sm);
+  color: var(--text-dim);
+}
+.palette-layering-note {
+  margin-top: 10px;
+  font-size: var(--fs-sm);
+  color: var(--text-dim);
+}
+.palette-layering-note p {
+  margin: 0 0 8px;
+}
+.palette-editor {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  background: var(--surface-2);
+}
+.palette-editor[hidden] {
+  display: none;
+}
+.palette-editor-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--fs-sm);
+  color: var(--text-dim);
+}
+/* Ghost: a quiet dismiss next to the editor's real actions. */
+.palette-close {
+  margin-left: auto;
+  min-height: var(--control-h-sm);
+  padding: 0 8px;
+  border-color: transparent;
+  background: transparent;
+  color: var(--text-dim);
+  font-size: var(--fs-sm);
+}
+.palette-close:hover {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+.palette-chip {
+  display: inline-block;
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+}
+/* Six tracks: color + HEX on the first row, R/G/B on the second, so the
+   number fields keep room for three digits in the narrow sidebar. */
+.palette-editor-fields {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 6px;
+  align-items: end;
+}
+.palette-editor-fields input[type="color"] {
+  grid-column: span 2;
+  padding: 2px;
+}
+.palette-editor-fields .palette-field {
+  grid-column: span 2;
+}
+.palette-editor-fields .palette-field:has(#palette-hex) {
+  grid-column: span 4;
+}
+.palette-field input[type="number"] {
+  appearance: textfield;
+}
+.palette-field input[type="number"]::-webkit-inner-spin-button,
+.palette-field input[type="number"]::-webkit-outer-spin-button {
+  appearance: none;
+  margin: 0;
+}
+.palette-field {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  font-size: var(--fs-xs);
+  color: var(--text-dim);
+}
+.palette-field input {
+  width: 100%;
+  min-width: 0;
+  min-height: var(--control-h);
+  padding: 4px 6px;
+  border: 1px solid var(--border-input);
+  border-radius: var(--r-sm);
+  background: var(--surface-2);
+  color: var(--text);
+  font: var(--fs-sm) var(--font-mono);
+}
+.palette-field input:focus {
+  border-color: var(--accent);
+  outline: none;
+}
+.palette-field input[aria-invalid="true"] {
+  border-color: var(--error);
+}
+.palette-error {
+  margin: 6px 0 0;
+  color: var(--error);
+  font-size: var(--fs-sm);
+}
+.palette-edits {
+  display: grid;
+  gap: 4px;
+  margin: 8px 0;
+  padding: 0;
+  list-style: none;
+}
+.palette-edits:empty {
+  display: none;
+}
+.palette-edit-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 4px 6px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  background: var(--surface-2);
+  color: var(--text);
+  cursor: pointer;
+}
+.palette-edit-row code {
+  overflow: hidden;
+  font-size: var(--fs-xs);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.subfield label {
+  font-weight: 500;
+  font-size: var(--fs-sm);
+  color: var(--text-dim);
+}
+
+/* One frame per color well: drop the UA swatch border inside ours. */
+input[type="color"]::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+input[type="color"]::-webkit-color-swatch {
+  border: 0;
+  border-radius: var(--r-xs);
+}
+input[type="color"]::-moz-color-swatch {
+  border: 0;
+  border-radius: var(--r-xs);
+}
+
+select,
+input[type="color"] {
+  min-height: var(--control-h);
+  padding: 4px 8px;
+  border: 1px solid var(--border-input);
+  border-radius: var(--r-sm);
+  background: var(--surface-2);
+  color: var(--text);
+  font: inherit;
+  width: 100%;
+}
+
+input[type="range"] {
+  appearance: none;
+  width: 100%;
+  min-height: 24px;
+  background: transparent;
+  cursor: pointer;
+}
+input[type="range"]::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--border-input);
+}
+input[type="range"]::-moz-range-track,
+input[type="range"]::-moz-range-progress {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--border-input);
+}
+input[type="range"]::-webkit-slider-thumb {
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  margin-top: -5px;
+  border: 2px solid var(--surface-1);
+  border-radius: 50%;
+  background: var(--accent);
+  box-sizing: border-box;
+}
+input[type="range"]::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--surface-1);
+  border-radius: 50%;
+  background: var(--accent);
+  box-sizing: border-box;
+}
+input[type="range"]:hover::-webkit-slider-thumb {
+  background: var(--accent-hover);
+}
+input[type="range"]:hover::-moz-range-thumb {
+  background: var(--accent-hover);
+}
+input[type="range"]:disabled {
+  opacity: var(--disabled-opacity);
+  cursor: default;
+}
+input[type="radio"],
+input[type="checkbox"] {
+  flex: none;
+  /* UA margins pushed boxes off the label column and below the text. */
+  margin: 0;
+  accent-color: var(--accent);
+  width: 16px;
+  height: 16px;
+}
+
+/* ---------- Accordion panels in the controls column ---------- */
+.panel {
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  border-radius: 0;
+  background: transparent;
+}
+
+.panel > summary {
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  min-height: 46px;
+  padding: 0 16px;
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border-radius: 0;
+  user-select: none;
+  line-height: 16px;
+  color: var(--text-dim);
+}
+
+.panel > summary::-webkit-details-marker {
+  display: none;
+}
+
+.panel > summary::after {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  color: var(--text-faint);
+  transform: rotate(45deg) translate(-1px, -1px);
+  transition: transform 160ms ease-out;
+}
+
+.panel[open] > summary::after {
+  transform: rotate(225deg) translate(-1px, -1px);
+}
+
+details.advanced > summary::after {
+  content: "";
+  width: 6px;
+  height: 6px;
+  margin-right: 1px;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  color: var(--text-faint);
+  transform: rotate(45deg) translate(-1px, -1px);
+  transition: transform 160ms ease-out;
+}
+details.advanced[open] > summary::after {
+  transform: rotate(225deg) translate(-1px, -1px);
+}
+
+.panel > summary:hover {
+  color: var(--text);
+}
+
+.panel > summary:hover::after,
+details.advanced > summary:hover::after {
+  color: var(--text-dim);
+}
+
+.panel > summary:focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
+}
+
+.panel-body {
+  display: grid;
+  gap: 14px;
+  padding: 4px 16px 20px;
+}
+.panel-heading {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+}
+.panel-summary {
+  overflow: hidden;
+  color: var(--text-faint);
+  font-size: var(--fs-xs);
+  font-weight: 400;
+  letter-spacing: 0;
+  text-overflow: ellipsis;
+  text-transform: none;
+  white-space: nowrap;
+}
+.panel[open] .panel-summary {
+  display: none;
+}
+.conditional-fields:not(:has(> :not([hidden]))) {
+  display: none;
+}
+.conditional-fields {
+  display: grid;
+  gap: 14px;
+  padding-left: 12px;
+  border-left: 2px solid var(--border);
+}
+
+/* Nested advanced block: quieter than a top-level panel */
+details.advanced > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  list-style: none;
+  cursor: pointer;
+  font-size: var(--fs-md);
+  font-weight: 500;
+  color: var(--text-dim);
+  user-select: none;
+}
+details.advanced > summary::-webkit-details-marker {
+  display: none;
+}
+
+details.advanced > summary:hover {
+  color: var(--text);
+}
+
+details.advanced[open] {
+  display: grid;
+  gap: 10px;
+}
