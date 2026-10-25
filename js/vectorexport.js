@@ -58,8 +58,11 @@ export function parseSvgPaths(svgText) {
 
 function parsePathData(d, dx, dy) {
   const tokens = d.match(/-?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?|[A-Za-z]/g) || [];
+  /** @type {VecSubpath[]} */
   const subpaths = [];
+  /** @type {VecSubpath | null} */
   let current = null;
+  /** @type {string | null} */
   let cmd = null;
   let point = { x: 0, y: 0 };
   let i = 0;
@@ -84,11 +87,13 @@ function parsePathData(d, dx, dy) {
         break;
       }
       case "L": {
+        if (!current) throw new Error("Path data must start with M.");
         point = { x: read() + dx, y: read() + dy };
         current.segments.push({ kind: "line", to: point });
         break;
       }
       case "C": {
+        if (!current) throw new Error("Path data must start with M.");
         const c1 = { x: read() + dx, y: read() + dy };
         const c2 = { x: read() + dx, y: read() + dy };
         point = { x: read() + dx, y: read() + dy };

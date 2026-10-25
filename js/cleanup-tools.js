@@ -4,10 +4,10 @@
 // register before the pan handlers in view.js, so app.js imports this
 // module first.
 import { brushSizeForShortcut, snapPointToAngle, svgViewBox } from "./eraser.js?v=17";
-import { parseHexColor, sampleRasterColor, toHexColor } from "./preprocess.js?v=98";
-import { els, hooks, state } from "./context.js?v=68";
-import { maskLoops } from "./magicwand.js?v=51";
-import { refreshExport } from "./exporters.js?v=88";
+import { parseHexColor, sampleRasterColor, toHexColor } from "./preprocess.js?v=99";
+import { els, hooks, state } from "./context.js?v=69";
+import { maskLoops } from "./magicwand.js?v=52";
+import { refreshExport } from "./exporters.js?v=89";
 
 /** @param {"result" | "source" | "compare"} view */
 export function setView(view) {
@@ -46,6 +46,7 @@ export function showResultOverSource() {
 // that raster instead of the original bitmap: a color picked off the
 // untouched original may no longer exist once the palette is reduced,
 // leaving the background only partly removed.
+/** @type {string | null} */
 let pickUrl = null;
 let pickToken = 0;
 
@@ -63,9 +64,11 @@ async function showPickPreview() {
   if (!raster?.data || !raster.width || !raster.height) return;
   const token = ++pickToken;
   const canvas = new OffscreenCanvas(raster.width, raster.height);
-  canvas
-    .getContext("2d")
-    .putImageData(new ImageData(raster.data, raster.width, raster.height), 0, 0);
+  /** @type {OffscreenCanvasRenderingContext2D} */ (canvas.getContext("2d")).putImageData(
+    new ImageData(raster.data, raster.width, raster.height),
+    0,
+    0,
+  );
   const blob = await canvas.convertToBlob({ type: "image/png" });
   // A newer arm/disarm may have landed while the blob encoded.
   if (token !== pickToken || !state.picking) return;
@@ -251,14 +254,17 @@ document.addEventListener("keydown", (event) => {
   }
 });
 
-/** Sample the original bitmap, for the window before the first trace. */
-function sampleBitmapColor(normalizedX, normalizedY) {
-  const { width, height } = state.bitmap;
+/**
+ * Sample the original bitmap, for the window before the first trace.
+ * @param {ImageBitmap} bitmap
+ */
+function sampleBitmapColor(bitmap, normalizedX, normalizedY) {
+  const { width, height } = bitmap;
   const x = Math.min(width - 1, Math.max(0, Math.floor(normalizedX * width)));
   const y = Math.min(height - 1, Math.max(0, Math.floor(normalizedY * height)));
   const canvas = new OffscreenCanvas(1, 1);
-  const ctx = canvas.getContext("2d");
-  ctx.drawImage(state.bitmap, x, y, 1, 1, 0, 0, 1, 1);
+  const ctx = /** @type {OffscreenCanvasRenderingContext2D} */ (canvas.getContext("2d"));
+  ctx.drawImage(bitmap, x, y, 1, 1, 0, 0, 1, 1);
   const [r, g, b] = ctx.getImageData(0, 0, 1, 1).data;
   return [r, g, b];
 }
@@ -271,7 +277,7 @@ els.sourceView.addEventListener("click", (e) => {
   const color = /** @type {[number, number, number] | null} */ (
     state.processedRaster
       ? sampleRasterColor(state.processedRaster, normalizedX, normalizedY)
-      : sampleBitmapColor(normalizedX, normalizedY)
+      : sampleBitmapColor(state.bitmap, normalizedX, normalizedY)
   );
   if (!color) return;
   els.knockoutColor.value = toHexColor(color).toLowerCase();
@@ -739,6 +745,7 @@ for (const [name, button] of Object.entries(modeButtons)) {
 }
 
 /** Show + or - beside the crosshair for the operation a press would start. */
+/** @param {KeyboardEvent | PointerEvent | null} [event] */
 function updateSelectCursor(event = null) {
   const op = event ? pressOp(event) : selectionMode;
   const armed = Boolean(state.selectionTool);
@@ -820,6 +827,7 @@ els.selectionCancel.addEventListener("click", async () => {
 // -- Touch: a second finger hands the gesture to pinch-zoom -------------
 
 /** The touch a tool is using, with how to undo what it started. */
+/** @type {{ id: number, x: number, y: number, undo: () => void } | null} */
 let toolTouch = null;
 
 function claimTouch(event, undo) {
@@ -862,6 +870,7 @@ for (const type of ["pointerup", "pointercancel"]) {
   );
 }
 
+/** @type {number | null} */
 let selectionPointer = null;
 let wandSelectionQueue = Promise.resolve();
 
@@ -935,7 +944,10 @@ async function selectWand(point, op, svg) {
 /** Tolerance slider (0 to 50) as an Oklab distance (0 to 0.2). */
 const wandTolerance = () => Number(els.wandTolerance.value) / 250;
 
-/** The result as the wand last rendered it: { svg, pixels } or pending. */
+/**
+ * The result as the wand last rendered it: { svg, pixels } or pending.
+ * @type {{ svg: string | null, pixels: Promise<ImageData> } | null}
+ */
 let wandRaster = null;
 
 /**
@@ -992,7 +1004,7 @@ let wandJobId = 0;
 
 function getWandWorker() {
   if (wandWorker) return wandWorker;
-  wandWorker = new Worker(new URL("./wand-worker.js?v=2", import.meta.url), { type: "module" });
+  wandWorker = new Worker(new URL("./wand-worker.js?v=3", import.meta.url), { type: "module" });
   wandWorker.onmessage = ({ data }) => {
     const pending = wandPending.get(data.id);
     if (!pending) return;
@@ -1048,6 +1060,7 @@ async function regionShape(raster, seeds, svg) {
   );
   if (!coarse) return null;
   const { x0, y0, x1, y1, detail } = coarse;
+  /** @type {ImageData | null} */
   let refined = null;
   if (detail > 1) {
     try {
@@ -1236,6 +1249,7 @@ els.preview.addEventListener(
     const point = selectionPoint(event, "free");
     if (!point) return;
     const selection = state.selection;
+    if (selection.type !== "rect" && selection.type !== "ellipse") return;
     selection.current = { x: point.x, y: point.y };
     if (!event.shiftKey) selection.holdShift = false;
     if (!event.altKey) selection.holdAlt = false;
@@ -1471,7 +1485,9 @@ function moveCleanupCursor(event) {
   els.eraserCursor.style.top = `${event.clientY - previewRect.top}px`;
 }
 
+/** @type {number | null} */
 let erasePointer = null;
+/** @type {{ mode: string, color?: string, diameter: number, points: { x: number, y: number }[] } | null} */
 let eraseStroke = null;
 let eraseFrame = 0;
 
@@ -1493,14 +1509,15 @@ els.preview.addEventListener("pointermove", (event) => {
   // Undo/redo shortcuts stay live during a drag, so the stroke this pointer
   // started can be popped off the stack mid-gesture. Drop the gesture then
   // instead of appending points to whatever action ended up last.
-  if (state.eraseStrokes.at(-1) !== eraseStroke) {
+  if (!eraseStroke || state.eraseStrokes.at(-1) !== eraseStroke) {
     erasePointer = null;
     eraseStroke = null;
     return;
   }
   const point = cleanupPoint(event);
   if (!point) return;
-  const previous = eraseStroke.points.at(-1);
+  // A stroke starts with one point and only grows.
+  const previous = /** @type {{ x: number, y: number }} */ (eraseStroke.points.at(-1));
   if (Math.hypot(point.x - previous.x, point.y - previous.y) < 0.001) return;
   eraseStroke.points.push({ x: point.x, y: point.y });
   redrawErasure();

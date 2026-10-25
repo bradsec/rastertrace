@@ -1,5 +1,5 @@
 // Browser-side pipeline: decode, premultiplied upscale, worker round-trip.
-import { assertRasterBudget, MAX_TRACE_SIDE } from "./preprocess.js?v=98";
+import { assertRasterBudget, MAX_TRACE_SIDE } from "./preprocess.js?v=99";
 
 export const MAX_IMAGE_BYTES = 50 * 1024 * 1024;
 export const MAX_SOURCE_PIXELS = 100_000_000;
@@ -125,6 +125,7 @@ export function fitDecodeSize(width, height, maxSide = MAX_TRACE_SIDE) {
 /**
  * Decode a File/Blob into an ImageBitmap. Throws a readable error for
  * unsupported or corrupt files.
+ * @param {{ width: number, height: number } | null} [knownSize]
  */
 export async function decodeImage(file, maxSide = MAX_TRACE_SIDE, knownSize = null) {
   if (file.size > MAX_IMAGE_BYTES) {
@@ -170,7 +171,7 @@ export async function capBitmap(bitmap, maxSide = MAX_TRACE_SIDE) {
   const width = Math.max(1, Math.round(bitmap.width * scale));
   const height = Math.max(1, Math.round(bitmap.height * scale));
   const canvas = new OffscreenCanvas(width, height);
-  const ctx = canvas.getContext("2d");
+  const ctx = /** @type {OffscreenCanvasRenderingContext2D} */ (canvas.getContext("2d"));
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = "high";
   ctx.drawImage(bitmap, 0, 0, width, height);
@@ -184,7 +185,7 @@ export async function capBitmap(bitmap, maxSide = MAX_TRACE_SIDE) {
  */
 export async function rotateBitmap(bitmap, clockwise = true) {
   const canvas = new OffscreenCanvas(bitmap.height, bitmap.width);
-  const ctx = canvas.getContext("2d");
+  const ctx = /** @type {OffscreenCanvasRenderingContext2D} */ (canvas.getContext("2d"));
   if (clockwise) {
     ctx.translate(bitmap.height, 0);
     ctx.rotate(Math.PI / 2);
@@ -216,7 +217,7 @@ export function invertRGBA(data) {
  */
 export async function invertBitmap(bitmap) {
   const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
-  const ctx = canvas.getContext("2d");
+  const ctx = /** @type {OffscreenCanvasRenderingContext2D} */ (canvas.getContext("2d"));
   ctx.drawImage(bitmap, 0, 0);
   const image = ctx.getImageData(0, 0, canvas.width, canvas.height);
   invertRGBA(image.data);
@@ -244,7 +245,7 @@ export function rasterize(bitmap, scale, nearest = false) {
   const width = Math.max(1, Math.round(bitmap.width * scale));
   const height = Math.max(1, Math.round(bitmap.height * scale));
   const canvas = new OffscreenCanvas(width, height);
-  const ctx = canvas.getContext("2d");
+  const ctx = /** @type {OffscreenCanvasRenderingContext2D} */ (canvas.getContext("2d"));
   ctx.imageSmoothingEnabled = scale !== 1 && !(nearest && scale > 1);
   ctx.imageSmoothingQuality = "high";
   ctx.drawImage(bitmap, 0, 0, width, height);
@@ -329,7 +330,11 @@ export class Tracer {
     };
     return new Promise((resolve, reject) => {
       this.pending.set(id, { resolve, reject, postedAt: Date.now() });
-      this.worker.postMessage({ id, img, settings, sourceWidth, sourceHeight }, [img.data.buffer]);
+      // Set above: startWorker() runs whenever the worker is missing.
+      /** @type {Worker} */ (this.worker).postMessage(
+        { id, img, settings, sourceWidth, sourceHeight },
+        [img.data.buffer],
+      );
     });
   }
 }

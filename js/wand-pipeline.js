@@ -1,7 +1,8 @@
-import { tracePixels } from "./preprocess.js?v=98";
-import { floodRegion, growMask, maskLoops, unionMasks } from "./magicwand.js?v=51";
+import { tracePixels } from "./preprocess.js?v=99";
+import { floodRegion, growMask, maskLoops, unionMasks } from "./magicwand.js?v=52";
 
 export function coarseRegion(raster, seeds, tolerance, expand, sourceWidth) {
+  /** @type {Uint8Array | null} */
   let mask = null;
   let width = 0;
   let height = 0;
@@ -36,6 +37,7 @@ export function coarseRegion(raster, seeds, tolerance, expand, sourceWidth) {
 
 export function finishRegion(coarse, refined, seeds, tolerance, expand, smooth, sourceWidth) {
   let { mask, width, height, x0, y0, x1, y1, detail } = coarse;
+  /** @type {Uint8Array | null} */
   let refinedMask = null;
   if (detail > 1 && refined) {
     for (const seed of seeds) {

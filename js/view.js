@@ -3,8 +3,8 @@
 // register after the selection and eraser handlers in cleanup-tools.js
 // (which stop propagation while a tool is active), so app.js imports
 // this module last.
-import { els, hooks, state } from "./context.js?v=68";
-import { renderSelection, renderSmoothPreview } from "./cleanup-tools.js?v=110";
+import { els, hooks, state } from "./context.js?v=69";
+import { renderSelection, renderSmoothPreview } from "./cleanup-tools.js?v=111";
 
 const view = { scale: 1, tx: 0, ty: 0 };
 const ZOOM_MIN = 0.001;
@@ -75,7 +75,10 @@ export function actualSizeView() {
 els.zoomIn.addEventListener("click", () => zoomAtCenter(1.5));
 els.zoomOut.addEventListener("click", () => zoomAtCenter(1 / 1.5));
 els.zoomReset.addEventListener("click", resetView);
-document.querySelector('[data-action="zoom-actual"]').addEventListener("click", actualSizeView);
+/** @type {HTMLElement} */ (document.querySelector('[data-action="zoom-actual"]')).addEventListener(
+  "click",
+  actualSizeView,
+);
 
 els.preview.addEventListener(
   "wheel",
@@ -119,7 +122,10 @@ els.preview.addEventListener("keydown", (e) => {
 // pan with it, so the standard touch pinch-drag combo works). `gesture`
 // holds the previous frame: { x, y } while panning, { dist, midX, midY }
 // while pinching; deltas are applied incrementally.
+/** @typedef {{ x: number, y: number }} PanGesture */
+/** @typedef {{ dist: number, midX: number, midY: number }} PinchGesture */
 const pointers = new Map();
+/** @type {PanGesture | PinchGesture | null} */
 let gesture = null;
 
 function pinchState() {
@@ -235,18 +241,20 @@ els.preview.addEventListener("pointermove", (e) => {
   if (!pointers.has(e.pointerId)) return;
   pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
   if (pointers.size === 1) {
-    view.tx += e.clientX - gesture.x;
-    view.ty += e.clientY - gesture.y;
+    const pan = /** @type {PanGesture} */ (gesture);
+    view.tx += e.clientX - pan.x;
+    view.ty += e.clientY - pan.y;
     gesture = { x: e.clientX, y: e.clientY };
     applyView();
   } else if (pointers.size === 2) {
     const now = pinchState();
     const rect = els.preview.getBoundingClientRect();
-    if (gesture.dist > 0) {
-      zoomAt(now.dist / gesture.dist, now.midX - rect.left, now.midY - rect.top);
+    const pinch = /** @type {PinchGesture} */ (gesture);
+    if (pinch.dist > 0) {
+      zoomAt(now.dist / pinch.dist, now.midX - rect.left, now.midY - rect.top);
     }
-    view.tx += now.midX - gesture.midX;
-    view.ty += now.midY - gesture.midY;
+    view.tx += now.midX - pinch.midX;
+    view.ty += now.midY - pinch.midY;
     applyView();
     gesture = now;
   }
@@ -337,6 +345,7 @@ els.compareHandle.addEventListener("keydown", (e) => {
 
 // Phones hit only the handle (CSS), so one finger elsewhere still
 // scrolls the page or pans; mouse users can grab the whole line.
+/** @type {number | null} */
 let dragId = null;
 
 /** @param {PointerEvent} e */

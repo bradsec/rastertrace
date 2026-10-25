@@ -435,7 +435,7 @@ export const EXPORT_PROFILES = Object.freeze({
 function stripInvalidXmlCharacters(value) {
   let result = "";
   for (const character of String(value)) {
-    const codePoint = character.codePointAt(0);
+    const codePoint = /** @type {number} */ (character.codePointAt(0));
     if (
       codePoint === 0x09 ||
       codePoint === 0x0a ||
@@ -467,7 +467,7 @@ export function applyExportOptions(svgText, { physicalWidth, physicalUnit, title
   if (minify) {
     out = compressSvgPaths(out.replace(/^<\?xml[^?]*\?>\s*/, "").replace(/^<!--.*?-->\s*/s, ""));
   }
-  if (physicalWidth > 0 && physicalUnit) {
+  if (physicalWidth && physicalWidth > 0 && physicalUnit) {
     out = out.replace(
       /(<svg[^>]*?) width="(\d+)" height="(\d+)"( viewBox="[^"]*")/,
       (_, head, w, h, vb) => {
@@ -540,7 +540,8 @@ function compressPathData(d, dx, dy) {
   let ey = 0;
   let startX = 0;
   let startY = 0;
-  let prevC2 = null; // absolute second control point of a preceding c/s
+  /** @type {{ x: number, y: number } | null} absolute second control point of a preceding c/s */
+  let prevC2 = null;
   let i = 0;
   const read = () => Number(tokens[i++]);
 
@@ -559,6 +560,7 @@ function compressPathData(d, dx, dy) {
     lastNum = s;
   };
 
+  /** @type {string | null} */
   let op = null;
   while (i < tokens.length) {
     if (/^[A-Za-z]$/.test(tokens[i])) {
@@ -1027,6 +1029,7 @@ export function oklabToSrgb([L, a, b]) {
  * coarsely (16 levels per channel), returning the average color of the
  * dominant bin: single corner pixels are one JPEG artifact or watermark
  * away from the wrong answer, and binning absorbs compression noise.
+ * @returns {[number, number, number] | null}
  */
 export function detectBackgroundColor(img) {
   const { data, width, height } = img;
@@ -1320,6 +1323,7 @@ export function knockOutEdges(
 export function snapToImageColor(img, [r, g, b], maxDistance) {
   const { data } = img;
   const seen = new Set();
+  /** @type {[number, number, number] | null} */
   let best = null;
   let bestDist = Infinity;
   for (let i = 0; i < data.length; i += 4) {
@@ -1360,9 +1364,11 @@ export function removeBackground(
   if (transparent === "edges") {
     return knockOutEdges(img, fuzz, enclosedMinArea, { gradient, enclosedMaxArea });
   }
+  /** @type {[number, number, number] | null} */
   let target = null;
   if (transparent === "auto") target = detectBackgroundColor(img);
-  else if (Array.isArray(transparent)) target = transparent;
+  else if (Array.isArray(transparent))
+    target = /** @type {[number, number, number]} */ (transparent);
   if (!target) return null;
   let color = target;
   if (quantized) {
@@ -2327,6 +2333,7 @@ export function dominantOpaqueColor(img) {
   const pixelCount = data.length / 4;
   const stride = Math.max(1, Math.floor(pixelCount / 4096)) * 4;
   const counts = new Map();
+  /** @type {number | null} */
   let best = null;
   let bestCount = 0;
   for (let i = 0; i < data.length; i += stride) {
@@ -2396,7 +2403,7 @@ const SIMILAR_LINE_SHARE = 0.02;
  */
 export function analyzeFlatness(img) {
   const { solidShare, ...exact } = exactFlatness(img);
-  if (exact.solids && solidShare >= EXACT_SOLID_SHARE) return exact;
+  if (exact.solids && (solidShare ?? 0) >= EXACT_SOLID_SHARE) return exact;
   return similarFlatness(img) ?? exact;
 }
 
@@ -2634,6 +2641,7 @@ function similarFlatness(img) {
         Math.round(g / count),
         Math.round(b / count),
       ]);
+      /** @type {{ lab: number[], sum: number[], count: number, spread: number } | null} */
       let best = null;
       let bestDistance = SIMILAR_CLUSTER_DISTANCE;
       for (const c of clusters) {
@@ -2821,7 +2829,8 @@ export function mapToPalette(img, swatches) {
           hit = rgb;
         }
       }
-      nearest.set(key, hit);
+      // Callers pass at least one swatch, so the loop always picks one.
+      nearest.set(key, /** @type {[number, number, number]} */ (hit));
     }
     return hit;
   };
@@ -2881,6 +2890,9 @@ const FLAT_ACCENT_CANDIDATES = 64;
  * fill colors) join the palette exactly, on top of `colors`. Mutates img
  * in place and returns false when it remapped nothing, "flat" when the
  * palette is the art's own flat colors (seeded), otherwise "clustered".
+ * @param {ImageData} img
+ * @param {number} colors
+ * @param {{ layerDiff?: number, seeds?: number[][] | null, keep?: number[][] | null }} [options]
  * @returns {false | "flat" | "clustered"}
  */
 export function quantize(img, colors, { layerDiff = 0, seeds = null, keep = null } = {}) {
@@ -3473,7 +3485,7 @@ export function nameColorGroups(svgText, { mosaic = false } = {}) {
         else byFill.set(fill, [path]);
       }
       const first = paths[0];
-      const last = paths.at(-1);
+      const last = /** @type {RegExpExecArray} */ (paths.at(-1)); // paths.length > 1
       out =
         out.slice(0, first.index) +
         [...byFill.values()].flat().join("\n") +
@@ -3530,6 +3542,7 @@ function straightenPathData(d, tolerance) {
   const tokens = d.match(/-?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?|[A-Za-z]/g) || [];
   let out = "";
   let i = 0;
+  /** @type {string | null} */
   let cmd = null;
   let point = { x: 0, y: 0 };
   // Lines buffered for merging: linePoints[0] is the run's anchor.

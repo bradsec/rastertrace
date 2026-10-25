@@ -1,9 +1,9 @@
 // Palette panel: swatch grid, color editor, and the result eyedropper
 // that picks a traced color to edit. Edits recolor fills only; they
 // only retrace when switching layering.
-import { els, hooks, state } from "./context.js?v=68";
-import { deactivateCleanupTools, setView, showResultOverSource } from "./cleanup-tools.js?v=110";
-import { refreshExport } from "./exporters.js?v=88";
+import { els, hooks, state } from "./context.js?v=69";
+import { deactivateCleanupTools, setView, showResultOverSource } from "./cleanup-tools.js?v=111";
+import { refreshExport } from "./exporters.js?v=89";
 import {
   mergeEdits,
   mergeGroups,
@@ -15,8 +15,8 @@ import {
   rasterPalette,
   stencilFill,
   svgPalette,
-} from "./palette.js?v=52";
-import { parseHexColor, toHexColor } from "./preprocess.js?v=98";
+} from "./palette.js?v=53";
+import { parseHexColor, toHexColor } from "./preprocess.js?v=99";
 
 // Local lookup: adding it to els would bump context.js at every importer.
 const paletteHiddenNote = /** @type {HTMLElement} */ (
@@ -32,7 +32,7 @@ const paletteError = /** @type {HTMLElement} */ (document.getElementById("palett
 const paletteSelect = /** @type {HTMLButtonElement} */ (document.getElementById("palette-select"));
 const paletteMerge = /** @type {HTMLButtonElement} */ (document.getElementById("palette-merge"));
 
-/** Original fill the editor is open on, or null when closed. */
+/** @type {string | null} Original fill the editor is open on, or null when closed. */
 let editing = null;
 let refreshFrame = 0;
 /** Swatches (by their largest color) chosen for merging. */
@@ -154,7 +154,8 @@ function swatchButton(fill, className) {
 export function renderPalette() {
   const groups = swatchGroups();
   // A merge can make another color the swatch's name: follow it.
-  if (editing) editing = groups.find((group) => group.members.includes(editing))?.fill ?? editing;
+  const open = editing;
+  if (open) editing = groups.find((group) => group.members.includes(open))?.fill ?? open;
   for (const fill of [...selected]) {
     if (!groups.some((group) => group.fill === fill)) selected.delete(fill);
   }
@@ -256,7 +257,10 @@ export function renderPalette() {
   els.paletteResetAll.disabled = state.colorEdits.size === 0;
 }
 
-/** Show `hex` in every editor field except `source`, the one being typed in. */
+/**
+ * Show `hex` in every editor field except `source`, the one being typed in.
+ * @param {HTMLInputElement | null} [source]
+ */
 function syncFields(hex, source = null) {
   const rgb = /** @type {[number, number, number]} */ (parseHexColor(hex));
   if (source !== els.paletteColor) els.paletteColor.value = hex.toLowerCase();
@@ -285,11 +289,12 @@ function showFieldError() {
 
 function openEditor(fill) {
   const members = membersOf(fill);
-  editing = members[0];
+  const original = /** @type {string} */ (members[0]);
+  editing = original;
   els.paletteEditor.hidden = false;
-  els.paletteOriginalSwatch.style.background = editing;
+  els.paletteOriginalSwatch.style.background = original;
   els.paletteOriginalHex.textContent =
-    members.length > 1 ? `${editing} and ${members.length - 1} more` : editing;
+    members.length > 1 ? `${original} and ${members.length - 1} more` : original;
   syncFields(editedFill(fill) === "none" ? (hiddenColors.get(fill) ?? fill) : editedFill(fill));
   syncEditor();
   renderPalette();

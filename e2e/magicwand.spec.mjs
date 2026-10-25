@@ -55,7 +55,10 @@ test.beforeEach(async ({ page }) => {
 test("wand outline follows a fractional SVG edge at high zoom", async ({ page }) => {
   await loadTwoBlocks(page);
   await page.evaluate(async () => {
-    const { state } = await import("/js/context.js?v=68");
+    const url = performance
+      .getEntriesByType("resource")
+      .find((entry) => entry.name.includes("/js/context.js")).name;
+    const { state } = await import(url);
     const svg =
       '<svg xmlns="http://www.w3.org/2000/svg" width="160" height="80" viewBox="0 0 20 10" preserveAspectRatio="none"><rect width="20" height="10" fill="#f3ead8"/><path d="M4.35 2H15.65V8H4.35Z" fill="#d02020"/></svg>';
     state.svg = svg;
@@ -72,7 +75,10 @@ test("wand outline follows a fractional SVG edge at high zoom", async ({ page })
   await clickResult(page, [80, 40]);
   await expect(page.locator("#selection-overlay")).toBeVisible();
   const edges = await page.evaluate(async () => {
-    const { state } = await import("/js/context.js?v=68");
+    const url = performance
+      .getEntriesByType("resource")
+      .find((entry) => entry.name.includes("/js/context.js")).name;
+    const { state } = await import(url);
     const points = state.selection.parts[0].shape.loops.flat();
     return [
       Math.min(...points.map((point) => point.x * 20)),

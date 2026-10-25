@@ -18,8 +18,8 @@ import {
   thresholdImage,
   toGrayscale,
   tracePixels,
-} from "./preprocess.js?v=98";
-import { rasterPalette, snapFills } from "./palette.js?v=52";
+} from "./preprocess.js?v=99";
+import { rasterPalette, snapFills } from "./palette.js?v=53";
 
 // Explicit versioned URL: the glue's own wasm fetch drops the ?v= query,
 // so a rebuilt binary would otherwise be served from stale browser cache
@@ -38,6 +38,7 @@ self.onmessage = async (event) => {
     stage("Preparing image…");
 
     let hasAlpha = false;
+    /** @type {Uint8Array | null} */
     let inputTransparent = null;
     for (let i = 3; i < img.data.length; i += 4) {
       if (img.data[i] < 255) hasAlpha = true;

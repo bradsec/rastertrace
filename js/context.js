@@ -205,39 +205,47 @@ export const els = {
   ),
 };
 
+/**
+ * @typedef {{ x: number, y: number }} Point
+ * @typedef {{ type: "polygon", points: Point[], hover: Point | null, finalized: boolean, op: string, base: any[] }} PolygonSelection
+ * @typedef {{ type: "rect" | "ellipse", start: Point, current: Point, constrain: boolean, fromCenter: boolean, holdShift: boolean, holdAlt: boolean, finalized: boolean, op: string, base: any[] }} MarqueeSelection
+ * @typedef {{ type: "composite", parts: any[], finalized: boolean }} CompositeSelection
+ * @typedef {PolygonSelection | MarqueeSelection | CompositeSelection} Selection
+ */
+
 export const state = {
-  bitmap: null, // decoded at MAX_TRACE_SIDE_ULTRA; source dims kept separately
-  file: null, // original file, kept for the Ultra re-decode
+  bitmap: /** @type {ImageBitmap | null} */ (null), // decoded at MAX_TRACE_SIDE_ULTRA; source dims kept separately
+  file: /** @type {File | null} */ (null), // original file, kept for the Ultra re-decode
   rotation: 0, // quarter turns applied since load, for re-decode replay
   inverted: false, // negative applied since load, replayed on Ultra re-decode
   sourceWidth: 0,
   sourceHeight: 0,
   fileName: "image",
-  sourceUrl: null,
-  svgRaw: null, // worker output before export post-processing
+  sourceUrl: /** @type {string | null} */ (null),
+  svgRaw: /** @type {string | null} */ (null), // worker output before export post-processing
   svgMosaic: false, // svgRaw traced in cutout layering: shapes never overlap
-  svg: null,
-  downloadUrl: null,
+  svg: /** @type {string | null} */ (null),
+  downloadUrl: /** @type {string | null} */ (null),
   debounce: 0,
-  raster: null, // { scale, imageData } cache, keyed by current bitmap
-  processedRaster: null, // worker pixels after current trace preprocessing
+  raster: /** @type {{ scale: number, nearest: boolean, imageData: ImageData } | null} */ (null), // { scale, imageData } cache, keyed by current bitmap
+  processedRaster: /** @type {ImageData | null} */ (null), // worker pixels after current trace preprocessing
   picking: false,
   palettePicking: false,
   colorEdits: /** @type {Map<string, string>} */ (new Map()), // palette "#RRGGBB" to edited fill
   paletteColors: /** @type {{ fill: string, count: number }[]} */ ([]),
   paletteMapping: /** @type {Map<string, string> | null} */ (null), // SVG fill to palette color
   loadToken: 0, // guards against overlapping loads (drop while decoding)
-  flatNote: null, // status prefix when load-time detection fired
+  flatNote: /** @type {string | null} */ (null), // status prefix when load-time detection fired
   erasing: false,
   blobFilling: false,
   blobPicking: false,
   smoothing: false,
-  eraseStrokes: [], // ordered cleanup actions, normalized so retracing preserves placement
-  eraseRedo: [],
+  eraseStrokes: /** @type {any[]} */ ([]), // ordered cleanup actions, normalized so retracing preserves placement
+  eraseRedo: /** @type {any[]} */ ([]),
   /** Cleanup actions painted into the current trace; the rest are drawn on top until it reruns. */
   bakedActions: /** @type {Set<object>} */ (new Set()),
-  selectionTool: null,
-  selection: null,
+  selectionTool: /** @type {"rect" | "ellipse" | "polygon" | "wand" | null} */ (null),
+  selection: /** @type {Selection | null} */ (null),
 };
 
 // Mutated in place (never reassigned) so every module sees updates.

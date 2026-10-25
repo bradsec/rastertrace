@@ -10,7 +10,7 @@ import {
   rotateBitmap,
   sniffImageSize,
   Tracer,
-} from "./pipeline.js?v=100";
+} from "./pipeline.js?v=101";
 import {
   analyzeFlatness,
   detectedColorSettings,
@@ -32,11 +32,11 @@ import {
   toHexColor,
   USER_PRESET_PREFIX,
   userPresetName,
-} from "./preprocess.js?v=98";
-import { $, els, hooks, preferences, showError, state } from "./context.js?v=68";
-import { bakeCleanup, smoothRegions } from "./bake.js?v=26";
+} from "./preprocess.js?v=99";
+import { $, els, hooks, preferences, showError, state } from "./context.js?v=69";
+import { bakeCleanup, smoothRegions } from "./bake.js?v=27";
 import { rotateCleanupAction } from "./eraser.js?v=17";
-import { refreshExport, setResultActions } from "./exporters.js?v=88";
+import { refreshExport, setResultActions } from "./exporters.js?v=89";
 import {
   clearSelection,
   setBlobFill,
@@ -44,8 +44,8 @@ import {
   setSelectionTool,
   setView,
   showResultOverSource,
-} from "./cleanup-tools.js?v=110";
-import { afterTrace, resetPalette } from "./palette-ui.js?v=94";
+} from "./cleanup-tools.js?v=111";
+import { afterTrace, resetPalette } from "./palette-ui.js?v=95";
 import {
   applyExportProfile,
   applyMeasurementUnit,
@@ -76,8 +76,8 @@ import {
   updateTraceFields,
   updateTransparencyFields,
   userPresets,
-} from "./settings.js?v=112";
-import { actualSizeView, resetView } from "./view.js?v=110";
+} from "./settings.js?v=113";
+import { actualSizeView, resetView } from "./view.js?v=111";
 
 const SAMPLE_FILES = [
   "synthwave.png",
@@ -98,7 +98,7 @@ const SAMPLE_KEY = "rastertrace:last-sample";
 
 const EMPTY_IMAGE_SRC = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==";
 
-const tracer = new Tracer(new URL("./worker.js?v=105", import.meta.url));
+const tracer = new Tracer(new URL("./worker.js?v=106", import.meta.url));
 
 let elapsedTimer = 0;
 
@@ -476,7 +476,7 @@ async function openSample() {
   }
   showError("Could not load the sample image.");
 }
-document.getElementById("try-sample").addEventListener("click", openSample);
+$("try-sample").addEventListener("click", openSample);
 for (const button of document.querySelectorAll('[data-action="open-sample"]')) {
   button.addEventListener("click", openSample);
 }
@@ -515,9 +515,10 @@ const menuActionTargets = {
   "zoom-out": els.zoomOut,
 };
 for (const [action, target] of Object.entries(menuActionTargets)) {
-  document
-    .querySelector(`[data-action="${action}"]`)
-    .addEventListener("click", () => target.click());
+  /** @type {HTMLElement} */ (document.querySelector(`[data-action="${action}"]`)).addEventListener(
+    "click",
+    () => target.click(),
+  );
 }
 
 const phoneSheet = window.matchMedia("(max-width: 680px)");
@@ -546,6 +547,7 @@ for (const panel of panels) {
 // Dialogs open from menu items that close with the menu, so focus would
 // drop to <body> on close. Return it to the menu button instead.
 for (const dialog of document.querySelectorAll("dialog")) {
+  /** @type {HTMLElement | null} */
   let opener = null;
   dialog.addEventListener("focusin", (event) => {
     const from = event.relatedTarget;
@@ -559,19 +561,27 @@ for (const dialog of document.querySelectorAll("dialog")) {
   });
 }
 
-document.querySelector('[data-action="about"]').addEventListener("click", () => {
-  /** @type {HTMLDialogElement} */ ($("about-dialog")).showModal();
-});
+/** @type {HTMLElement} */ (document.querySelector('[data-action="about"]')).addEventListener(
+  "click",
+  () => {
+    /** @type {HTMLDialogElement} */ ($("about-dialog")).showModal();
+  },
+);
 for (const guide of ["tracing", "cleanup", "export"]) {
-  document.querySelector(`[data-action="${guide}-guide"]`).addEventListener("click", () => {
+  /** @type {HTMLElement} */ (
+    document.querySelector(`[data-action="${guide}-guide"]`)
+  ).addEventListener("click", () => {
     /** @type {HTMLDialogElement} */ ($(`${guide}-guide-dialog`)).showModal();
   });
 }
-document.querySelector('[data-action="preferences"]').addEventListener("click", () => {
-  els.preferencesDialog.returnValue = "";
-  els.measurementUnitPreference.value = preferences.measurementUnit;
-  els.preferencesDialog.showModal();
-});
+/** @type {HTMLElement} */ (document.querySelector('[data-action="preferences"]')).addEventListener(
+  "click",
+  () => {
+    els.preferencesDialog.returnValue = "";
+    els.measurementUnitPreference.value = preferences.measurementUnit;
+    els.preferencesDialog.showModal();
+  },
+);
 els.preferencesDialog.addEventListener("close", () => {
   if (els.preferencesDialog.returnValue !== "apply") return;
   preferences.measurementUnit = els.measurementUnitPreference.value;
@@ -591,10 +601,13 @@ for (const menu of appMenus) {
   menu.addEventListener("toggle", () => {
     if (menu.open) closeMenus(menu);
   });
-  menu.querySelector("summary").addEventListener("pointerenter", (event) => {
-    if (event.pointerType === "mouse" && !menu.open && appMenus.some((other) => other.open))
-      menu.open = true;
-  });
+  /** @type {HTMLElement} */ (menu.querySelector("summary")).addEventListener(
+    "pointerenter",
+    (event) => {
+      if (event.pointerType === "mouse" && !menu.open && appMenus.some((other) => other.open))
+        menu.open = true;
+    },
+  );
 }
 document.addEventListener(
   "pointerdown",
@@ -645,7 +658,11 @@ window.addEventListener("keydown", (event) => {
 // from it: eyedropper coordinates and the preview stay consistent.
 async function updateSourceView(bitmap, token) {
   const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
-  canvas.getContext("2d").drawImage(bitmap, 0, 0);
+  /** @type {OffscreenCanvasRenderingContext2D} */ (canvas.getContext("2d")).drawImage(
+    bitmap,
+    0,
+    0,
+  );
   const blob = await canvas.convertToBlob({ type: "image/png" });
   if (!bitmapOperationIsCurrent(state, token, bitmap)) return false;
   if (state.sourceUrl) URL.revokeObjectURL(state.sourceUrl);
@@ -722,7 +739,7 @@ els.rotateLeft.addEventListener("click", () => rotate(false));
 els.rotateRight.addEventListener("click", () => rotate(true));
 els.invertImage.addEventListener("click", invert);
 els.fileInput.addEventListener("change", () => {
-  const file = els.fileInput.files[0];
+  const file = els.fileInput.files?.[0];
   // Clear so picking the same file again still fires a change event
   // (e.g. after editing it externally).
   els.fileInput.value = "";
@@ -1036,7 +1053,9 @@ function renderPresetList() {
   els.presetExport.disabled = userPresets.length === 0;
 }
 
-document.querySelector('[data-action="manage-presets"]').addEventListener("click", () => {
+/** @type {HTMLElement} */ (
+  document.querySelector('[data-action="manage-presets"]')
+).addEventListener("click", () => {
   els.presetMessage.textContent = "";
   renderPresetList();
   els.presetsDialog.showModal();
@@ -1212,6 +1231,7 @@ function toggleBothPanels() {
 }
 
 {
+  /** @type {{ left?: boolean, right?: boolean } | null} */
   let stored = null;
   try {
     stored = JSON.parse(localStorage.getItem(FOLD_KEY) ?? "null");

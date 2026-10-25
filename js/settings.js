@@ -14,10 +14,10 @@ import {
   toGrayscaleColor,
   USER_PRESET_PREFIX,
   userPresetName,
-} from "./preprocess.js?v=98";
-import { els, preferences } from "./context.js?v=68";
-import { refreshExport, updatePhysicalHeightOut } from "./exporters.js?v=88";
-import { setEyedropper } from "./cleanup-tools.js?v=110";
+} from "./preprocess.js?v=99";
+import { els, preferences } from "./context.js?v=69";
+import { refreshExport, updatePhysicalHeightOut } from "./exporters.js?v=89";
+import { setEyedropper } from "./cleanup-tools.js?v=111";
 
 /** @returns {HTMLInputElement} */
 const radioEl = (selector) => /** @type {HTMLInputElement} */ (document.querySelector(selector));
@@ -260,7 +260,7 @@ export function updateStencilFields() {
   if (atTop && els.stencilThresholdField.parentElement !== els.stencilThresholdSlot) {
     els.stencilThresholdSlot.appendChild(els.stencilThresholdField);
   } else if (!atTop && els.stencilThresholdField.parentElement === els.stencilThresholdSlot) {
-    els.stencil.closest("label").after(els.stencilThresholdField);
+    /** @type {HTMLLabelElement} */ (els.stencil.closest("label")).after(els.stencilThresholdField);
   }
 }
 
@@ -322,7 +322,7 @@ const SAVED_DEFAULTS_KEY = "rastertrace-settings-defaults";
 // Saves from before SAVED_DEFAULTS_KEY existed: the defaults that changed
 // since, so values left at those follow the new defaults too.
 const LEGACY_DEFAULTS = { straighten: 0, lengthThreshold: 4, spliceThreshold: 45 };
-/** This page's defaults, read before saved settings apply. */
+/** @type {Record<string, unknown> | null} This page's defaults, read before saved settings apply. */
 let pageDefaults = null;
 
 function snapshotSettings() {
@@ -457,12 +457,13 @@ function applySnapshot(saved) {
 export function restoreSettings() {
   let saved;
   try {
-    saved = sanitizeSettings(JSON.parse(localStorage.getItem(SETTINGS_KEY)));
+    saved = sanitizeSettings(JSON.parse(localStorage.getItem(SETTINGS_KEY) ?? "null"));
   } catch {
     return;
   }
   pageDefaults = snapshotSettings();
   const defaults = JSON.stringify(pageDefaults);
+  /** @type {Record<string, unknown> | null} */
   let savedDefaults = null;
   try {
     savedDefaults = JSON.parse(localStorage.getItem(SAVED_DEFAULTS_KEY) ?? "null");
@@ -501,12 +502,13 @@ const DETECTED_KEYS = ["colors", "speckle", "layerDiff"];
  * auto-detect sets for each image do not count while it is on.
  */
 export function noteCarriedSettings() {
-  if (!pageDefaults) return;
+  const defaults = pageDefaults;
+  if (!defaults) return;
   const current = snapshotSettings();
   const detected = els.autoDetect.checked ? DETECTED_KEYS : [];
-  const differs = Object.keys(pageDefaults).some(
+  const differs = Object.keys(defaults).some(
     (key) =>
-      !detected.includes(key) && JSON.stringify(current[key]) !== JSON.stringify(pageDefaults[key]),
+      !detected.includes(key) && JSON.stringify(current[key]) !== JSON.stringify(defaults[key]),
   );
   els.restoredNote.hidden = !differs;
 }

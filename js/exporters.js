@@ -7,10 +7,10 @@ import {
   countPaths,
   nameColorGroups,
   physicalWidthValue,
-} from "./preprocess.js?v=98";
-import { recolorSvg } from "./palette.js?v=52";
-import { parseSvgPaths, toDxf, toPdf } from "./vectorexport.js?v=44";
-import { els, hooks, preferences, showError, state } from "./context.js?v=68";
+} from "./preprocess.js?v=99";
+import { recolorSvg } from "./palette.js?v=53";
+import { parseSvgPaths, toDxf, toPdf } from "./vectorexport.js?v=45";
+import { els, hooks, preferences, showError, state } from "./context.js?v=69";
 
 const DISPLAY_UNITS_PER_INCH = { px: 96, in: 1, cm: 2.54, mm: 25.4 };
 
@@ -101,6 +101,7 @@ export function updatePhysicalHeightOut() {
 // 0.7 s on a 6 MB trace), and eraser drags refresh once per frame with
 // only the cleanup strokes changing.
 let exportCache = { raw: "", key: "", svg: "" };
+/** @type {{ raw: string, key: string, mapping: Map<string, string> | null, svg: string }} */
 let paletteCache = { raw: "", key: "", mapping: null, svg: "" };
 
 /**
@@ -108,18 +109,15 @@ let paletteCache = { raw: "", key: "", mapping: null, svg: "" };
  * SVG, PDF and DXF, so every output shows the same colors.
  */
 export function paletteSvg() {
+  const raw = state.svgRaw ?? "";
   const key = JSON.stringify([...state.colorEdits]);
   const mapping = state.paletteMapping;
-  if (
-    paletteCache.raw !== state.svgRaw ||
-    paletteCache.key !== key ||
-    paletteCache.mapping !== mapping
-  ) {
+  if (paletteCache.raw !== raw || paletteCache.key !== key || paletteCache.mapping !== mapping) {
     paletteCache = {
-      raw: state.svgRaw,
+      raw,
       key,
       mapping,
-      svg: recolorSvg(state.svgRaw, state.colorEdits, mapping),
+      svg: recolorSvg(raw, state.colorEdits, mapping),
     };
   }
   return paletteCache.svg;
@@ -155,23 +153,24 @@ export function refreshExport() {
   // until the retrace that includes them lands.
   const pending = state.eraseStrokes.filter((a) => !state.bakedActions.has(a));
   const baked = state.eraseStrokes.filter((a) => state.bakedActions.has(a));
-  state.svg = applyCleanupActions(
+  const svg = applyCleanupActions(
     applyErasureGuard(exportedSvg(), baked, { pixelExact }),
     pending,
     {
       pixelExact,
     },
   );
+  state.svg = svg;
   hooks.renderSmoothPreview();
 
   // Rendered via <img> + blob URL: sandboxes the generated markup and
   // avoids inflating the DOM with thousands of inline path nodes.
   if (state.downloadUrl) URL.revokeObjectURL(state.downloadUrl);
-  const blob = new Blob([state.svg], { type: "image/svg+xml" });
+  const blob = new Blob([svg], { type: "image/svg+xml" });
   state.downloadUrl = URL.createObjectURL(blob);
   els.resultView.src = state.downloadUrl;
 
-  const paths = countPaths(state.svg);
+  const paths = countPaths(svg);
   const kb = blob.size / 1024;
   els.statPaths.textContent = paths.toLocaleString();
   els.statSize.textContent = kb >= 1024 ? `${(kb / 1024).toFixed(1)} MB` : `${kb.toFixed(0)} KB`;
@@ -184,7 +183,7 @@ els.copySvg.addEventListener("click", async () => {
   if (!state.svgRaw) return;
   try {
     refreshExport();
-    const svg = state.svg;
+    const svg = /** @type {string} */ (state.svg); // set by refreshExport()
     await navigator.clipboard.writeText(svg);
     els.status.textContent = "SVG copied to clipboard.";
   } catch {
@@ -217,7 +216,7 @@ function downloadBlob(blob, extension) {
 }
 
 async function chooseSaveFile(extension, mimeType) {
-  if (!("showSaveFilePicker" in window)) return null;
+  if (!window.showSaveFilePicker) return null;
   // Menu actions and keyboard shortcuts can reach here without the transient
   // activation the File System Access API requires. Use the normal browser
   // download path in that case instead of surfacing a misleading error.
@@ -261,7 +260,7 @@ els.download.addEventListener("click", async () => {
   showError("");
   try {
     refreshExport();
-    const svg = state.svg;
+    const svg = /** @type {string} */ (state.svg); // set by refreshExport()
     const fileHandle = await chooseSaveFile("svg", "image/svg+xml");
     if (fileHandle === undefined) return;
     const result = await saveBlob(new Blob([svg], { type: "image/svg+xml" }), "svg", fileHandle);
@@ -276,10 +275,11 @@ els.download.addEventListener("click", async () => {
 els.downloadPng.addEventListener("click", async () => {
   if (!state.svgRaw || els.downloadPng.disabled) return;
   showError("");
+  /** @type {string | null} */
   let renderUrl = null;
   try {
     refreshExport();
-    const svg = state.svg;
+    const svg = /** @type {string} */ (state.svg); // set by refreshExport()
     const fileHandle = await chooseSaveFile("png", "image/png");
     if (fileHandle === undefined) return;
     els.downloadPng.disabled = true;
@@ -293,7 +293,13 @@ els.downloadPng.addEventListener("click", async () => {
     const canvas = document.createElement("canvas");
     canvas.width = width;
     canvas.height = height;
-    canvas.getContext("2d").drawImage(img, 0, 0, width, height);
+    /** @type {CanvasRenderingContext2D} */ (canvas.getContext("2d")).drawImage(
+      img,
+      0,
+      0,
+      width,
+      height,
+    );
     const blob = await new Promise((resolve) => {
       canvas.toBlob(resolve, "image/png");
     });

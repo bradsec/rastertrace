@@ -1,5 +1,5 @@
 // File System Access API: not in TS's default DOM lib, feature-detected at
-// call sites via `"showSaveFilePicker" in window`.
+// call sites via `window.showSaveFilePicker`.
 interface FileSystemWritableFileStream {
   write(data: BufferSource | Blob | string): Promise<void>;
   close(): Promise<void>;

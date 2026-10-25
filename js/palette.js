@@ -1,6 +1,6 @@
 // Palette editing: read the traced colors out of the SVG and swap fill
 // values. Edits recolor existing shapes only; geometry never changes.
-import { ALPHA_THRESHOLD, parseHexColor, srgbToOklab, toHexColor } from "./preprocess.js?v=98";
+import { ALPHA_THRESHOLD, parseHexColor, srgbToOklab, toHexColor } from "./preprocess.js?v=99";
 
 /** Largest palette the swatch grid lists; above this, pick from the result. */
 export const PALETTE_GRID_MAX = 32;
@@ -119,6 +119,7 @@ export function recolorSvg(svgText, edits, mapping = null) {
  */
 export function nearestFill(rgb, palette) {
   const [L, a, b] = srgbToOklab(rgb);
+  /** @type {string | null} */
   let best = null;
   let bestDist = Infinity;
   for (const { fill } of palette) {
