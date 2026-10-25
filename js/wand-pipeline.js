@@ -1,5 +1,5 @@
 import { tracePixels } from "./raster.js?v=1";
-import { floodRegion, growMask, maskLoops, unionMasks } from "./magicwand.js?v=57";
+import { floodRegion, growMask, maskLoops, unionMasks } from "./magicwand.js?v=58";
 
 /**
  * @param {{ width: number, height: number, data: Uint8ClampedArray }} raster

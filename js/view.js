@@ -3,8 +3,8 @@
 // register after the selection and eraser handlers in cleanup-tools.js
 // (which stop propagation while a tool is active), so app.js imports
 // this module last.
-import { els, hooks, state } from "./context.js?v=70";
-import { renderSelection, renderSmoothPreview } from "./cleanup-tools.js?v=121";
+import { els, hooks, state } from "./context.js?v=71";
+import { renderSelection, renderSmoothPreview } from "./cleanup-tools.js?v=123";
 
 const view = { scale: 1, tx: 0, ty: 0 };
 const ZOOM_MIN = 0.001;
@@ -178,7 +178,7 @@ els.preview.addEventListener("pointerdown", (e) => {
   startPointer(e);
 });
 
-// Holding Space pans with any tool active, like Illustrator's Hand tool.
+// Holding Space pans with any tool active.
 // The window capture listener runs before the tools' preview listeners.
 let spaceHeld = false;
 

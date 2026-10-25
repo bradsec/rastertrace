@@ -3,11 +3,11 @@
 // Pure functions: they run in Node (tests) and the browser (worker/app).
 // Images are plain { data: Uint8ClampedArray, width, height } RGBA buffers.
 
-import { linearLut, oklabInto, srgbToOklab } from "./color.js?v=1";
+import { linearLut, oklabInto, srgbToOklab } from "./color.js?v=2";
 import { BLEND_REACH, modeFilter, unblendEdges } from "./filters.js?v=1";
-import { mapToPalette, quantize } from "./quantize.js?v=1";
+import { mapToPalette, quantize } from "./quantize.js?v=2";
 import { ALPHA_THRESHOLD, tracePixels } from "./raster.js?v=1";
-import { DEFAULTS, ENCLOSED_NO_LIMIT } from "./settings-schema.js?v=1";
+import { DEFAULTS, ENCLOSED_NO_LIMIT } from "./settings-schema.js?v=2";
 
 /**
  * Dominant border color, or null when the border is mostly transparent.

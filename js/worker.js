@@ -14,10 +14,10 @@ import {
   thresholdImage,
   toGrayscale,
 } from "./filters.js?v=1";
-import { reduceAndRemoveBackground } from "./background.js?v=1";
+import { reduceAndRemoveBackground } from "./background.js?v=2";
 import { applyStencilInk, finalizeSvg, straightenPaths } from "./svg-output.js?v=1";
 import { tracePixels } from "./raster.js?v=1";
-import { rasterPalette, snapFills } from "./palette.js?v=57";
+import { rasterPalette, snapFills } from "./palette.js?v=58";
 
 // Explicit versioned URL: the glue's own wasm fetch drops the ?v= query,
 // so a rebuilt binary would otherwise be served from stale browser cache

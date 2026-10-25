@@ -252,7 +252,7 @@ test.describe("touch devices", () => {
   });
 });
 
-test.describe("Illustrator habits", () => {
+test.describe("desktop editor habits", () => {
   test.use({ viewport: { width: 1280, height: 800 } });
 
   const resultSvg = (page) =>
@@ -303,6 +303,25 @@ test.describe("Illustrator habits", () => {
     await expect(page.locator("#preview")).not.toHaveClass(/space-pan/);
     await expect(page.locator("#eraser-undo")).toBeDisabled();
     expect(await transform(page)).toContain("translate(60px, 40px)");
+  });
+
+  test("the Move tool and H put the active cleanup tool away", async ({ page }) => {
+    await traced(page, () => page.locator("#file-input").setInputFiles(IMAGE));
+    const move = page.locator("#move-tool");
+    await expect(move).toHaveAttribute("aria-pressed", "true");
+    await page.locator("#eraser-tool").click();
+    await expect(move).toHaveAttribute("aria-pressed", "false");
+    await move.click();
+    await expect(page.locator("#eraser-tool")).toHaveAttribute("aria-pressed", "false");
+    await expect(page.locator("#preview")).not.toHaveClass(/erasing/);
+    await expect(move).toHaveAttribute("aria-pressed", "true");
+    // Rotate steps aside only for a real tool's options.
+    await expect(page.locator(".rotate-group")).toBeVisible();
+    await page.locator("#magic-wand").click();
+    await page.locator("#preview").focus();
+    await page.keyboard.press("h");
+    await expect(page.locator("#magic-wand")).toHaveAttribute("aria-pressed", "false");
+    await expect(move).toHaveAttribute("aria-pressed", "true");
   });
 });
 

@@ -14,7 +14,7 @@ export function colorDistance(a, b) {
 export const SWATCHES_MAX = 256;
 
 /**
- * Swatches from pasted text or a text swatch file: a GIMP/Inkscape .gpl
+ * Swatches from pasted text or a text swatch file: a .gpl
  * palette ("R G B name" rows), otherwise every #RGB, #RRGGBB or bare
  * RRGGBB code in order. Returns unique "#RRGGBB", at most SWATCHES_MAX.
  * @param {string} text
@@ -43,7 +43,7 @@ export function parseSwatchText(text) {
 }
 
 /**
- * CIE Lab (D50, as Adobe stores it) to sRGB [0-255], clamped.
+ * CIE Lab (D50, as .ase files store it) to sRGB [0-255], clamped.
  * @param {number[]} lab
  */
 function labD50ToSrgb([L, a, b]) {
@@ -72,8 +72,7 @@ function labD50ToSrgb([L, a, b]) {
 }
 
 /**
- * Swatches from an Adobe Swatch Exchange (.ase) file, as exported from
- * Illustrator's Swatches panel. RGB entries are exact. CMYK, Lab, gray and
+ * Swatches from a swatch exchange (.ase) file. RGB entries are exact. CMYK, Lab, gray and
  * spot entries convert to screen RGB without a color profile, so
  * `approximate` is true when any appear. Throws on anything else.
  * @param {Uint8Array} bytes
@@ -82,7 +81,7 @@ function labD50ToSrgb([L, a, b]) {
 export function parseAse(bytes) {
   /** @type {() => never} */
   const fail = () => {
-    throw new Error("Not a readable Adobe swatch (.ase) file.");
+    throw new Error("Not a readable swatch exchange (.ase) file.");
   };
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   const colors = [];

@@ -2,11 +2,11 @@
 // the traced SVG, drives the result stats and action buttons, and saves
 // SVG/PNG/PDF/DXF through the File System Access API or a download.
 import { applyCleanupActions, applyErasureGuard } from "./eraser.js?v=19";
-import { physicalWidthValue } from "./settings-schema.js?v=1";
+import { physicalWidthValue } from "./settings-schema.js?v=2";
 import { applyExportOptions, countPaths, nameColorGroups } from "./svg-output.js?v=1";
-import { recolorSvg } from "./palette.js?v=57";
+import { recolorSvg } from "./palette.js?v=58";
 import { parseSvgPaths, toDxf, toPdf } from "./vectorexport.js?v=46";
-import { els, hooks, preferences, showError, state } from "./context.js?v=70";
+import { els, hooks, preferences, showError, state } from "./context.js?v=71";
 
 /**
  * @type {Record<string, number>}

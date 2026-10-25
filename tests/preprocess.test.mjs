@@ -1790,7 +1790,7 @@ test("sanitizeSettings accepts a saved user preset as the active profile", () =>
   assert.deepEqual(sanitizeSettings({ profile: "nonsense" }), {});
 });
 
-/** Adobe Swatch Exchange bytes for [name, model, values, type] entries, in one group. */
+/** Swatch exchange (.ase) bytes for [name, model, values, type] entries, in one group. */
 function aseBytes(entries) {
   const blocks = [];
   const nameBytes = (name) => {
@@ -1880,7 +1880,7 @@ test("parseAse rejects color values that are not numbers", () => {
   }
 });
 
-test("parseSwatchText reads hex lists and GIMP palettes", () => {
+test("parseSwatchText reads hex lists and .gpl palettes", () => {
   assert.deepEqual(parseSwatchText("#1f2a3b, ffffff\n#abc nope #12345 #1F2A3B"), [
     "#1F2A3B",
     "#FFFFFF",

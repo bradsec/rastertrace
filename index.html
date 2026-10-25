@@ -53,7 +53,7 @@
       }
     </script>
 
-    <link rel="stylesheet" href="css/styles.css?v=119" />
+    <link rel="stylesheet" href="css/styles.css?v=121" />
   </head>
   <body>
     <header class="app-header">
@@ -387,7 +387,7 @@
                         type="button"
                         id="swatch-import"
                         class="button button-secondary"
-                        title="Adobe .ase (Illustrator Swatches panel), GIMP or Inkscape .gpl, or a text list of hex codes"
+                        title="An .ase swatch exchange file, a .gpl palette, or a text list of hex codes"
                       >
                         Import file
                       </button>
@@ -1332,6 +1332,34 @@
             </button>
             <button
               type="button"
+              id="move-tool"
+              class="rail-tool"
+              aria-label="Move tool"
+              aria-pressed="true"
+              title="Move: drag to pan, scroll or pinch to zoom (H or Esc)"
+            >
+              <svg
+                class="cleanup-tool-icon"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+                focusable="false"
+              >
+                <path d="M18 11V6a2 2 0 0 0-4 0v5" />
+                <path d="M14 10V4a2 2 0 0 0-4 0v2" />
+                <path d="M10 10.5V6a2 2 0 0 0-4 0v8" />
+                <path
+                  d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"
+                />
+              </svg>
+            </button>
+            <span class="rail-divider" aria-hidden="true"></span>
+            <button
+              type="button"
               id="eraser-tool"
               class="rail-tool"
               aria-label="Eraser tool"
@@ -1627,8 +1655,8 @@
               <dt>Color source</dt>
               <dd>
                 This image picks the colors automatically. My colors snaps every shape to a palette
-                you supply: paste hex codes or import an Adobe .ase, .gpl, or hex list. Max colors
-                is disabled while My colors has swatches.
+                you supply: paste hex codes or import an .ase, .gpl, or hex list. Max colors is
+                disabled while My colors has swatches.
               </dd>
             </div>
             <div>
@@ -1663,9 +1691,9 @@
             <div>
               <dt>Simplify</dt>
               <dd>
-                How closely paths follow the image, like Illustrator's Paths slider in reverse.
-                Lower keeps detail; higher gives fewer, smoother points. Shows Custom when the
-                Advanced tracing curve settings were set by hand. Spline mode only.
+                How closely paths follow the image. Lower keeps detail; higher gives fewer, smoother
+                points. Shows Custom when the Advanced tracing curve settings were set by hand.
+                Spline mode only.
               </dd>
             </div>
             <div>
@@ -1770,6 +1798,13 @@
             </p>
           </div>
           <dl class="help-settings">
+            <div>
+              <dt>Move</dt>
+              <dd>
+                The hand at the top of the rail. Select it, or press H or Esc, to put away the
+                current tool; dragging then pans the preview, and scrolling or pinching zooms.
+              </dd>
+            </div>
             <div>
               <dt>Eraser</dt>
               <dd>
@@ -2127,6 +2162,6 @@
         location.reload();
       };
     </script>
-    <script type="module" src="js/app.js?v=226" onerror="window.recoverRasterTraceBoot()"></script>
+    <script type="module" src="js/app.js?v=228" onerror="window.recoverRasterTraceBoot()"></script>
   </body>
 </html>

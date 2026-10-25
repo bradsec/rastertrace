@@ -2,7 +2,7 @@
 // validation of saved settings and presets.
 // Pure functions: they run in Node (tests) and the browser (worker/app).
 
-import { colorDistance, SWATCHES_MAX } from "./color.js?v=1";
+import { colorDistance, SWATCHES_MAX } from "./color.js?v=2";
 
 export const DEFAULTS = Object.freeze({
   autoDetect: true,
@@ -59,7 +59,7 @@ export const PRESETS = Object.freeze({
   256: { colors: 256, speckle: 3, layerDiff: 10 },
 });
 
-// The Simplify slider, like Illustrator's Paths slider: one control over
+// The Simplify slider: one control over
 // both curve-fitting tolerances, from most detail to simplest. Level 3 is
 // the default pair, and the detail profiles' pairs are levels too, so a
 // profile never shows as Custom.

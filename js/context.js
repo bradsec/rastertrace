@@ -167,6 +167,7 @@ export const els = {
   zoomIn: /** @type {HTMLButtonElement} */ ($("zoom-in")),
   zoomOut: /** @type {HTMLButtonElement} */ ($("zoom-out")),
   zoomReset: /** @type {HTMLButtonElement} */ ($("zoom-reset")),
+  moveTool: /** @type {HTMLButtonElement} */ ($("move-tool")),
   eraserTool: /** @type {HTMLButtonElement} */ ($("eraser-tool")),
   eraserSize: /** @type {HTMLInputElement} */ ($("eraser-size")),
   eraserSizeOut: $("eraser-size-out"),

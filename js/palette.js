@@ -1,6 +1,6 @@
 // Palette editing: read the traced colors out of the SVG and swap fill
 // values. Edits recolor existing shapes only; geometry never changes.
-import { parseHexColor, srgbToOklab, toHexColor } from "./color.js?v=1";
+import { parseHexColor, srgbToOklab, toHexColor } from "./color.js?v=2";
 import { ALPHA_THRESHOLD } from "./raster.js?v=1";
 
 /** Largest palette the swatch grid lists; above this, pick from the result. */

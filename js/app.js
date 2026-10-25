@@ -11,8 +11,8 @@ import {
   sniffImageSize,
   Tracer,
 } from "./pipeline.js?v=105";
-import { parseAse, parseHexColor, parseSwatchText, SWATCHES_MAX, toHexColor } from "./color.js?v=1";
-import { analyzeFlatness } from "./quantize.js?v=1";
+import { parseAse, parseHexColor, parseSwatchText, SWATCHES_MAX, toHexColor } from "./color.js?v=2";
+import { analyzeFlatness } from "./quantize.js?v=2";
 import {
   detectedColorSettings,
   distinctColorCount,
@@ -24,13 +24,13 @@ import {
   sanitizePresets,
   USER_PRESET_PREFIX,
   userPresetName,
-} from "./settings-schema.js?v=1";
+} from "./settings-schema.js?v=2";
 import { isStaleModuleError } from "./svg-output.js?v=1";
 import { fitTraceScale, MAX_TRACE_SIDE, MAX_TRACE_SIDE_ULTRA } from "./raster.js?v=1";
-import { $, els, hooks, preferences, showError, state } from "./context.js?v=70";
-import { bakeCleanup, smoothRegions } from "./bake.js?v=34";
+import { $, els, hooks, preferences, showError, state } from "./context.js?v=71";
+import { bakeCleanup, smoothRegions } from "./bake.js?v=35";
 import { rotateCleanupAction } from "./eraser.js?v=19";
-import { refreshExport, setResultActions } from "./exporters.js?v=98";
+import { refreshExport, setResultActions } from "./exporters.js?v=100";
 import {
   clearSelection,
   setBlobFill,
@@ -38,8 +38,8 @@ import {
   setSelectionTool,
   setView,
   showResultOverSource,
-} from "./cleanup-tools.js?v=121";
-import { afterTrace, resetPalette } from "./palette-ui.js?v=105";
+} from "./cleanup-tools.js?v=123";
+import { afterTrace, resetPalette } from "./palette-ui.js?v=107";
 import {
   applyExportProfile,
   applyMeasurementUnit,
@@ -70,8 +70,8 @@ import {
   updateTraceFields,
   updateTransparencyFields,
   userPresets,
-} from "./settings.js?v=124";
-import { actualSizeView, resetView } from "./view.js?v=121";
+} from "./settings.js?v=126";
+import { actualSizeView, resetView } from "./view.js?v=123";
 
 const SAMPLE_FILES = [
   "synthwave.png",
@@ -92,7 +92,7 @@ const SAMPLE_KEY = "rastertrace:last-sample";
 
 const EMPTY_IMAGE_SRC = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==";
 
-const tracer = new Tracer(new URL("./worker.js?v=116", import.meta.url));
+const tracer = new Tracer(new URL("./worker.js?v=117", import.meta.url));
 
 let elapsedTimer = 0;
 
@@ -1199,8 +1199,7 @@ function openSheet(sheet) {
 }
 if (phoneSheet.matches) openSheet(els.workspace.dataset.sheet);
 
-// Each side panel folds to a narrow rail, like Illustrator's or
-// Lightroom's panel toggles, so the preview can take the room.
+// Each side panel folds to a narrow rail so the preview can take the room.
 const FOLD_KEY = "rastertrace:folded";
 const foldButtons = { left: els.foldLeft, right: els.foldRight };
 const foldMenuButtons = {

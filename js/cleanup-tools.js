@@ -12,10 +12,10 @@
  * @typedef {Exclude<NonNullable<typeof state.selection>, { type: "composite" }>} ShapeSelection
  */
 import { brushSizeForShortcut, snapPointToAngle, svgViewBox } from "./eraser.js?v=19";
-import { parseHexColor, sampleRasterColor, toHexColor } from "./color.js?v=1";
-import { els, hooks, state } from "./context.js?v=70";
-import { maskLoops } from "./magicwand.js?v=57";
-import { refreshExport } from "./exporters.js?v=98";
+import { parseHexColor, sampleRasterColor, toHexColor } from "./color.js?v=2";
+import { els, hooks, state } from "./context.js?v=71";
+import { maskLoops } from "./magicwand.js?v=58";
+import { refreshExport } from "./exporters.js?v=100";
 
 /** @param {"result" | "source" | "compare"} view */
 export function setView(view) {
@@ -108,6 +108,16 @@ document.addEventListener("keydown", (e) => {
   if (e.key === "Escape" && state.picking) setEyedropper(false);
 });
 
+// Move is the rail's resting state: pressed whenever no other rail tool is,
+// so users who never learn Esc still have a visible way out of a tool.
+function syncMoveTool() {
+  const toolActive =
+    state.erasing || state.blobFilling || state.smoothing || Boolean(state.selectionTool);
+  els.moveTool.setAttribute("aria-pressed", String(!toolActive));
+}
+
+els.moveTool.addEventListener("click", () => deactivateCleanupTools());
+
 export function deactivateCleanupTools() {
   const active =
     state.picking ||
@@ -179,7 +189,10 @@ document.addEventListener("keydown", (event) => {
     (/^(INPUT|SELECT|TEXTAREA)$/.test(target.tagName) || target.isContentEditable);
   if (editing) return;
   const key = event.key.toLowerCase();
-  if (!event.ctrlKey && !event.metaKey && !event.altKey && key === "e" && state.svg) {
+  if (!event.ctrlKey && !event.metaKey && !event.altKey && key === "h") {
+    event.preventDefault();
+    deactivateCleanupTools();
+  } else if (!event.ctrlKey && !event.metaKey && !event.altKey && key === "e" && state.svg) {
     event.preventDefault();
     setEraser(!state.erasing);
   } else if (!event.ctrlKey && !event.metaKey && !event.altKey && key === "b" && state.svg) {
@@ -347,6 +360,7 @@ export function setSelectionTool(tool) {
   els.polygonLasso.setAttribute("aria-pressed", String(tool === "polygon"));
   els.magicWand.setAttribute("aria-pressed", String(tool === "wand"));
   els.preview.classList.toggle("selecting", Boolean(tool));
+  syncMoveTool();
   updateSelectCursor();
   if (tool === "wand" && state.svg) {
     // Render ahead of the first click; a failure surfaces on that click.
@@ -1105,7 +1119,7 @@ let wandJobId = 0;
 
 function getWandWorker() {
   if (wandWorker) return wandWorker;
-  const worker = new Worker(new URL("./wand-worker.js?v=8", import.meta.url), { type: "module" });
+  const worker = new Worker(new URL("./wand-worker.js?v=9", import.meta.url), { type: "module" });
   wandWorker = worker;
   worker.onmessage = ({ data }) => {
     const pending = wandPending.get(data.id);
@@ -1330,7 +1344,7 @@ els.preview.addEventListener(
       constrain: false,
       fromCenter: false,
       // A key held at the press picks add or subtract; it constrains or
-      // centers only once released and pressed again (Photoshop behavior).
+      // centers only once released and pressed again.
       holdShift: event.shiftKey,
       holdAlt: event.altKey,
       finalized: false,
@@ -1431,6 +1445,7 @@ export function setEraser(active) {
     setSelectionTool(null);
   }
   els.eraserTool.setAttribute("aria-pressed", String(state.erasing));
+  syncMoveTool();
   els.preview.classList.toggle("erasing", state.erasing);
   els.eraserCursor.hidden = true;
   if (state.erasing) {
@@ -1457,6 +1472,7 @@ export function setBlobFill(active) {
     setSelectionTool(null);
   }
   els.blobFillTool.setAttribute("aria-pressed", String(state.blobFilling));
+  syncMoveTool();
   els.blobFillPick.setAttribute("aria-pressed", "false");
   els.preview.classList.toggle("blob-filling", state.blobFilling);
   els.preview.classList.remove("blob-picking");
@@ -1486,6 +1502,7 @@ export function setSmooth(active) {
     setSelectionTool(null);
   }
   els.smoothTool.setAttribute("aria-pressed", String(state.smoothing));
+  syncMoveTool();
   els.preview.classList.toggle("smoothing", state.smoothing);
   els.eraserCursor.hidden = true;
   if (state.smoothing) {

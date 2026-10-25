@@ -2,7 +2,7 @@
 // Pure functions: they run in Node (tests) and the browser (worker/app).
 // Images are plain { data: Uint8ClampedArray, width, height } RGBA buffers.
 
-import { colorDistance, oklabToSrgb, parseHexColor, srgbToOklab } from "./color.js?v=1";
+import { colorDistance, oklabToSrgb, parseHexColor, srgbToOklab } from "./color.js?v=2";
 import { ALPHA_THRESHOLD } from "./raster.js?v=1";
 
 /**

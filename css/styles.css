@@ -1,5 +1,5 @@
 /* rastertrace: compact desktop-tool UI shared with the image app family.
-   Neutral dark ramp, one Illustrator-orange accent, one radius scale. */
+   Neutral dark ramp, one orange accent, one radius scale. */
 :root {
   --fs-xs: 11px;
   --fs-sm: 12px;
@@ -1613,9 +1613,8 @@ details.advanced[open] {
 }
 
 /* ---------- Cleanup tool rail ---------- */
-/* Tools sit in a column on the preview's left edge, like Photoshop's and
-   Illustrator's toolbars; the active tool's options join the strip above
-   the preview. */
+/* Tools sit in a column on the preview's left edge; the active tool's
+   options join the strip above the preview. */
 .tool-rail {
   grid-column: 1;
   grid-row: 2;
@@ -1745,7 +1744,7 @@ body:has(#blob-fill-pick[aria-pressed="true"], #blob-fill-tool[aria-pressed="tru
 }
 /* View controls step aside for tool options; Result/Source and the
    backdrop stay. */
-body:has(.tool-rail .rail-tool[aria-pressed="true"]) .rotate-group {
+body:has(.tool-rail .rail-tool[aria-pressed="true"]:not(#move-tool)) .rotate-group {
   display: none;
 }
 .canvas-strip .view-toggle {
@@ -2582,7 +2581,7 @@ dialog::backdrop {
   }
   /* The active tool's options open in a sheet pinned above the status bar,
      like the selection actions, and above those when they show. */
-  body:has(.tool-rail .rail-tool[aria-pressed="true"]) .tool-options {
+  body:has(.tool-rail .rail-tool[aria-pressed="true"]:not(#move-tool)) .tool-options {
     position: fixed;
     z-index: 6;
     left: 8px;
