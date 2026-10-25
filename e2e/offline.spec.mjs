@@ -32,7 +32,7 @@ test("the app caches itself and reloads offline", async ({ page, context }) => {
   await expect
     .poll(cached)
     .toEqual(
-      expect.arrayContaining(["/", "/js/app.js", "/js/preprocess.js", "/js/wand-pipeline.js"]),
+      expect.arrayContaining(["/", "/js/app.js", "/js/background.js", "/js/wand-pipeline.js"]),
     );
   expect((await cached()).some((p) => p.endsWith(".wasm"))).toBe(true);
 

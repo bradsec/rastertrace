@@ -1,6 +1,7 @@
-// Pure pixel and string operations for the rastertrace pipeline.
-// Every function here runs in Node (tests) and the browser (worker/app):
-// images are plain { data: Uint8ClampedArray, width, height } RGBA buffers.
+// Background removal: border detection, knockout, fringe repair, and the
+// reduce-then-remove step that combines them with quantization.
+// Pure functions: they run in Node (tests) and the browser (worker/app).
+// Images are plain { data: Uint8ClampedArray, width, height } RGBA buffers.
 
 import { linearLut, oklabInto, srgbToOklab } from "./color.js?v=1";
 import { BLEND_REACH, modeFilter, unblendEdges } from "./filters.js?v=1";

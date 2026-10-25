@@ -92,7 +92,7 @@ const SAMPLE_KEY = "rastertrace:last-sample";
 
 const EMPTY_IMAGE_SRC = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==";
 
-const tracer = new Tracer(new URL("./worker.js?v=115", import.meta.url));
+const tracer = new Tracer(new URL("./worker.js?v=116", import.meta.url));
 
 let elapsedTimer = 0;
 

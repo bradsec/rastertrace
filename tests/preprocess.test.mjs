@@ -30,7 +30,7 @@ import {
   reduceAndRemoveBackground,
   removeBackground,
   snapToImageColor,
-} from "../js/preprocess.js";
+} from "../js/background.js";
 import { analyzeFlatness, dominantOpaqueColor, mapToPalette, quantize } from "../js/quantize.js";
 import {
   DEFAULTS,
@@ -1096,7 +1096,7 @@ test("removeBackground returns null when off or nothing to remove", () => {
 });
 
 test("knockOutEdges removes border-connected background only", async () => {
-  const { knockOutEdges } = await import("../js/preprocess.js");
+  const { knockOutEdges } = await import("../js/background.js");
   // White bg, black square, and a white HOLE inside the square that must stay
   const img = makeImage(10, 10, [255, 255, 255, 255]);
   for (let y = 2; y < 8; y++) for (let x = 2; x < 8; x++) setPixel(img, x, y, [0, 0, 0, 255]);
@@ -1109,13 +1109,13 @@ test("knockOutEdges removes border-connected background only", async () => {
 });
 
 test("knockOutEdges returns null when corners already transparent", async () => {
-  const { knockOutEdges } = await import("../js/preprocess.js");
+  const { knockOutEdges } = await import("../js/background.js");
   const img = makeImage(4, 4, [255, 255, 255, 0]);
   assert.equal(knockOutEdges(img, 16), null);
 });
 
 test("knockOutEdges handles a broad background with bounded storage", async () => {
-  const { knockOutEdges } = await import("../js/preprocess.js");
+  const { knockOutEdges } = await import("../js/background.js");
   const width = 512;
   const height = 512;
   const data = new Uint8ClampedArray(width * height * 4);
@@ -1158,7 +1158,7 @@ test("removeBackground contiguous pick snaps to the palette when quantized", () 
 });
 
 test("knockOutEdges also removes enclosed background at or above the minimum area", async () => {
-  const { knockOutEdges } = await import("../js/preprocess.js");
+  const { knockOutEdges } = await import("../js/background.js");
   const img = ringImage(); // enclosed hole is 12x12 = 144 px
   // Black 3x3 block inside the hole with a 1 px white center.
   for (let y = 8; y < 11; y++) for (let x = 8; x < 11; x++) setPixel(img, x, y, [0, 0, 0, 255]);
@@ -1171,14 +1171,14 @@ test("knockOutEdges also removes enclosed background at or above the minimum are
 });
 
 test("knockOutEdges keeps enclosed background below the minimum area", async () => {
-  const { knockOutEdges } = await import("../js/preprocess.js");
+  const { knockOutEdges } = await import("../js/background.js");
   const img = ringImage();
   knockOutEdges(img, 16, 145);
   assert.equal(getPixel(img, 10, 10)[3], 255);
 });
 
 test("knockOutConnected keeps enclosed areas above the maximum area", async () => {
-  const { knockOutConnected } = await import("../js/preprocess.js");
+  const { knockOutConnected } = await import("../js/background.js");
   const img = ringImage(); // enclosed hole is 12x12 = 144 px
   for (let y = 8; y < 11; y++) for (let x = 8; x < 11; x++) setPixel(img, x, y, [0, 0, 0, 255]);
   setPixel(img, 9, 9, [255, 255, 255, 255]); // 1 px enclosed region
@@ -1255,7 +1255,7 @@ function rampImage(width, height, from, to) {
 }
 
 test("knockOutConnected follows a gradient background when asked", async () => {
-  const { knockOutConnected } = await import("../js/preprocess.js");
+  const { knockOutConnected } = await import("../js/background.js");
   const flat = rampImage(40, 10, 255, 185);
   knockOutConnected(flat, [255, 255, 255], 16);
   assert.equal(getPixel(flat, 0, 5)[3], 0);
@@ -1270,7 +1270,7 @@ test("knockOutConnected follows a gradient background when asked", async () => {
 });
 
 test("knockOutConnected gradient flood stops at the drift cap", async () => {
-  const { knockOutConnected } = await import("../js/preprocess.js");
+  const { knockOutConnected } = await import("../js/background.js");
   const img = rampImage(100, 4, 255, 60);
   knockOutConnected(img, [255, 255, 255], 16, 0, { gradient: true });
   assert.equal(getPixel(img, 0, 1)[3], 0);

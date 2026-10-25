@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { modeFilter } from "../js/filters.js";
-import { reduceAndRemoveBackground } from "../js/preprocess.js";
+import { reduceAndRemoveBackground } from "../js/background.js";
 import { analyzeFlatness, quantize } from "../js/quantize.js";
 
 const CREAM = [240, 230, 208];

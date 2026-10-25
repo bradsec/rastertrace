@@ -67,13 +67,13 @@ sw.js               service worker: offline cache for the static app
 css/styles.css      design tokens + layout
 assets/icons/       locally bundled Material SVG icons
 assets/samples/     built-in sample images (PNG) and their SVG sources
-js/preprocess.js    pure pixel/string ops (Node-testable, no browser APIs)
 js/raster.js        alpha cutoff and trace size limits (Node-testable)
 js/color.js         hex, sRGB/Oklab conversion, swatch file parsing (Node-testable)
 js/svg-output.js    SVG post-processing: export options, path compression, fills (Node-testable)
-js/settings-schema.jstrace defaults, presets, export profiles, settings validation (Node-testable)
+js/settings-schema.js trace defaults, presets, export profiles, settings validation (Node-testable)
 js/filters.js       pixel filters: specks, soft edges, alpha cleanup, smoothing (Node-testable)
 js/quantize.js      flat-art detection and palette quantization (Node-testable)
+js/background.js    background detection, knockout, fringe repair (Node-testable)
 js/vectorexport.js  DXF and PDF writers from traced SVG (Node-testable)
 js/eraser.js        eraser mask geometry (Node-testable)
 js/bake.js          paints cleanup edits into the raster before tracing; smooth stroke masks
