@@ -7,8 +7,8 @@ import {
   countPaths,
   nameColorGroups,
   physicalWidthValue,
-} from "./preprocess.js?v=101";
-import { recolorSvg } from "./palette.js?v=55";
+} from "./preprocess.js?v=102";
+import { recolorSvg } from "./palette.js?v=56";
 import { parseSvgPaths, toDxf, toPdf } from "./vectorexport.js?v=46";
 import { els, hooks, preferences, showError, state } from "./context.js?v=70";
 

@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { coarseRegion, finishRegion } from "../js/wand-pipeline.js";
 import { floodRegion, growMask, maskLoops, unionMasks } from "../js/magicwand.js";
-import { tracePixels } from "../js/preprocess.js";
+import { tracePixels } from "../js/raster.js";
 
 const RED = [255, 0, 0, 255];
 const BLUE = [0, 0, 255, 255];

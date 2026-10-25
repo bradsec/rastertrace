@@ -1,5 +1,5 @@
 // Browser-side pipeline: decode, premultiplied upscale, worker round-trip.
-import { assertRasterBudget, MAX_TRACE_SIDE } from "./preprocess.js?v=101";
+import { assertRasterBudget, MAX_TRACE_SIDE } from "./raster.js?v=1";
 
 export const MAX_IMAGE_BYTES = 50 * 1024 * 1024;
 export const MAX_SOURCE_PIXELS = 100_000_000;

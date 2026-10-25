@@ -4,8 +4,8 @@ import {
   DEFAULTS,
   ENCLOSED_NO_LIMIT,
   EXPORT_PROFILES,
-  parseHexColor,
   mergePresets,
+  parseHexColor,
   PRESETS,
   sanitizePresets,
   sanitizeSettings,
@@ -14,10 +14,10 @@ import {
   toGrayscaleColor,
   USER_PRESET_PREFIX,
   userPresetName,
-} from "./preprocess.js?v=101";
+} from "./preprocess.js?v=102";
 import { els, preferences } from "./context.js?v=70";
-import { refreshExport, updatePhysicalHeightOut } from "./exporters.js?v=94";
-import { setEyedropper } from "./cleanup-tools.js?v=117";
+import { refreshExport, updatePhysicalHeightOut } from "./exporters.js?v=95";
+import { setEyedropper } from "./cleanup-tools.js?v=118";
 
 /**
  * @returns {HTMLInputElement}

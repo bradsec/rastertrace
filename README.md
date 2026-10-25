@@ -68,6 +68,7 @@ css/styles.css      design tokens + layout
 assets/icons/       locally bundled Material SVG icons
 assets/samples/     built-in sample images (PNG) and their SVG sources
 js/preprocess.js    pure pixel/string ops (Node-testable, no browser APIs)
+js/raster.js        alpha cutoff and trace size limits (Node-testable)
 js/vectorexport.js  DXF and PDF writers from traced SVG (Node-testable)
 js/eraser.js        eraser mask geometry (Node-testable)
 js/bake.js          paints cleanup edits into the raster before tracing; smooth stroke masks
