@@ -5,9 +5,16 @@ export const MAX_IMAGE_BYTES = 50 * 1024 * 1024;
 export const MAX_SOURCE_PIXELS = 100_000_000;
 export const MAX_SOURCE_SIDE = 32_768;
 
+/**
+ * @param {Blob} file
+ */
 export async function sniffImageSize(file) {
   const bytes = new Uint8Array(await file.slice(0, 256 * 1024).arrayBuffer());
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  /**
+   * @param {number} offset
+   * @param {number} length
+   */
   const ascii = (offset, length) => String.fromCharCode(...bytes.slice(offset, offset + length));
 
   if (bytes.length >= 24 && ascii(1, 3) === "PNG") {
@@ -32,6 +39,9 @@ export async function sniffImageSize(file) {
         height: 1 + (((bytes[27] & 0x0f) << 10) | (bytes[26] << 2) | ((bytes[25] & 0xc0) >> 6)),
       };
     if (type === "VP8X") {
+      /**
+       * @param {number} offset
+       */
       const read24 = (offset) =>
         bytes[offset] | (bytes[offset + 1] << 8) | (bytes[offset + 2] << 16);
       return { width: 1 + read24(24), height: 1 + read24(27) };
@@ -89,6 +99,9 @@ export async function sniffImageSize(file) {
  * EXIF orientation (1-8) from the TIFF block of a JPEG APP1 segment, or 0
  * when absent/malformed. `tiffStart` is the byte offset of the TIFF
  * header inside `view`; `end` bounds the segment.
+ * @param {DataView} view
+ * @param {number} tiffStart
+ * @param {number} end
  */
 function exifOrientation(view, tiffStart, end) {
   try {
@@ -114,6 +127,10 @@ function exifOrientation(view, tiffStart, end) {
   return 0;
 }
 
+/**
+ * @param {number} width
+ * @param {number} height
+ */
 export function fitDecodeSize(width, height, maxSide = MAX_TRACE_SIDE) {
   const scale = Math.min(1, maxSide / Math.max(width, height));
   return {
@@ -126,6 +143,7 @@ export function fitDecodeSize(width, height, maxSide = MAX_TRACE_SIDE) {
  * Decode a File/Blob into an ImageBitmap. Throws a readable error for
  * unsupported or corrupt files.
  * @param {{ width: number, height: number } | null} [knownSize]
+ * @param {File} file
  */
 export async function decodeImage(file, maxSide = MAX_TRACE_SIDE, knownSize = null) {
   if (file.size > MAX_IMAGE_BYTES) {
@@ -164,6 +182,7 @@ export async function decodeImage(file, maxSide = MAX_TRACE_SIDE, knownSize = nu
  * retained for the app lifetime: without the cap a 100 MP panorama would
  * hold ~400 MB, enough to kill an iOS tab on its own. Returns the bitmap
  * unchanged when it already fits.
+ * @param {ImageBitmap} bitmap
  */
 export async function capBitmap(bitmap, maxSide = MAX_TRACE_SIDE) {
   const scale = maxSide / Math.max(bitmap.width, bitmap.height);
@@ -182,6 +201,7 @@ export async function capBitmap(bitmap, maxSide = MAX_TRACE_SIDE) {
 /**
  * Rotate a bitmap 90 degrees. The caller retains ownership of the source
  * and must close it after replacing it with the returned bitmap.
+ * @param {ImageBitmap} bitmap
  */
 export async function rotateBitmap(bitmap, clockwise = true) {
   const canvas = new OffscreenCanvas(bitmap.height, bitmap.width);
@@ -202,6 +222,7 @@ export async function rotateBitmap(bitmap, clockwise = true) {
  * Invert the RGB channels of an RGBA buffer in place. Alpha is left as-is
  * so transparent pixels stay transparent. Inversion is its own inverse:
  * applying it twice restores the original pixels.
+ * @param {Uint8ClampedArray} data
  */
 export function invertRGBA(data) {
   for (let i = 0; i < data.length; i += 4) {
@@ -214,6 +235,7 @@ export function invertRGBA(data) {
 /**
  * Return a negative copy of the bitmap. The caller retains ownership of the
  * source and must close it after replacing it with the returned bitmap.
+ * @param {ImageBitmap} bitmap
  */
 export async function invertBitmap(bitmap) {
   const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
@@ -226,6 +248,11 @@ export async function invertBitmap(bitmap) {
   return inverted;
 }
 
+/**
+ * @param {{ loadToken: number, bitmap: ImageBitmap | null }} state
+ * @param {number} loadToken
+ * @param {ImageBitmap} bitmap
+ */
 export function bitmapOperationIsCurrent(state, loadToken, bitmap) {
   return state.loadToken === loadToken && state.bitmap === bitmap;
 }
@@ -239,6 +266,8 @@ export function bitmapOperationIsCurrent(state, loadToken, bitmap) {
  * sources must keep smooth resampling or their edge gradients turn into
  * uneven stair-steps that trace as jagged outlines. Downscales always
  * resample smoothly: nearest-neighbor would drop pixels.
+ * @param {ImageBitmap} bitmap
+ * @param {number} scale
  */
 export function rasterize(bitmap, scale, nearest = false) {
   assertRasterBudget(bitmap.width, bitmap.height, scale);
@@ -261,11 +290,18 @@ export function rasterize(bitmap, scale, nearest = false) {
  * re-init instead of one per scrub step.
  */
 export class Tracer {
+  /**
+   * @param {string | URL} workerUrl
+   * @param {{ terminateAfterMs?: number }} [options]
+   */
   constructor(workerUrl, { terminateAfterMs = 1000 } = {}) {
     this.workerUrl = workerUrl;
     this.terminateAfterMs = terminateAfterMs;
     this.nextId = 0;
     this.pending = new Map();
+    /**
+     * @type {((stage: string) => void) | null}
+     */
     this.onProgress = null; // (stageLabel) => void, latest request only
     this.startWorker();
   }
@@ -312,6 +348,10 @@ export class Tracer {
   /**
    * Trace ImageData with the given settings. Resolves to
    * { svg, ms, knockedOut } or null when superseded by a newer request.
+   * @param {ImageData} imageData
+   * @param {Record<string, any>} settings
+   * @param {number} sourceWidth
+   * @param {number} sourceHeight
    */
   trace(imageData, settings, sourceWidth, sourceHeight) {
     if (!this.worker) this.startWorker();

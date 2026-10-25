@@ -268,6 +268,9 @@ export const hooks = {
   renderSmoothPreview: () => {},
 };
 
+/**
+ * @param {string} message empty hides the error
+ */
 export function showError(message) {
   els.errorText.textContent = message;
   els.error.hidden = !message;

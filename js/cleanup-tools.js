@@ -5,9 +5,9 @@
 // module first.
 import { brushSizeForShortcut, snapPointToAngle, svgViewBox } from "./eraser.js?v=17";
 import { parseHexColor, sampleRasterColor, toHexColor } from "./preprocess.js?v=99";
-import { els, hooks, state } from "./context.js?v=69";
-import { maskLoops } from "./magicwand.js?v=52";
-import { refreshExport } from "./exporters.js?v=89";
+import { els, hooks, state } from "./context.js?v=70";
+import { maskLoops } from "./magicwand.js?v=53";
+import { refreshExport } from "./exporters.js?v=90";
 
 /** @param {"result" | "source" | "compare"} view */
 export function setView(view) {
@@ -1004,7 +1004,7 @@ let wandJobId = 0;
 
 function getWandWorker() {
   if (wandWorker) return wandWorker;
-  wandWorker = new Worker(new URL("./wand-worker.js?v=3", import.meta.url), { type: "module" });
+  wandWorker = new Worker(new URL("./wand-worker.js?v=4", import.meta.url), { type: "module" });
   wandWorker.onmessage = ({ data }) => {
     const pending = wandPending.get(data.id);
     if (!pending) return;

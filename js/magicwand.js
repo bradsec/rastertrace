@@ -24,6 +24,9 @@ export function floodRegion(imageData, nx, ny, tolerance = 0) {
   const limit = tolerance * tolerance;
   /** @type {Map<number, boolean>} reduced rasters have few colors: test each once */
   const near = new Map();
+  /**
+   * @param {number} i pixel index
+   */
   const same = (i) => {
     const o = i * 4;
     if (data[o + 3] < ALPHA_THRESHOLD) return false;
@@ -118,6 +121,10 @@ export function unionMasks(a, b) {
  */
 export function maskLoops(mask, width, height, smooth = 0) {
   const stride = width + 1;
+  /**
+   * @param {number} x
+   * @param {number} y
+   */
   const set = (x, y) => x >= 0 && y >= 0 && x < width && y < height && mask[y * width + x] === 1;
   /** @type {number[]} edge start vertices */
   const from = [];
@@ -125,6 +132,12 @@ export function maskLoops(mask, width, height, smooth = 0) {
   const to = [];
   /** @type {Map<number, number[]>} vertex to outgoing edge indices */
   const outgoing = new Map();
+  /**
+   * @param {number} x1
+   * @param {number} y1
+   * @param {number} x2
+   * @param {number} y2
+   */
   const addEdge = (x1, y1, x2, y2) => {
     const a = y1 * stride + x1;
     from.push(a);
@@ -170,6 +183,9 @@ const SMOOTH_PASSES = 2;
  * neighbours within `smooth` pixels along the outline. Points on a straight
  * edge average to that edge, so lines stay straight while stair steps and
  * bumps up to about `smooth` pixels wide flatten out.
+ * @param {{ x: number, y: number }[]} points
+ * @param {number} smooth
+ * @returns {{ x: number, y: number }[]}
  */
 function smoothLoop(points, smooth) {
   /** @type {{ x: number, y: number }[]} */
@@ -203,7 +219,11 @@ function smoothLoop(points, smooth) {
   return loop;
 }
 
-/** Ramer-Douglas-Peucker on a closed loop, split at its farthest point. */
+/**
+ * Ramer-Douglas-Peucker on a closed loop, split at its farthest point.
+ * @param {{ x: number, y: number }[]} points
+ * @param {number} tolerance
+ */
 function simplifyPath(points, tolerance) {
   if (points.length < 4) return points;
   let far = 0;
@@ -220,10 +240,15 @@ function simplifyPath(points, tolerance) {
   return [...first.slice(0, -1), ...second.slice(0, -1)];
 }
 
+/**
+ * @param {{ x: number, y: number }[]} points
+ * @param {number} tolerance
+ * @returns {{ x: number, y: number }[]}
+ */
 function rdp(points, tolerance) {
   if (points.length < 3) return points;
   const a = points[0];
-  const b = points.at(-1);
+  const b = /** @type {{ x: number, y: number }} */ (points.at(-1));
   const dx = b.x - a.x;
   const dy = b.y - a.y;
   const length = Math.hypot(dx, dy) || 1;
@@ -243,7 +268,11 @@ function rdp(points, tolerance) {
   ];
 }
 
-/** Pixel-corner vertices where the outline turns, in pixel units. */
+/**
+ * Pixel-corner vertices where the outline turns, in pixel units.
+ * @param {number[]} vertices vertex indices into a (width + 1)-wide grid
+ * @param {number} stride
+ */
 function corners(vertices, stride) {
   const points = [];
   const n = vertices.length;

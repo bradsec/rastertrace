@@ -30,6 +30,9 @@ const ready = init({
 
 self.onmessage = async (event) => {
   const { id, img, settings, sourceWidth, sourceHeight } = event.data;
+  /**
+   * @param {string} label
+   */
   const stage = (label) => self.postMessage({ id, stage: label });
   try {
     stage("Loading tracer…");

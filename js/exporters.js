@@ -9,9 +9,12 @@ import {
   physicalWidthValue,
 } from "./preprocess.js?v=99";
 import { recolorSvg } from "./palette.js?v=53";
-import { parseSvgPaths, toDxf, toPdf } from "./vectorexport.js?v=45";
-import { els, hooks, preferences, showError, state } from "./context.js?v=69";
+import { parseSvgPaths, toDxf, toPdf } from "./vectorexport.js?v=46";
+import { els, hooks, preferences, showError, state } from "./context.js?v=70";
 
+/**
+ * @type {Record<string, number>}
+ */
 const DISPLAY_UNITS_PER_INCH = { px: 96, in: 1, cm: 2.54, mm: 25.4 };
 
 /**
@@ -23,6 +26,9 @@ function cleanupPending() {
   return state.eraseStrokes.length !== baked.size || state.eraseStrokes.some((a) => !baked.has(a));
 }
 
+/**
+ * @param {boolean} enabled
+ */
 export function setResultActions(enabled) {
   els.copySvg.disabled = !enabled;
   els.downloadPng.disabled = !enabled;
@@ -191,6 +197,10 @@ els.copySvg.addEventListener("click", async () => {
   }
 });
 
+/**
+ * @param {number} width inches
+ * @param {number} height inches
+ */
 function formatDimensionsFromInches(width, height) {
   const unit = preferences.measurementUnit;
   const displayWidth = width * DISPLAY_UNITS_PER_INCH[unit];
@@ -202,10 +212,17 @@ function formatDimensionsFromInches(width, height) {
 // "_rt" suffix so a PNG export never lands on the source file's own name.
 // The SVG <title> keeps the plain stem: that is the artwork's accessible
 // name, not a file name.
+/**
+ * @param {string} extension
+ */
 function exportFileName(extension) {
   return `${state.fileName.replace(/\.[^.]+$/, "")}_rt.${extension}`;
 }
 
+/**
+ * @param {Blob} blob
+ * @param {string} extension
+ */
 function downloadBlob(blob, extension) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
@@ -215,6 +232,11 @@ function downloadBlob(blob, extension) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
+/**
+ * @param {string} extension
+ * @param {string} mimeType
+ * @returns {Promise<FileSystemFileHandle | null | undefined>} undefined when the user cancels
+ */
 async function chooseSaveFile(extension, mimeType) {
   if (!window.showSaveFilePicker) return null;
   // Menu actions and keyboard shortcuts can reach here without the transient
@@ -238,6 +260,12 @@ async function chooseSaveFile(extension, mimeType) {
   }
 }
 
+/**
+ * @param {Blob} blob
+ * @param {string} extension
+ * @param {FileSystemFileHandle | null | undefined} fileHandle
+ * @returns {Promise<{ cancelled?: boolean, downloaded?: boolean, name?: string }>}
+ */
 async function saveBlob(blob, extension, fileHandle) {
   if (fileHandle === undefined) return { cancelled: true };
   if (!fileHandle) {
@@ -250,6 +278,10 @@ async function saveBlob(blob, extension, fileHandle) {
   return { name: fileHandle.name };
 }
 
+/**
+ * @param {string} format
+ * @param {{ downloaded?: boolean, name?: string }} result
+ */
 function saveStatus(format, result, detail = "") {
   if (result.downloaded) return `${format} export sent to your browser downloads${detail}.`;
   return `${format} saved as ${result.name}${detail}.`;
@@ -317,7 +349,11 @@ els.downloadPng.addEventListener("click", async () => {
   }
 });
 
-/** Physical export width in the given output unit, or null when off. */
+/**
+ * Physical export width in the given output unit, or null when off.
+ * @param {number} unitsPerMm
+ * @param {number} unitsPerInch
+ */
 function physicalWidthIn(unitsPerMm, unitsPerInch) {
   if (els.exportSize.value !== "physical") return null;
   const width = physicalWidthValue(els.physicalWidth.value);

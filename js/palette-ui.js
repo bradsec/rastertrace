@@ -1,9 +1,9 @@
 // Palette panel: swatch grid, color editor, and the result eyedropper
 // that picks a traced color to edit. Edits recolor fills only; they
 // only retrace when switching layering.
-import { els, hooks, state } from "./context.js?v=69";
-import { deactivateCleanupTools, setView, showResultOverSource } from "./cleanup-tools.js?v=111";
-import { refreshExport } from "./exporters.js?v=89";
+import { els, hooks, state } from "./context.js?v=70";
+import { deactivateCleanupTools, setView, showResultOverSource } from "./cleanup-tools.js?v=112";
+import { refreshExport } from "./exporters.js?v=90";
 import {
   mergeEdits,
   mergeGroups,
@@ -111,6 +111,9 @@ function computePalette() {
   return { colors: raster.filter((entry) => traced.has(entry.fill)), mapping };
 }
 
+/**
+ * @param {string} fill
+ */
 function editedFill(fill) {
   return state.colorEdits.get(fill) ?? fill;
 }
@@ -120,11 +123,18 @@ function swatchGroups() {
   return mergeGroups(currentPalette(), state.colorEdits);
 }
 
-/** Every traced color sharing a swatch with `fill`, largest first. */
+/**
+ * Every traced color sharing a swatch with `fill`, largest first.
+ * @param {string} fill
+ * @returns {string[]}
+ */
 function membersOf(fill) {
   return swatchGroups().find((group) => group.members.includes(fill))?.members ?? [fill];
 }
 
+/**
+ * @param {boolean} on
+ */
 function setSelecting(on) {
   selecting = on;
   paletteSelect.setAttribute("aria-pressed", String(on));
@@ -132,12 +142,19 @@ function setSelecting(on) {
   renderPalette();
 }
 
+/**
+ * @param {string} fill
+ */
 function toggleSelected(fill) {
   if (selected.has(fill)) selected.delete(fill);
   else selected.add(fill);
   renderPalette();
 }
 
+/**
+ * @param {string} fill
+ * @param {string} className
+ */
 function swatchButton(fill, className) {
   const button = document.createElement("button");
   button.type = "button";
@@ -260,6 +277,7 @@ export function renderPalette() {
 /**
  * Show `hex` in every editor field except `source`, the one being typed in.
  * @param {HTMLInputElement | null} [source]
+ * @param {string} hex
  */
 function syncFields(hex, source = null) {
   const rgb = /** @type {[number, number, number]} */ (parseHexColor(hex));
@@ -277,6 +295,9 @@ function syncFields(hex, source = null) {
 
 /** Explain the first invalid field; color alone does not (WCAG 1.4.1). */
 function showFieldError() {
+  /**
+   * @param {HTMLInputElement} input
+   */
   const invalid = (input) => input.getAttribute("aria-invalid") === "true";
   let message = "";
   if (invalid(els.paletteHex)) message = "Use six hex digits, like #336699.";
@@ -287,6 +308,9 @@ function showFieldError() {
   paletteError.hidden = !message;
 }
 
+/**
+ * @param {string} fill
+ */
 function openEditor(fill) {
   const members = membersOf(fill);
   const original = /** @type {string} */ (members[0]);
@@ -309,6 +333,7 @@ function closeEditor() {
 /**
  * Record `hex` for the open swatch, every merged color with it; a color
  * set back to its own traced value has no edit.
+ * @param {string} hex
  */
 function applyEdit(hex) {
   if (!editing) return;
@@ -333,6 +358,9 @@ function onHexInput() {
   applyEdit(hex);
 }
 
+/**
+ * @param {Event} event
+ */
 function onChannelInput(event) {
   const input = /** @type {HTMLInputElement} */ (event.currentTarget);
   const raw = input.value.trim();
@@ -433,6 +461,9 @@ els.paletteResetAll.addEventListener("click", () => {
 
 // -- Eyedropper on the result -----------------------------------------
 
+/**
+ * @param {boolean} armed
+ */
 export function setPalettePick(armed) {
   const next = armed && Boolean(state.svgRaw);
   if (next) deactivateCleanupTools();

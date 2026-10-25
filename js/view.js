@@ -3,8 +3,8 @@
 // register after the selection and eraser handlers in cleanup-tools.js
 // (which stop propagation while a tool is active), so app.js imports
 // this module last.
-import { els, hooks, state } from "./context.js?v=69";
-import { renderSelection, renderSmoothPreview } from "./cleanup-tools.js?v=111";
+import { els, hooks, state } from "./context.js?v=70";
+import { renderSelection, renderSmoothPreview } from "./cleanup-tools.js?v=112";
 
 const view = { scale: 1, tx: 0, ty: 0 };
 const ZOOM_MIN = 0.001;
@@ -49,7 +49,12 @@ export function resetView() {
   applyView();
 }
 
-/** Zoom by factor, keeping the point (px, py) in preview coordinates fixed. */
+/**
+ * Zoom by factor, keeping the point (px, py) in preview coordinates fixed.
+ * @param {number} factor
+ * @param {number} px
+ * @param {number} py
+ */
 function zoomAt(factor, px, py) {
   const next = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, view.scale * factor));
   const f = next / view.scale;
@@ -59,6 +64,9 @@ function zoomAt(factor, px, py) {
   applyView();
 }
 
+/**
+ * @param {number} factor
+ */
 function zoomAtCenter(factor) {
   zoomAt(factor, els.preview.clientWidth / 2, els.preview.clientHeight / 2);
 }
@@ -100,6 +108,9 @@ for (const type of ["touchstart", "touchmove"]) {
   );
 }
 
+/**
+ * @type {Record<string, [number, number]>}
+ */
 const PAN_KEYS = { ArrowLeft: [1, 0], ArrowRight: [-1, 0], ArrowUp: [0, 1], ArrowDown: [0, -1] };
 
 els.preview.addEventListener("keydown", (e) => {
@@ -310,7 +321,10 @@ function updateCompare() {
 }
 hooks.updateCompare = updateCompare;
 
-/** @param {number} value percent of the preview width */
+/**
+ * @param {number} value percent of the preview width
+ * @param {boolean} [persist]
+ */
 function setSplit(value, persist) {
   split = Math.min(100, Math.max(0, value));
   els.preview.style.setProperty("--compare-split", `${split}%`);
@@ -327,6 +341,9 @@ function setSplit(value, persist) {
 }
 setSplit(split, false);
 
+/**
+ * @type {Record<string, number>}
+ */
 const SPLIT_KEYS = { ArrowLeft: -1, ArrowDown: -1, ArrowRight: 1, ArrowUp: 1 };
 
 els.compareHandle.addEventListener("keydown", (e) => {

@@ -10,7 +10,10 @@
  * @typedef {{ width: number, height: number, paths: VecPath[] }} ParsedSvg
  */
 
-/** Trim a number to a compact decimal string (max 4 places). */
+/**
+ * Trim a number to a compact decimal string (max 4 places).
+ * @param {number} n
+ */
 function fmt(n) {
   return String(Number(n.toFixed(4)));
 }
@@ -34,6 +37,9 @@ export function parseSvgPaths(svgText) {
   // of grouped same-fill paths onto the enclosing <g>, so a path without
   // its own fill inherits the innermost group's.
   const paths = [];
+  /**
+   * @type {(string | undefined)[]}
+   */
   const groupFills = [];
   for (const el of svgText.matchAll(/<g\b[^>]*>|<\/g>|<path\b[^>]*>/g)) {
     const tag = el[0];
@@ -56,6 +62,11 @@ export function parseSvgPaths(svgText) {
   return { width, height, paths };
 }
 
+/**
+ * @param {string} d
+ * @param {number} dx
+ * @param {number} dy
+ */
 function parsePathData(d, dx, dy) {
   const tokens = d.match(/-?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?|[A-Za-z]/g) || [];
   /** @type {VecSubpath[]} */
@@ -111,8 +122,17 @@ function parsePathData(d, dx, dy) {
  * Flatten a cubic Bezier into line-segment end points (excluding p0,
  * including p1), subdividing until the control points sit within `tol`
  * of the chord.
+ * @param {VecPoint} p0
+ * @param {VecPoint} c1
+ * @param {VecPoint} c2
+ * @param {VecPoint} p1
+ * @param {number} tol
+ * @returns {VecPoint[]}
  */
 export function flattenCubic(p0, c1, c2, p1, tol, depth = 0) {
+  /**
+   * @param {VecPoint} p
+   */
   const flatEnough = (p) => {
     const vx = p1.x - p0.x;
     const vy = p1.y - p0.y;
@@ -121,6 +141,10 @@ export function flattenCubic(p0, c1, c2, p1, tol, depth = 0) {
     return Math.abs((p.x - p0.x) * vy - (p.y - p0.y) * vx) / len <= tol;
   };
   if (depth >= 16 || (flatEnough(c1) && flatEnough(c2))) return [p1];
+  /**
+   * @param {VecPoint} a
+   * @param {VecPoint} b
+   */
   const mid = (a, b) => ({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 });
   const p01 = mid(p0, c1);
   const p12 = mid(c1, c2);
@@ -134,7 +158,10 @@ export function flattenCubic(p0, c1, c2, p1, tol, depth = 0) {
   ];
 }
 
-/** Nearest AutoCAD color index for a hex fill (basic ACI palette). */
+/**
+ * Nearest AutoCAD color index for a hex fill (basic ACI palette).
+ * @param {string} hex
+ */
 function aciColor(hex) {
   const n = parseInt(hex.slice(1), 16);
   const rgb = [(n >> 16) & 255, (n >> 8) & 255, n & 255];
@@ -177,6 +204,10 @@ const FLATTEN_TOL = 0.2;
 export function toDxf(parsed, { scale = 1 } = {}) {
   const { height } = parsed;
   const paths = parsed.paths.filter((path) => path.fill !== "none");
+  /**
+   * @param {number | string} code
+   * @param {number | string} value
+   */
   const g = (code, value) => `${code}\n${value}\n`;
   const layers = new Map();
   for (const path of paths) {
@@ -238,6 +269,9 @@ export function toPdf(parsed, { pageWidth, pageHeight } = {}) {
 
   // One transform maps SVG space (y down) onto the page (y up).
   let content = `${fmt(pw / width)} 0 0 ${fmt(-ph / height)} 0 ${fmt(ph)} cm\n`;
+  /**
+   * @param {string} hex
+   */
   const fillColor = (hex) => {
     const n = parseInt(hex.slice(1), 16);
     return `${[(n >> 16) & 255, (n >> 8) & 255, n & 255].map((v) => fmt(v / 255)).join(" ")} rg\n`;
@@ -267,6 +301,9 @@ export function toPdf(parsed, { pageWidth, pageHeight } = {}) {
   ];
 
   let pdf = "%PDF-1.4\n";
+  /**
+   * @type {number[]}
+   */
   const offsets = [];
   objects.forEach((body, index) => {
     offsets.push(pdf.length);

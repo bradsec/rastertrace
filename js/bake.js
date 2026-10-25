@@ -16,7 +16,12 @@ import { parseHexColor } from "./preprocess.js?v=99";
  */
 const masks = new WeakMap();
 
-/** @param {CleanupAction} action */
+/**
+ * @param {CleanupAction} action
+ * @param {number} width
+ * @param {number} height
+ * @param {boolean} pixelExact
+ */
 async function coverage(action, width, height, pixelExact) {
   const key = `${width}x${height}:${pixelExact}:${action.points?.length ?? 0}`;
   const cached = masks.get(action);
@@ -105,6 +110,9 @@ const SMOOTH_SHARE = 1 / 4;
  * The smooth strokes among `actions` as smoothLabels regions of an image
  * `width` by `height`, in drawing order.
  * @param {CleanupAction[]} actions
+ * @param {number} width
+ * @param {number} height
+ * @param {{ pixelExact?: boolean }} [options]
  */
 export async function smoothRegions(actions, width, height, { pixelExact = false } = {}) {
   const regions = [];

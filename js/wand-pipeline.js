@@ -1,6 +1,13 @@
 import { tracePixels } from "./preprocess.js?v=99";
-import { floodRegion, growMask, maskLoops, unionMasks } from "./magicwand.js?v=52";
+import { floodRegion, growMask, maskLoops, unionMasks } from "./magicwand.js?v=53";
 
+/**
+ * @param {{ width: number, height: number, data: Uint8ClampedArray }} raster
+ * @param {{ x: number, y: number }[]} seeds normalized
+ * @param {number} tolerance
+ * @param {number} expand source px
+ * @param {number} sourceWidth
+ */
 export function coarseRegion(raster, seeds, tolerance, expand, sourceWidth) {
   /** @type {Uint8Array | null} */
   let mask = null;
@@ -35,6 +42,15 @@ export function coarseRegion(raster, seeds, tolerance, expand, sourceWidth) {
   return { mask, width, height, x0, y0, x1, y1, detail };
 }
 
+/**
+ * @param {NonNullable<ReturnType<typeof coarseRegion>>} coarse
+ * @param {ImageData | null} refined
+ * @param {{ x: number, y: number }[]} seeds normalized
+ * @param {number} tolerance
+ * @param {number} expand source px
+ * @param {number} smooth source px
+ * @param {number} sourceWidth
+ */
 export function finishRegion(coarse, refined, seeds, tolerance, expand, smooth, sourceWidth) {
   let { mask, width, height, x0, y0, x1, y1, detail } = coarse;
   /** @type {Uint8Array | null} */
@@ -47,7 +63,7 @@ export function finishRegion(coarse, refined, seeds, tolerance, expand, smooth, 
       if (region) refinedMask = refinedMask ? unionMasks(refinedMask, region.mask) : region.mask;
     }
   }
-  if (refinedMask) {
+  if (refinedMask && refined) {
     mask = refinedMask;
     width = refined.width;
     height = refined.height;
