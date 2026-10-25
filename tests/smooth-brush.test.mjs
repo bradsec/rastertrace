@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { smoothLabels, smoothOutlines } from "../js/preprocess.js";
+import { smoothLabels, smoothOutlines } from "../js/filters.js";
 import { DEFAULTS, sanitizeSettings } from "../js/settings-schema.js";
 
 const BLUE = [20, 80, 180];

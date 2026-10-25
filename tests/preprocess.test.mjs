@@ -11,27 +11,29 @@ import {
   toHexColor,
 } from "../js/color.js";
 import {
-  analyzeFlatness,
   binarizeAlpha,
   defringeAlpha,
   despeckleColors,
-  detectBackgroundColor,
-  dominantOpaqueColor,
   erodeAlpha,
   fillTransparent,
-  knockOutColor,
-  mapToPalette,
   medianFilter,
   modeFilter,
+  removeSpecks,
+  thresholdImage,
+  toGrayscale,
+  toGrayscaleColor,
+} from "../js/filters.js";
+import {
+  analyzeFlatness,
+  detectBackgroundColor,
+  dominantOpaqueColor,
+  knockOutColor,
+  mapToPalette,
   quantize,
   reclaimFringe,
   reduceAndRemoveBackground,
   removeBackground,
-  removeSpecks,
   snapToImageColor,
-  thresholdImage,
-  toGrayscale,
-  toGrayscaleColor,
 } from "../js/preprocess.js";
 import {
   DEFAULTS,

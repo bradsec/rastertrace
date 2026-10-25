@@ -72,6 +72,7 @@ js/raster.js        alpha cutoff and trace size limits (Node-testable)
 js/color.js         hex, sRGB/Oklab conversion, swatch file parsing (Node-testable)
 js/svg-output.js    SVG post-processing: export options, path compression, fills (Node-testable)
 js/settings-schema.jstrace defaults, presets, export profiles, settings validation (Node-testable)
+js/filters.js       pixel filters: specks, soft edges, alpha cleanup, smoothing (Node-testable)
 js/vectorexport.js  DXF and PDF writers from traced SVG (Node-testable)
 js/eraser.js        eraser mask geometry (Node-testable)
 js/bake.js          paints cleanup edits into the raster before tracing; smooth stroke masks

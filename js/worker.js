@@ -7,14 +7,14 @@ import {
   erodeAlpha,
   fillTransparent,
   medianFilter,
-  reduceAndRemoveBackground,
   removeSpecks,
   smoothAlpha,
   smoothLabels,
   smoothOutlines,
   thresholdImage,
   toGrayscale,
-} from "./preprocess.js?v=105";
+} from "./filters.js?v=1";
+import { reduceAndRemoveBackground } from "./preprocess.js?v=106";
 import { applyStencilInk, finalizeSvg, straightenPaths } from "./svg-output.js?v=1";
 import { tracePixels } from "./raster.js?v=1";
 import { rasterPalette, snapFills } from "./palette.js?v=57";

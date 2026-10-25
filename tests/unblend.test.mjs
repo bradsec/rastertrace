@@ -1,11 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import {
-  analyzeFlatness,
-  modeFilter,
-  quantize,
-  reduceAndRemoveBackground,
-} from "../js/preprocess.js";
+import { modeFilter } from "../js/filters.js";
+import { analyzeFlatness, quantize, reduceAndRemoveBackground } from "../js/preprocess.js";
 
 const CREAM = [240, 230, 208];
 const NAVY = [30, 52, 90];

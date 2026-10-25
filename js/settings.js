@@ -1,7 +1,7 @@
 // Settings: measurement preferences, the live control values, export
 // profiles and presets, and localStorage persistence across reloads.
 import { parseHexColor } from "./color.js?v=1";
-import { toGrayscaleColor } from "./preprocess.js?v=105";
+import { toGrayscaleColor } from "./filters.js?v=1";
 import {
   DEFAULTS,
   ENCLOSED_NO_LIMIT,
