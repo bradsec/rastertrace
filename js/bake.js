@@ -3,10 +3,10 @@
 // artwork: a fill is traced in its color, an erase leaves a hole. Smooth
 // strokes act on the reduced colors instead, so they leave as masks for
 // the worker.
-import { cleanupMaskSvg } from "./eraser.js?v=17";
+import { cleanupMaskSvg } from "./eraser.js?v=18";
 import { parseHexColor } from "./preprocess.js?v=100";
 
-/** @typedef {{ mode?: string, color?: string, diameter?: number, points?: unknown[], type?: string }} CleanupAction */
+/** @typedef {import("./eraser.js").CleanupAction} CleanupAction */
 
 /**
  * Coverage per action, cropped to its bounding box: { key, x, y, width,
@@ -23,7 +23,7 @@ const masks = new WeakMap();
  * @param {boolean} pixelExact
  */
 async function coverage(action, width, height, pixelExact) {
-  const key = `${width}x${height}:${pixelExact}:${action.points?.length ?? 0}`;
+  const key = `${width}x${height}:${pixelExact}:${"points" in action ? action.points.length : 0}`;
   const cached = masks.get(action);
   if (cached?.key === key) return cached;
   const svg = cleanupMaskSvg(action, width, height, { pixelExact });
@@ -121,7 +121,8 @@ export async function smoothRegions(actions, width, height, { pixelExact = false
     const mask = await coverage(action, width, height, pixelExact);
     if (!mask.width || !mask.height) continue;
     const { x, y, bits } = mask;
-    const radius = (action.diameter ?? 0) * Math.min(width, height) * SMOOTH_SHARE;
+    const radius =
+      ("diameter" in action ? action.diameter : 0) * Math.min(width, height) * SMOOTH_SHARE;
     regions.push({ x, y, width: mask.width, height: mask.height, bits, radius });
   }
   return regions;

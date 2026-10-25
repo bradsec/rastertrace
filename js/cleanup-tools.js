@@ -3,11 +3,11 @@
 // Listener order matters: the selection and eraser pointer handlers must
 // register before the pan handlers in view.js, so app.js imports this
 // module first.
-import { brushSizeForShortcut, snapPointToAngle, svgViewBox } from "./eraser.js?v=17";
+import { brushSizeForShortcut, snapPointToAngle, svgViewBox } from "./eraser.js?v=18";
 import { parseHexColor, sampleRasterColor, toHexColor } from "./preprocess.js?v=100";
 import { els, hooks, state } from "./context.js?v=70";
 import { maskLoops } from "./magicwand.js?v=54";
-import { refreshExport } from "./exporters.js?v=91";
+import { refreshExport } from "./exporters.js?v=92";
 
 /** @param {"result" | "source" | "compare"} view */
 export function setView(view) {
@@ -1154,7 +1154,8 @@ function constrainedPolygonPoint(point, shiftKey) {
   if (!shiftKey || selection?.type !== "polygon" || !selection.points.length) return point;
   const box = svgViewBox(state.svgRaw || "");
   if (!box) return point;
-  return snapPointToAngle(selection.points.at(-1), point, box.width, box.height);
+  const anchor = /** @type {{ x: number, y: number }} */ (selection.points.at(-1));
+  return snapPointToAngle(anchor, point, box.width, box.height);
 }
 
 els.preview.addEventListener(

@@ -1,12 +1,33 @@
+/**
+ * Cleanup geometry is normalized to the image: 0..1 on each axis.
+ * @typedef {{ x: number, y: number }} NormPoint
+ * @typedef {{ type?: undefined, diameter: number, points: NormPoint[] }} StrokeShape freehand brush
+ * @typedef {{ type: "polygon", points: NormPoint[] }} PolygonShape
+ * @typedef {{ type: "rect", x: number, y: number, width: number, height: number }} RectShape
+ * @typedef {{ type: "ellipse", cx: number, cy: number, rx: number, ry: number }} EllipseShape
+ * @typedef {{ type: "region", seeds: NormPoint[], loops: NormPoint[][] }} RegionShape
+ * @typedef {{ type: "composite", parts: { op: string, shape: CleanupShape }[] }} CompositeShape
+ * @typedef {StrokeShape | PolygonShape | RectShape | EllipseShape | RegionShape | CompositeShape} CleanupShape
+ * @typedef {CleanupShape & { mode?: string, color?: string }} CleanupAction mode "fill" or "smooth"; absent erases
+ */
 const MASK_ID = "rastertrace-eraser-mask";
 const CLEANUP_MASK_ID = "rastertrace-cleanup-mask";
 
+/**
+ * @param {number} value
+ * @param {boolean} increase
+ * @param {number} min
+ * @param {number} max
+ */
 export function brushSizeForShortcut(value, increase, min, max) {
   const scaled = Math.round(value * (increase ? 1.2 : 1 / 1.2));
   const changed = increase ? Math.max(value + 1, scaled) : Math.min(value - 1, scaled);
   return Math.min(max, Math.max(min, changed));
 }
 
+/**
+ * @param {string} svg
+ */
 export function svgViewBox(svg) {
   const match = svg.match(
     /\bviewBox\s*=\s*["']\s*([-+\d.eE]+)[ ,]+([-+\d.eE]+)[ ,]+([-+\d.eE]+)[ ,]+([-+\d.eE]+)\s*["']/i,
@@ -17,6 +38,12 @@ export function svgViewBox(svg) {
   return { x: values[0], y: values[1], width: values[2], height: values[3] };
 }
 
+/**
+ * @param {NormPoint} anchor
+ * @param {NormPoint} point
+ * @param {number} width
+ * @param {number} height
+ */
 export function snapPointToAngle(anchor, point, width, height, increment = Math.PI / 4) {
   if (!(width > 0) || !(height > 0) || !(increment > 0)) return point;
   const dx = (point.x - anchor.x) * width;
@@ -35,8 +62,14 @@ export function snapPointToAngle(anchor, point, width, height, increment = Math.
  * normalized to the image (0..1 on each axis), so a turn swaps the axes
  * and mirrors one; brush diameters are relative to the shorter side and
  * stay as they are. Returns a new action and leaves the input untouched.
+ * @param {CleanupAction} action
+ * @param {boolean} clockwise
+ * @returns {CleanupAction}
  */
 export function rotateCleanupAction(action, clockwise) {
+  /**
+   * @param {NormPoint} point
+   */
   const turn = (point) =>
     clockwise ? { x: 1 - point.y, y: point.x } : { x: point.y, y: 1 - point.x };
   if (action.type === "composite") {
@@ -72,10 +105,17 @@ export function rotateCleanupAction(action, clockwise) {
   return { ...action, points: action.points.map(turn) };
 }
 
+/**
+ * @param {number} value
+ */
 function n(value) {
   return Number(value.toFixed(3));
 }
 
+/**
+ * @param {NormPoint} point
+ * @param {{ x: number, y: number, width: number, height: number }} box
+ */
 function pointInBox(point, box) {
   return {
     x: box.x + point.x * box.width,
@@ -83,10 +123,18 @@ function pointInBox(point, box) {
   };
 }
 
+/**
+ * @param {number} value
+ * @param {number} origin
+ */
 function pixelCenter(value, origin) {
   return origin + Math.floor(value - origin) + 0.5;
 }
 
+/**
+ * @param {StrokeShape} erasure
+ * @param {{ x: number, y: number, width: number, height: number }} box
+ */
 function pixelExactStrokeMarkup(erasure, box) {
   const points = erasure.points.map((point) => {
     const absolute = pointInBox(point, box);
@@ -116,6 +164,10 @@ function pixelExactStrokeMarkup(erasure, box) {
 /**
  * Marks for a combined selection, in order: added parts in `addFill`,
  * subtracted parts in `subtractFill`, so later parts override earlier ones.
+ * @param {CompositeShape["parts"]} parts
+ * @param {{ x: number, y: number, width: number, height: number }} box
+ * @param {string} addFill
+ * @param {string} subtractFill
  */
 function compositeMarkup(parts, box, addFill, subtractFill) {
   return parts
@@ -128,6 +180,12 @@ function compositeMarkup(parts, box, addFill, subtractFill) {
     .join("");
 }
 
+/**
+ * @param {CleanupShape} erasure
+ * @param {{ x: number, y: number, width: number, height: number }} box
+ * @param {boolean} pixelExact
+ * @returns {string}
+ */
 function erasureMarkup(erasure, box, pixelExact) {
   if (erasure.type === "composite") return compositeMarkup(erasure.parts, box, "#000", "#fff");
   if (erasure.type === "rect") {
@@ -167,6 +225,11 @@ function erasureMarkup(erasure, box, pixelExact) {
   return `<path d="${d}" fill="none" stroke="#000" stroke-width="${n(diameter)}" stroke-linecap="round" stroke-linejoin="round"/>`;
 }
 
+/**
+ * @param {CleanupAction} stroke
+ * @param {{ x: number, y: number, width: number, height: number }} box
+ * @param {boolean} pixelExact
+ */
 function fillMarkup(stroke, box, pixelExact) {
   const mark = erasureMarkup(stroke, box, pixelExact);
   return mark
@@ -179,6 +242,10 @@ function fillMarkup(stroke, box, pixelExact) {
  * `width` x `height`: the coverage mask for painting the action into a
  * raster before tracing. A combined selection's subtracted parts are
  * black, so they stay unpainted.
+ * @param {CleanupAction} action
+ * @param {number} width
+ * @param {number} height
+ * @param {{ pixelExact?: boolean }} [options]
  */
 export function cleanupMaskSvg(action, width, height, { pixelExact = false } = {}) {
   const box = { x: 0, y: 0, width, height };
@@ -191,6 +258,9 @@ export function cleanupMaskSvg(action, width, height, { pixelExact = false } = {
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}"><rect width="${width}" height="${height}" fill="#000"/>${marks}</svg>`;
 }
 
+/**
+ * @param {string} svg
+ */
 function svgParts(svg) {
   const rootStart = svg.search(/<svg\b/i);
   const openEnd = rootStart < 0 ? -1 : svg.indexOf(">", rootStart);
@@ -203,6 +273,11 @@ function svgParts(svg) {
   };
 }
 
+/**
+ * @param {string} svg
+ * @param {CleanupShape[]} strokes
+ * @param {{ pixelExact?: boolean }} [options]
+ */
 export function applyEraserMask(svg, strokes, { pixelExact = false } = {}) {
   if (!strokes.length) return svg;
   const box = svgViewBox(svg);
@@ -222,6 +297,9 @@ export function applyEraserMask(svg, strokes, { pixelExact = false } = {}) {
  * artwork produced before it, while a later fill remains visible above
  * that mask. This mirrors the order in which cleanup actions were drawn.
  * Smooth strokes are skipped.
+ * @param {string} svg
+ * @param {CleanupAction[]} actions
+ * @param {{ pixelExact?: boolean }} [options]
  */
 export function applyCleanupActions(svg, actions, { pixelExact = false } = {}) {
   if (!actions.length) return svg;
@@ -257,7 +335,12 @@ export function applyCleanupActions(svg, actions, { pixelExact = false } = {}) {
   return `${parts.before}${definitions}${content}${parts.after}`;
 }
 
-/** Keep baked erasures exact after tracing smooths the edited raster. */
+/**
+ * Keep baked erasures exact after tracing smooths the edited raster.
+ * @param {string} svg
+ * @param {CleanupAction[]} actions
+ * @param {{ pixelExact?: boolean }} [options]
+ */
 export function applyErasureGuard(svg, actions, { pixelExact = false } = {}) {
   if (!actions.some((action) => action.mode !== "fill" && action.mode !== "smooth")) return svg;
   const box = svgViewBox(svg);
