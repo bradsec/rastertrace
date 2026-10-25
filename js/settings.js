@@ -14,10 +14,10 @@ import {
   toGrayscaleColor,
   USER_PRESET_PREFIX,
   userPresetName,
-} from "./preprocess.js?v=103";
+} from "./preprocess.js?v=104";
 import { els, preferences } from "./context.js?v=70";
-import { refreshExport, updatePhysicalHeightOut } from "./exporters.js?v=96";
-import { setEyedropper } from "./cleanup-tools.js?v=119";
+import { refreshExport, updatePhysicalHeightOut } from "./exporters.js?v=97";
+import { setEyedropper } from "./cleanup-tools.js?v=120";
 
 /**
  * @returns {HTMLInputElement}

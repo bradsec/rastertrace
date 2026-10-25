@@ -1,23 +1,21 @@
 // Web Worker: runs preprocessing + wasm tracing off the main thread.
 import init, { trace } from "../pkg/rastertrace_wasm.js?v=43";
 import {
-  applyStencilInk,
   binarizeAlpha,
   defringeAlpha,
   despeckleColors,
   erodeAlpha,
   fillTransparent,
-  finalizeSvg,
   medianFilter,
   reduceAndRemoveBackground,
   removeSpecks,
   smoothAlpha,
   smoothLabels,
   smoothOutlines,
-  straightenPaths,
   thresholdImage,
   toGrayscale,
-} from "./preprocess.js?v=103";
+} from "./preprocess.js?v=104";
+import { applyStencilInk, finalizeSvg, straightenPaths } from "./svg-output.js?v=1";
 import { tracePixels } from "./raster.js?v=1";
 import { rasterPalette, snapFills } from "./palette.js?v=57";
 

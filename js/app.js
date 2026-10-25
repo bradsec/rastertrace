@@ -18,19 +18,19 @@ import {
   distinctColorCount,
   distinctColors,
   EXPORT_PROFILES,
-  isStaleModuleError,
   presetName,
   PRESETS_MAX,
   profileColorSettings,
   sanitizePresets,
   USER_PRESET_PREFIX,
   userPresetName,
-} from "./preprocess.js?v=103";
+} from "./preprocess.js?v=104";
+import { isStaleModuleError } from "./svg-output.js?v=1";
 import { fitTraceScale, MAX_TRACE_SIDE, MAX_TRACE_SIDE_ULTRA } from "./raster.js?v=1";
 import { $, els, hooks, preferences, showError, state } from "./context.js?v=70";
 import { bakeCleanup, smoothRegions } from "./bake.js?v=34";
 import { rotateCleanupAction } from "./eraser.js?v=19";
-import { refreshExport, setResultActions } from "./exporters.js?v=96";
+import { refreshExport, setResultActions } from "./exporters.js?v=97";
 import {
   clearSelection,
   setBlobFill,
@@ -38,8 +38,8 @@ import {
   setSelectionTool,
   setView,
   showResultOverSource,
-} from "./cleanup-tools.js?v=119";
-import { afterTrace, resetPalette } from "./palette-ui.js?v=103";
+} from "./cleanup-tools.js?v=120";
+import { afterTrace, resetPalette } from "./palette-ui.js?v=104";
 import {
   applyExportProfile,
   applyMeasurementUnit,
@@ -70,8 +70,8 @@ import {
   updateTraceFields,
   updateTransparencyFields,
   userPresets,
-} from "./settings.js?v=121";
-import { actualSizeView, resetView } from "./view.js?v=119";
+} from "./settings.js?v=122";
+import { actualSizeView, resetView } from "./view.js?v=120";
 
 const SAMPLE_FILES = [
   "synthwave.png",
@@ -92,7 +92,7 @@ const SAMPLE_KEY = "rastertrace:last-sample";
 
 const EMPTY_IMAGE_SRC = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==";
 
-const tracer = new Tracer(new URL("./worker.js?v=111", import.meta.url));
+const tracer = new Tracer(new URL("./worker.js?v=112", import.meta.url));
 
 let elapsedTimer = 0;
 
