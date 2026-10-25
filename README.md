@@ -125,6 +125,10 @@ Static files only. The GitHub Actions workflow validates pushes to `main` and pu
 
 Requires OffscreenCanvas and module workers: Chrome/Edge 109+, Firefox 111+, Safari 16.4+. Chrome and Edge offer native Save As dialogs; other supported browsers use their standard download flow because they do not expose a file-location picker to web pages.
 
+## Support
+
+If rastertrace is useful to you, please consider starring the repository to help others discover it. You can also support its development on [Ko-fi](https://ko-fi.com/bradsec).
+
 ## Acknowledgements and credits
 
 [vtracer](https://github.com/visioncortex/vtracer) by Vision Cortex powers rastertrace's raster-to-SVG tracing. The Rust tracing engine is compiled to WebAssembly and runs locally in the browser.

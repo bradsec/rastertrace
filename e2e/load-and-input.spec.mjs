@@ -41,8 +41,11 @@ test.beforeEach(async ({ page }) => {
 
 test("sample image loads and traces", async ({ page }) => {
   await page.goto("/");
+  const zoom = ["#zoom-out", "#zoom-reset", "#zoom-in"].map((id) => page.locator(id));
+  for (const button of zoom) await expect(button).toBeDisabled();
   await page.locator("#try-sample").click();
   await expect(page.locator("#status")).toContainText(/Traced \d/, { timeout: 60_000 });
+  for (const button of zoom) await expect(button).toBeEnabled();
 });
 
 test("View image actions require a loaded sample while panel actions follow folding", async ({
@@ -163,6 +166,7 @@ test.describe("opening files", () => {
     await page.locator("#file-input").setInputFiles(NOT_AN_IMAGE);
     await expect(page.locator("#error")).toBeVisible();
     await expect(page.locator("#empty-state")).toBeVisible();
+    await expect(page.locator("#zoom-in")).toBeDisabled();
   });
 
   test("replacing an image with cleanup asks first", async ({ page }) => {

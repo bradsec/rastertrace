@@ -114,6 +114,20 @@ function setBusy(busy, label = "Starting…") {
 }
 
 /**
+ * The empty state and the workspace swap places. Zoom sits in the status
+ * bar, outside the workspace, so it is disabled while there is no preview.
+ * @param {boolean} shown
+ */
+function showWorkspace(shown) {
+  els.emptyState.hidden = shown;
+  els.workspace.hidden = !shown;
+  els.zoomIn.disabled = !shown;
+  els.zoomOut.disabled = !shown;
+  els.zoomReset.disabled = !shown;
+  syncFoldMenu();
+}
+
+/**
  * @param {boolean} enabled
  */
 function setBitmapActionsEnabled(enabled) {
@@ -345,11 +359,7 @@ async function loadFile(file) {
   showError("");
   const token = ++state.loadToken;
   const wasEmpty = !state.bitmap;
-  if (wasEmpty) {
-    els.emptyState.hidden = true;
-    els.workspace.hidden = false;
-    syncFoldMenu();
-  }
+  if (wasEmpty) showWorkspace(true);
   setBusy(true, "Loading image…");
   try {
     const sourceSize = await sniffImageSize(file);
@@ -401,9 +411,7 @@ async function loadFile(file) {
     if (state.sourceUrl) URL.revokeObjectURL(state.sourceUrl);
     state.sourceUrl = URL.createObjectURL(file);
     els.sourceView.src = state.sourceUrl;
-    els.emptyState.hidden = true;
-    els.workspace.hidden = false;
-    syncFoldMenu();
+    showWorkspace(true);
     resetView();
     setView("result");
     await retrace();
@@ -413,11 +421,7 @@ async function loadFile(file) {
     if (token === state.loadToken) {
       setBusy(false);
       els.status.textContent = "";
-      if (wasEmpty && !state.bitmap) {
-        els.workspace.hidden = true;
-        els.emptyState.hidden = false;
-        syncFoldMenu();
-      }
+      if (wasEmpty && !state.bitmap) showWorkspace(false);
       showError(err.message || "Could not open that file.");
     }
   }
