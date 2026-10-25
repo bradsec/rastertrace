@@ -14,17 +14,23 @@ import {
   toGrayscaleColor,
   USER_PRESET_PREFIX,
   userPresetName,
-} from "./preprocess.js?v=99";
+} from "./preprocess.js?v=100";
 import { els, preferences } from "./context.js?v=70";
-import { refreshExport, updatePhysicalHeightOut } from "./exporters.js?v=90";
-import { setEyedropper } from "./cleanup-tools.js?v=112";
+import { refreshExport, updatePhysicalHeightOut } from "./exporters.js?v=91";
+import { setEyedropper } from "./cleanup-tools.js?v=113";
 
-/** @returns {HTMLInputElement} */
+/**
+ * @returns {HTMLInputElement}
+ * @param {string} selector
+ */
 const radioEl = (selector) => /** @type {HTMLInputElement} */ (document.querySelector(selector));
 
 const PREFERENCES_KEY = "rastertrace-preferences";
 const PHYSICAL_UNITS = new Set(["in", "cm", "mm"]);
 const MEASUREMENT_UNITS = new Set(["px", "in", "cm", "mm"]);
+/**
+ * @type {Record<string, number>}
+ */
 const MM_PER_UNIT = { in: 25.4, cm: 10, mm: 1 };
 
 export function readPreferences(fallbackUnit = "mm") {
@@ -48,10 +54,18 @@ export function savePreferences() {
   }
 }
 
+/**
+ * @param {number} value
+ * @param {string} fromUnit
+ * @param {string} toUnit
+ */
 function convertPhysicalValue(value, fromUnit, toUnit) {
   return (value * MM_PER_UNIT[fromUnit]) / MM_PER_UNIT[toUnit];
 }
 
+/**
+ * @param {string} unit
+ */
 export function applyMeasurementUnit(unit, preserveSize = true) {
   if (!MEASUREMENT_UNITS.has(unit)) return;
   if (unit === "px") {
@@ -122,7 +136,10 @@ export function currentSwatches() {
   return els.swatches.value ? els.swatches.value.split(",") : [];
 }
 
-/** Replace the swatch list and redraw it; each swatch button removes itself. */
+/**
+ * Replace the swatch list and redraw it; each swatch button removes itself.
+ * @param {string[]} list
+ */
 export function setSwatches(list) {
   els.swatches.value = list.join(",");
   els.swatchList.replaceChildren(
@@ -205,6 +222,9 @@ function updateSimplify() {
   const splice = Number(els.spliceThreshold.value);
   const level = simplifyLevel(length, splice);
   if (level === -1) {
+    /**
+     * @param {{ spliceThreshold: number }} l
+     */
     const distance = (l) => Math.abs(l.spliceThreshold - splice);
     const nearest = SIMPLIFY_LEVELS.reduce(
       (best, l, i) => (distance(l) < distance(SIMPLIFY_LEVELS[best]) ? i : best),
@@ -218,7 +238,10 @@ function updateSimplify() {
   }
 }
 
-/** Set the Advanced curve settings from a Simplify level. */
+/**
+ * Set the Advanced curve settings from a Simplify level.
+ * @param {number} level
+ */
 export function applySimplify(level) {
   const { lengthThreshold, spliceThreshold } = SIMPLIFY_LEVELS[level];
   els.lengthThreshold.value = String(lengthThreshold);
@@ -268,6 +291,7 @@ export function updateStencilFields() {
  * Apply a purpose-based export profile: moves the visible controls (like
  * presets do) and sets the export post-processing toggles. Everything
  * stays user-editable afterwards.
+ * @param {string} name
  */
 export function applyExportProfile(name) {
   const profile = EXPORT_PROFILES[name];
@@ -398,11 +422,20 @@ export function flushSettings() {
 /**
  * Set every control present in a sanitized snapshot; absent keys keep
  * their current value. Profile and auto-detect are the caller's call.
+ * @param {Record<string, any>} saved
  */
 function applySnapshot(saved) {
+  /**
+   * @param {HTMLInputElement | HTMLSelectElement} el
+   * @param {string} key
+   */
   const set = (el, key) => {
     if (saved[key] !== undefined) el.value = String(saved[key]);
   };
+  /**
+   * @param {HTMLInputElement} el
+   * @param {string} key
+   */
   const check = (el, key) => {
     if (saved[key] !== undefined) el.checked = saved[key];
   };
@@ -504,6 +537,7 @@ const DETECTED_KEYS = ["colors", "speckle", "layerDiff"];
 export function noteCarriedSettings() {
   const defaults = pageDefaults;
   if (!defaults) return;
+  /** @type {Record<string, unknown>} */
   const current = snapshotSettings();
   const detected = els.autoDetect.checked ? DETECTED_KEYS : [];
   const differs = Object.keys(defaults).some(
@@ -513,7 +547,10 @@ export function noteCarriedSettings() {
   els.restoredNote.hidden = !differs;
 }
 
-/** Quick color count: sets Colors only, leaving cleanup settings alone. */
+/**
+ * Quick color count: sets Colors only, leaving cleanup settings alone.
+ * @param {string} name
+ */
 export function applyPreset(name) {
   const preset = PRESETS[name];
   if (!preset) return;
@@ -610,7 +647,10 @@ export function loadUserPresets() {
   renderPresetOptions();
 }
 
-/** Store `presets`; false when browser storage is full or blocked. */
+/**
+ * Store `presets`; false when browser storage is full or blocked.
+ * @param {{ name: string, settings: object }[]} presets
+ */
 function storeUserPresets(presets) {
   try {
     localStorage.setItem(PRESETS_KEY, JSON.stringify(presets));
@@ -640,12 +680,18 @@ function renderPresetOptions() {
   if (els.exportProfile.value !== value) clearProfile();
 }
 
-/** Existing preset with this name (case-insensitive), or undefined. */
+/**
+ * Existing preset with this name (case-insensitive), or undefined.
+ * @param {string} name
+ */
 export function findUserPreset(name) {
   return userPresets.find((p) => p.name.toLowerCase() === name.toLowerCase());
 }
 
-/** Save the current controls as `name`, replacing a same-named preset. */
+/**
+ * Save the current controls as `name`, replacing a same-named preset.
+ * @param {string} name
+ */
 export function saveUserPreset(name) {
   const settings = sanitizePresets([{ name, settings: snapshotSettings() }])[0]?.settings;
   if (!settings) return false;
@@ -656,6 +702,9 @@ export function saveUserPreset(name) {
   return true;
 }
 
+/**
+ * @param {string} name
+ */
 export function deleteUserPreset(name) {
   return storeUserPresets(userPresets.filter((p) => p.name !== name));
 }
@@ -664,13 +713,18 @@ export function deleteUserPreset(name) {
  * Merge imported presets (already sanitized). Same names are replaced
  * only with `replace`. Returns mergePresets' report, or null when the
  * result could not be stored.
+ * @param {{ name: string, settings: object }[]} incoming
+ * @param {boolean} replace
  */
 export function importUserPresets(incoming, replace) {
   const result = mergePresets(userPresets, incoming, { replace });
   return storeUserPresets(result.presets) ? result : null;
 }
 
-/** Apply a saved preset like a profile: defaults first, then its values. */
+/**
+ * Apply a saved preset like a profile: defaults first, then its values.
+ * @param {string} profileValue
+ */
 export function applyUserPreset(profileValue) {
   const name = userPresetName(profileValue);
   const preset = name && findUserPreset(name);

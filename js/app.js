@@ -10,7 +10,7 @@ import {
   rotateBitmap,
   sniffImageSize,
   Tracer,
-} from "./pipeline.js?v=102";
+} from "./pipeline.js?v=103";
 import {
   analyzeFlatness,
   detectedColorSettings,
@@ -32,11 +32,11 @@ import {
   toHexColor,
   USER_PRESET_PREFIX,
   userPresetName,
-} from "./preprocess.js?v=99";
+} from "./preprocess.js?v=100";
 import { $, els, hooks, preferences, showError, state } from "./context.js?v=70";
-import { bakeCleanup, smoothRegions } from "./bake.js?v=28";
+import { bakeCleanup, smoothRegions } from "./bake.js?v=29";
 import { rotateCleanupAction } from "./eraser.js?v=17";
-import { refreshExport, setResultActions } from "./exporters.js?v=90";
+import { refreshExport, setResultActions } from "./exporters.js?v=91";
 import {
   clearSelection,
   setBlobFill,
@@ -44,8 +44,8 @@ import {
   setSelectionTool,
   setView,
   showResultOverSource,
-} from "./cleanup-tools.js?v=112";
-import { afterTrace, resetPalette } from "./palette-ui.js?v=96";
+} from "./cleanup-tools.js?v=113";
+import { afterTrace, resetPalette } from "./palette-ui.js?v=97";
 import {
   applyExportProfile,
   applyMeasurementUnit,
@@ -76,8 +76,8 @@ import {
   updateTraceFields,
   updateTransparencyFields,
   userPresets,
-} from "./settings.js?v=114";
-import { actualSizeView, resetView } from "./view.js?v=112";
+} from "./settings.js?v=115";
+import { actualSizeView, resetView } from "./view.js?v=113";
 
 const SAMPLE_FILES = [
   "synthwave.png",
@@ -98,10 +98,13 @@ const SAMPLE_KEY = "rastertrace:last-sample";
 
 const EMPTY_IMAGE_SRC = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==";
 
-const tracer = new Tracer(new URL("./worker.js?v=107", import.meta.url));
+const tracer = new Tracer(new URL("./worker.js?v=108", import.meta.url));
 
 let elapsedTimer = 0;
 
+/**
+ * @param {boolean} busy
+ */
 function setBusy(busy, label = "Starting…") {
   els.tracingVeil.hidden = !busy;
   clearInterval(elapsedTimer);
@@ -116,6 +119,9 @@ function setBusy(busy, label = "Starting…") {
   }
 }
 
+/**
+ * @param {boolean} enabled
+ */
 function setBitmapActionsEnabled(enabled) {
   els.rotateLeft.disabled = !enabled;
   els.rotateRight.disabled = !enabled;
@@ -134,6 +140,7 @@ async function retrace() {
   setBusy(true);
   showError("");
   try {
+    /** @type {ReturnType<typeof currentSettings> & { seeds?: number[][], flatArt?: boolean, keep?: unknown[], smooth?: unknown }} */
     const settings = currentSettings();
     // Detected colors seed the quantizer: compressed sources have no exact
     // colors for it to find them by itself.
@@ -249,6 +256,7 @@ hooks.scheduleRetrace = scheduleRetrace;
  * old file body under a new ?v= URL, and cache-first then serves it
  * forever. Purge rastertrace caches and its service worker, then reload once
  * (sessionStorage guards against a reload loop) to refetch clean files.
+ * @param {string} message
  */
 async function recoverFromStaleCache(message) {
   if (!isStaleModuleError(message)) return false;
@@ -283,12 +291,18 @@ async function recoverFromStaleCache(message) {
  */
 // The current image's detected colors, for recounting Max colors when
 // Merge similar shades changes under auto-detect.
+/**
+ * @type {number[][] | null}
+ */
 let detectedSolids = null;
 // Photographic sources gain nothing from filling the trace size, and
 // their noise upscaled to 2048 px traces into huge, slow results.
 let photographic = false;
 const PHOTO_MAX_UPSCALE = 2;
 
+/**
+ * @param {ImageBitmap} bitmap
+ */
 function applyDetectedSettings(bitmap) {
   // Keep the 1x pixels for the trace that follows. Any source at or above
   // the trace cap scales to exactly 1, so this usually saves a full second
@@ -321,6 +335,9 @@ function applyDetectedSettings(bitmap) {
   }
 }
 
+/**
+ * @param {File | undefined} file
+ */
 async function loadFile(file) {
   if (!file) return;
   // Cleanup strokes and palette edits belong to the current image only.
@@ -594,6 +611,9 @@ els.preferencesDialog.addEventListener("close", () => {
 const appMenus = [
   .../** @type {NodeListOf<HTMLDetailsElement>} */ (document.querySelectorAll("details.app-menu")),
 ];
+/**
+ * @param {HTMLDetailsElement} [except]
+ */
 const closeMenus = (except) => {
   for (const menu of appMenus) if (menu !== except) menu.open = false;
 };
@@ -656,6 +676,10 @@ window.addEventListener("keydown", (event) => {
 
 // Rotation replaces the working bitmap, so the source view is re-rendered
 // from it: eyedropper coordinates and the preview stay consistent.
+/**
+ * @param {ImageBitmap} bitmap
+ * @param {number} token
+ */
 async function updateSourceView(bitmap, token) {
   const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
   /** @type {OffscreenCanvasRenderingContext2D} */ (canvas.getContext("2d")).drawImage(
@@ -671,6 +695,9 @@ async function updateSourceView(bitmap, token) {
   return true;
 }
 
+/**
+ * @param {boolean} clockwise
+ */
 async function rotate(clockwise) {
   if (!state.bitmap || els.rotateLeft.disabled) return;
   const token = state.loadToken;
@@ -1081,6 +1108,9 @@ els.presetImportInput.addEventListener("change", async () => {
   const file = els.presetImportInput.files?.[0];
   els.presetImportInput.value = "";
   if (!file) return;
+  /**
+   * @type {{ name: string, settings: object }[]}
+   */
   let incoming = [];
   try {
     if (file.size <= PRESET_FILE_MAX_BYTES)
@@ -1140,6 +1170,9 @@ for (const radio of document.querySelectorAll('input[name="mode"]')) {
 
 // Phones fold the tool rail to the chosen tool; the toggle opens a tray of
 // every tool, and picking one closes it.
+/**
+ * @param {boolean} open
+ */
 function setToolTray(open) {
   els.toolRail.classList.toggle("open", open);
   els.toolTrayToggle.setAttribute("aria-expanded", String(open));
@@ -1188,6 +1221,9 @@ const foldMenuButtons = {
 const foldingLayout = window.matchMedia("(min-width: 901px)");
 const foldLabels = { left: "profile, colors and palette", right: "settings" };
 
+/**
+ * @param {"left" | "right"} side
+ */
 function isFolded(side) {
   return els.workspace.classList.contains(`${side}-folded`);
 }
@@ -1202,6 +1238,10 @@ function syncFoldMenu() {
 }
 foldingLayout.addEventListener("change", syncFoldMenu);
 
+/**
+ * @param {"left" | "right"} side
+ * @param {boolean} folded
+ */
 function setFolded(side, folded) {
   els.workspace.classList.toggle(`${side}-folded`, folded);
   const action = folded ? "Show" : "Hide";

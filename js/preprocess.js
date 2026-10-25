@@ -100,6 +100,9 @@ export const DEFAULTS = Object.freeze({
 // Keyed by color count. Speckle and layer difference scale inversely:
 // fewer colors means flat print-style output, so cleanup gets more
 // aggressive; more colors means detail retention matters.
+/**
+ * @type {Readonly<Record<string, { colors: number, speckle: number, layerDiff: number }>>}
+ */
 export const PRESETS = Object.freeze({
   2: { colors: 2, speckle: 16, layerDiff: 48 },
   3: { colors: 3, speckle: 16, layerDiff: 32 },
@@ -240,6 +243,14 @@ export function distinctColors(solids, layerDiff) {
 // applied to the visible controls like PRESETS: users can edit them
 // afterwards. pathPrecision/spliceThreshold feed the tracer directly;
 // minify/stencil toggle post-processing and binary color mode.
+/**
+ * @typedef {{ colors: number, speckle: number, layerDiff: number, mode: string, cornerThreshold: number,
+ *   hierarchical: string, pathPrecision: number, upscale: string | number, straighten: number,
+ *   minify: boolean, stencil: boolean, autoDetect?: boolean, lengthThreshold?: number,
+ *   spliceThreshold?: number, stencilInk?: string, smoothOutlines?: number,
+ *   stencilThreshold?: number, denoise?: boolean }} ExportProfile
+ * @type {Readonly<Record<string, ExportProfile>>}
+ */
 export const EXPORT_PROFILES = Object.freeze({
   web: {
     colors: 16,
@@ -753,6 +764,8 @@ const SETTING_CHECKS = {
 /**
  * Reduce a parsed settings snapshot (e.g. from localStorage) to known
  * keys with in-range values. Anything unknown or invalid is dropped.
+ * @param {any} raw untrusted, e.g. parsed JSON
+ * @returns {Record<string, any>}
  */
 export function sanitizeSettings(raw) {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {};
