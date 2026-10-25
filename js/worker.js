@@ -14,7 +14,7 @@ import {
   thresholdImage,
   toGrayscale,
 } from "./filters.js?v=1";
-import { reduceAndRemoveBackground } from "./preprocess.js?v=106";
+import { reduceAndRemoveBackground } from "./preprocess.js?v=107";
 import { applyStencilInk, finalizeSvg, straightenPaths } from "./svg-output.js?v=1";
 import { tracePixels } from "./raster.js?v=1";
 import { rasterPalette, snapFills } from "./palette.js?v=57";

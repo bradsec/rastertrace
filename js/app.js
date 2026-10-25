@@ -12,7 +12,7 @@ import {
   Tracer,
 } from "./pipeline.js?v=105";
 import { parseAse, parseHexColor, parseSwatchText, SWATCHES_MAX, toHexColor } from "./color.js?v=1";
-import { analyzeFlatness } from "./preprocess.js?v=106";
+import { analyzeFlatness } from "./quantize.js?v=1";
 import {
   detectedColorSettings,
   distinctColorCount,
@@ -92,7 +92,7 @@ const SAMPLE_KEY = "rastertrace:last-sample";
 
 const EMPTY_IMAGE_SRC = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==";
 
-const tracer = new Tracer(new URL("./worker.js?v=114", import.meta.url));
+const tracer = new Tracer(new URL("./worker.js?v=115", import.meta.url));
 
 let elapsedTimer = 0;
 

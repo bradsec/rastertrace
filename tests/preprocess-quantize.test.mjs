@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { oklabToSrgb, parseHexColor, srgbToOklab, toHexColor } from "../js/color.js";
-import { analyzeFlatness, quantize } from "../js/preprocess.js";
+import { analyzeFlatness, quantize } from "../js/quantize.js";
 
 test("quantize preserves eight flat colors despite rare edge blends", () => {
   const runs = [

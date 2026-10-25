@@ -24,17 +24,14 @@ import {
   toGrayscaleColor,
 } from "../js/filters.js";
 import {
-  analyzeFlatness,
   detectBackgroundColor,
-  dominantOpaqueColor,
   knockOutColor,
-  mapToPalette,
-  quantize,
   reclaimFringe,
   reduceAndRemoveBackground,
   removeBackground,
   snapToImageColor,
 } from "../js/preprocess.js";
+import { analyzeFlatness, dominantOpaqueColor, mapToPalette, quantize } from "../js/quantize.js";
 import {
   DEFAULTS,
   detectedColorSettings,
