@@ -34,9 +34,9 @@ import {
   userPresetName,
 } from "./preprocess.js?v=100";
 import { $, els, hooks, preferences, showError, state } from "./context.js?v=70";
-import { bakeCleanup, smoothRegions } from "./bake.js?v=30";
-import { rotateCleanupAction } from "./eraser.js?v=18";
-import { refreshExport, setResultActions } from "./exporters.js?v=92";
+import { bakeCleanup, smoothRegions } from "./bake.js?v=31";
+import { rotateCleanupAction } from "./eraser.js?v=19";
+import { refreshExport, setResultActions } from "./exporters.js?v=93";
 import {
   clearSelection,
   setBlobFill,
@@ -44,8 +44,8 @@ import {
   setSelectionTool,
   setView,
   showResultOverSource,
-} from "./cleanup-tools.js?v=114";
-import { afterTrace, resetPalette } from "./palette-ui.js?v=98";
+} from "./cleanup-tools.js?v=116";
+import { afterTrace, resetPalette } from "./palette-ui.js?v=100";
 import {
   applyExportProfile,
   applyMeasurementUnit,
@@ -76,8 +76,8 @@ import {
   updateTraceFields,
   updateTransparencyFields,
   userPresets,
-} from "./settings.js?v=116";
-import { actualSizeView, resetView } from "./view.js?v=114";
+} from "./settings.js?v=118";
+import { actualSizeView, resetView } from "./view.js?v=116";
 
 const SAMPLE_FILES = [
   "synthwave.png",

@@ -3,11 +3,19 @@
 // Listener order matters: the selection and eraser pointer handlers must
 // register before the pan handlers in view.js, so app.js imports this
 // module first.
-import { brushSizeForShortcut, snapPointToAngle, svgViewBox } from "./eraser.js?v=18";
+/**
+ * @typedef {import("./eraser.js").NormPoint} NormPoint
+ * @typedef {import("./eraser.js").CleanupShape} CleanupShape
+ * @typedef {import("./eraser.js").BasicShape} BasicShape
+ * @typedef {import("./eraser.js").CompositeShape["parts"]} Parts
+ * @typedef {Extract<NonNullable<typeof state.selection>, { type: "rect" | "ellipse" }>} MarqueeSelection
+ * @typedef {Exclude<NonNullable<typeof state.selection>, { type: "composite" }>} ShapeSelection
+ */
+import { brushSizeForShortcut, snapPointToAngle, svgViewBox } from "./eraser.js?v=19";
 import { parseHexColor, sampleRasterColor, toHexColor } from "./preprocess.js?v=100";
 import { els, hooks, state } from "./context.js?v=70";
 import { maskLoops } from "./magicwand.js?v=54";
-import { refreshExport } from "./exporters.js?v=92";
+import { refreshExport } from "./exporters.js?v=93";
 
 /** @param {"result" | "source" | "compare"} view */
 export function setView(view) {
@@ -76,6 +84,9 @@ async function showPickPreview() {
   els.sourceView.src = pickUrl;
 }
 
+/**
+ * @param {boolean} armed
+ */
 export function setEyedropper(armed) {
   state.picking = armed;
   els.pickFromImage.setAttribute("aria-pressed", String(armed));
@@ -257,6 +268,8 @@ document.addEventListener("keydown", (event) => {
 /**
  * Sample the original bitmap, for the window before the first trace.
  * @param {ImageBitmap} bitmap
+ * @param {number} normalizedX
+ * @param {number} normalizedY
  */
 function sampleBitmapColor(bitmap, normalizedX, normalizedY) {
   const { width, height } = bitmap;
@@ -309,6 +322,9 @@ function updateSelectionActions() {
   if (hadFocus && els.selectionActions.hidden) els.preview.focus({ preventScroll: true });
 }
 
+/**
+ * @param {typeof state.selectionTool} tool
+ */
 export function setSelectionTool(tool) {
   state.selectionTool = tool;
   if (tool) {
@@ -350,6 +366,9 @@ export function setSelectionTool(tool) {
   }
 }
 
+/**
+ * @param {MarqueeSelection} selection
+ */
 function marqueeGeometry(selection) {
   const box = svgViewBox(state.svgRaw || "");
   let dx = selection.current.x - selection.start.x;
@@ -379,7 +398,11 @@ function marqueeGeometry(selection) {
 
 const SVG_NS = "http://www.w3.org/2000/svg";
 
-/** Overlay element for one finished shape, in overlay pixels. */
+/**
+ * Overlay element for one finished shape, in overlay pixels.
+ * @param {BasicShape} shape
+ * @param {{ width: number, height: number }} size
+ */
 function shapeNode(shape, size) {
   if (shape.type === "rect") {
     const node = document.createElementNS(SVG_NS, "rect");
@@ -400,6 +423,10 @@ function shapeNode(shape, size) {
   return loopsNode(shape.type === "region" ? shape.loops : [shape.points], size);
 }
 
+/**
+ * @param {NormPoint[][]} loops
+ * @param {{ width: number, height: number }} size
+ */
 function loopsNode(loops, size) {
   const node = document.createElementNS(SVG_NS, "path");
   node.setAttribute(
@@ -420,7 +447,11 @@ function loopsNode(loops, size) {
 /** Built nodes per parts array: redraws while dragging reuse them. */
 const partsNodes = new WeakMap();
 
-/** One shape draws as itself; several draw as their merged outline. */
+/**
+ * One shape draws as itself; several draw as their merged outline.
+ * @param {Parts} parts
+ * @param {{ width: number, height: number }} size
+ */
 function partsNode(parts, size) {
   const cached = partsNodes.get(parts);
   if (cached?.width === size.width && cached.height === size.height) {
@@ -434,6 +465,9 @@ function partsNode(parts, size) {
   return node;
 }
 
+/**
+ * @param {Element} node
+ */
 function antsPair(node) {
   const dark = /** @type {Element} */ (node.cloneNode());
   dark.setAttribute("class", "selection-ants-dark");
@@ -541,7 +575,9 @@ export function renderSmoothPreview() {
   const scale = Math.min(imageRect.width, imageRect.height);
   const strokes = pending.map((action) => {
     const path = document.createElementNS(SVG_NS, "path");
-    const points = action.points.map(
+    // Smooth actions are always brush strokes.
+    const { points: strokePoints } = /** @type {import("./eraser.js").StrokeShape} */ (action);
+    const points = strokePoints.map(
       (point) => `${point.x * imageRect.width},${point.y * imageRect.height}`,
     );
     // A lone point still needs a segment for the round cap to draw.
@@ -570,19 +606,30 @@ function scheduleRenderSelection() {
 /** Toolbar selection mode: "new", "add" or "subtract" (touch has no keys). */
 let selectionMode = "new";
 
-/** The operation a press starts: modifier keys win over the toolbar mode. */
+/**
+ * The operation a press starts: modifier keys win over the toolbar mode.
+ * @param {{ shiftKey: boolean, altKey: boolean }} event
+ */
 function pressOp(event) {
   if (event.shiftKey) return "add";
   if (event.altKey) return "subtract";
   return selectionMode;
 }
 
-/** Finished parts the next shape combines with; "new" starts over. */
+/**
+ * Finished parts the next shape combines with; "new" starts over.
+ * @param {string} op
+ * @returns {Parts}
+ */
 function baseParts(op) {
   return op !== "new" && state.selection?.type === "composite" ? state.selection.parts : [];
 }
 
-/** A finished marquee or lasso in the cleanup action format. */
+/**
+ * A finished marquee or lasso in the cleanup action format.
+ * @param {ShapeSelection} selection
+ * @returns {BasicShape}
+ */
 function toShape(selection) {
   if (selection.type === "polygon") return { type: "polygon", points: selection.points };
   const g = marqueeGeometry(selection);
@@ -598,7 +645,12 @@ function toShape(selection) {
   return { type: "rect", ...g };
 }
 
-/** Add or subtract a finished shape and show the combined selection. */
+/**
+ * Add or subtract a finished shape and show the combined selection.
+ * @param {string} op
+ * @param {Parts} base
+ * @param {BasicShape} shape
+ */
 function finishShape(op, base, shape) {
   if (op === "subtract" && !base.length) {
     clearSelection();
@@ -617,12 +669,18 @@ function keepFinishedSelection() {
   if (selection && selection.type !== "composite") abandonShape(selection.base);
 }
 
-/** Drop a shape that went nowhere, keeping the parts drawn before it. */
+/**
+ * Drop a shape that went nowhere, keeping the parts drawn before it.
+ * @param {Parts} [base]
+ */
 function abandonShape(base) {
   if (base?.length) setComposite(base);
   else clearSelection();
 }
 
+/**
+ * @param {Parts} parts
+ */
 function setComposite(parts) {
   const outline = parts.length > 1 ? compositeOutline(parts) : null;
   if (outline && !outline.length) {
@@ -643,6 +701,7 @@ const outlines = new WeakMap();
  * Merged outline of several parts for the marching ants, traced from a
  * raster of them: SVG cannot union shapes. Display only; commits stay
  * vector masks.
+ * @param {Parts} parts
  */
 function compositeOutline(parts) {
   let outline = outlines.get(parts);
@@ -653,9 +712,16 @@ function compositeOutline(parts) {
   return outline;
 }
 
-/** Normalized bounds of the added parts: subtracting never grows a selection. */
+/**
+ * Normalized bounds of the added parts: subtracting never grows a selection.
+ * @param {Parts} parts
+ */
 function addedBounds(parts) {
   const box = { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity };
+  /**
+   * @param {number} x
+   * @param {number} y
+   */
   const include = (x, y) => {
     box.minX = Math.min(box.minX, x);
     box.minY = Math.min(box.minY, y);
@@ -679,6 +745,9 @@ function addedBounds(parts) {
   return box;
 }
 
+/**
+ * @param {Parts} parts
+ */
 function traceOutline(parts) {
   const width = state.processedRaster?.width || 1024;
   const height = state.processedRaster?.height || 1024;
@@ -732,6 +801,9 @@ const modeButtons = {
   subtract: els.selModeSubtract,
 };
 
+/**
+ * @param {string} mode
+ */
 function setSelectionMode(mode) {
   selectionMode = mode;
   for (const [name, button] of Object.entries(modeButtons)) {
@@ -775,6 +847,9 @@ function finishPolygon() {
   finishShape(selection.op, selection.base, toShape(selection));
 }
 
+/**
+ * @param {"erase" | "fill"} mode
+ */
 async function commitSelection(mode) {
   const color = els.blobFillColor.value;
   await wandSelectionQueue;
@@ -830,6 +905,10 @@ els.selectionCancel.addEventListener("click", async () => {
 /** @type {{ id: number, x: number, y: number, undo: () => void } | null} */
 let toolTouch = null;
 
+/**
+ * @param {PointerEvent} event
+ * @param {() => void} undo
+ */
 function claimTouch(event, undo) {
   if (event.pointerType !== "touch") return;
   toolTouch = { id: event.pointerId, x: event.clientX, y: event.clientY, undo };
@@ -874,6 +953,9 @@ for (const type of ["pointerup", "pointercancel"]) {
 let selectionPointer = null;
 let wandSelectionQueue = Promise.resolve();
 
+/**
+ * @param {MouseEvent} event
+ */
 function selectionPoint(event, mode = "strict") {
   const rect = els.resultView.getBoundingClientRect();
   if (!rect.width || !rect.height) return null;
@@ -887,6 +969,9 @@ function selectionPoint(event, mode = "strict") {
   };
 }
 
+/**
+ * @param {ShapeSelection} selection
+ */
 function selectionIntersectsImage(selection) {
   let bounds;
   if (selection.type === "polygon") {
@@ -906,15 +991,25 @@ function selectionIntersectsImage(selection) {
   );
 }
 
-/** Select the connected region of the clicked color and combine it. */
+/**
+ * Select the connected region of the clicked color and combine it.
+ * @param {NormPoint} point
+ * @param {string} op
+ */
 function wandSelect(point, op) {
-  const svg = state.svg;
+  // The wand is enabled only once a trace exists.
+  const svg = /** @type {string} */ (state.svg);
   const selection = wandSelectionQueue.then(() => selectWand(point, op, svg));
   // Keep later clicks moving; this click still rejects to its caller.
   wandSelectionQueue = selection.catch(() => {});
   return selection;
 }
 
+/**
+ * @param {NormPoint} point
+ * @param {string} op
+ * @param {string} svg
+ */
 async function selectWand(point, op, svg) {
   let raster;
   try {
@@ -956,7 +1051,7 @@ let wandRaster = null;
  * colors it is not quantized at all, and tracing merges similar clusters.
  */
 function resultRaster() {
-  const svg = state.svg;
+  const svg = /** @type {string} */ (state.svg); // set while the wand is in use
   if (wandRaster?.svg !== svg) {
     const pixels = renderResultRaster(svg);
     wandRaster = { svg, pixels };
@@ -968,6 +1063,9 @@ function resultRaster() {
   return wandRaster.pixels;
 }
 
+/**
+ * @param {string} svg
+ */
 async function renderResultRaster(svg) {
   const box = svgViewBox(svg);
   const width = state.processedRaster?.width || Math.ceil(box?.width || 1024);
@@ -998,32 +1096,45 @@ async function renderResultRaster(svg) {
   }
 }
 
+/**
+ * @type {Worker | null | undefined}
+ */
 let wandWorker;
 const wandPending = new Map();
 let wandJobId = 0;
 
 function getWandWorker() {
   if (wandWorker) return wandWorker;
-  wandWorker = new Worker(new URL("./wand-worker.js?v=5", import.meta.url), { type: "module" });
-  wandWorker.onmessage = ({ data }) => {
+  const worker = new Worker(new URL("./wand-worker.js?v=5", import.meta.url), { type: "module" });
+  wandWorker = worker;
+  worker.onmessage = ({ data }) => {
     const pending = wandPending.get(data.id);
     if (!pending) return;
     wandPending.delete(data.id);
     if (data.error) pending.reject(new Error(data.error));
     else pending.resolve(data.result);
   };
+  /**
+   * @param {Event & { message?: string }} event
+   */
   const rejectPending = (event) => {
     const error = new Error(event.message || "Magic wand worker failed");
     for (const pending of wandPending.values()) pending.reject(error);
     wandPending.clear();
-    wandWorker.terminate();
+    worker.terminate();
     wandWorker = null;
   };
-  wandWorker.onerror = rejectPending;
-  wandWorker.onmessageerror = rejectPending;
-  return wandWorker;
+  worker.onerror = rejectPending;
+  worker.onmessageerror = rejectPending;
+  return worker;
 }
 
+/**
+ * @param {string} phase
+ * @param {unknown[]} args
+ * @param {Transferable[]} transfer
+ * @returns {Promise<any>}
+ */
 function wandJob(phase, args, transfer) {
   return new Promise((resolve, reject) => {
     const id = ++wandJobId;
@@ -1040,6 +1151,10 @@ function wandJob(phase, args, transfer) {
 /**
  * A wand region from its clicked points. Kept with the points, so changing
  * Tolerance, Expand or Smooth rebuilds the current selection in place.
+ * @param {ImageData} raster
+ * @param {NormPoint[]} seeds
+ * @param {string} svg
+ * @returns {Promise<import("./eraser.js").RegionShape | null>}
  */
 async function regionShape(raster, seeds, svg) {
   const tolerance = wandTolerance();
@@ -1079,6 +1194,14 @@ async function regionShape(raster, seeds, svg) {
   return { type: "region", seeds, loops };
 }
 
+/**
+ * @param {string} svg
+ * @param {number} x
+ * @param {number} y
+ * @param {number} width
+ * @param {number} height
+ * @param {number} detail
+ */
 async function renderRegionRaster(svg, x, y, width, height, detail) {
   const cropped = svg.replace(
     /<svg\b[^>]*>/,
@@ -1133,7 +1256,7 @@ for (const input of [els.wandTolerance, els.wandExpand, els.wandSmooth]) {
         return;
       }
       const selection = state.selection;
-      const svg = state.svg;
+      const svg = /** @type {string} */ (state.svg); // a composite selection implies a trace
       if (selection?.type !== "composite") return;
       const parts = await Promise.all(
         selection.parts.map(async (part) =>
@@ -1149,6 +1272,10 @@ for (const input of [els.wandTolerance, els.wandExpand, els.wandSmooth]) {
   });
 }
 
+/**
+ * @param {NormPoint} point
+ * @param {boolean} shiftKey
+ */
 function constrainedPolygonPoint(point, shiftKey) {
   const selection = state.selection;
   if (!shiftKey || selection?.type !== "polygon" || !selection.points.length) return point;
@@ -1268,7 +1395,7 @@ for (const type of ["pointerup", "pointercancel"]) {
       if (selectionPointer !== /** @type {PointerEvent} */ (event).pointerId) return;
       selectionPointer = null;
       const selection = state.selection;
-      if (!selection || selection.type === "composite") return;
+      if (selection?.type !== "rect" && selection?.type !== "ellipse") return;
       const geometry = marqueeGeometry(selection);
       if (
         geometry.width < 0.001 ||
@@ -1286,6 +1413,9 @@ for (const type of ["pointerup", "pointercancel"]) {
 
 // -- Vector eraser: normalized freehand strokes become an SVG mask -----
 
+/**
+ * @param {boolean} active
+ */
 export function setEraser(active) {
   state.erasing = active && Boolean(state.svg);
   if (state.erasing) {
@@ -1310,6 +1440,9 @@ export function setEraser(active) {
   }
 }
 
+/**
+ * @param {boolean} active
+ */
 export function setBlobFill(active) {
   state.blobFilling = active && Boolean(state.svg);
   state.blobPicking = false;
@@ -1335,6 +1468,9 @@ export function setBlobFill(active) {
   }
 }
 
+/**
+ * @param {boolean} active
+ */
 export function setSmooth(active) {
   state.smoothing = active && Boolean(state.svg);
   if (state.smoothing) {
@@ -1359,6 +1495,9 @@ export function setSmooth(active) {
   }
 }
 
+/**
+ * @param {number} value
+ */
 function setEraserSize(value) {
   const size = Math.min(
     Number(els.eraserSize.max),
@@ -1406,6 +1545,9 @@ els.blobFillTool.addEventListener("click", () => setBlobFill(!state.blobFilling)
 els.smoothTool.addEventListener("click", () => setSmooth(!state.smoothing));
 els.eraserSize.addEventListener("input", () => setEraserSize(Number(els.eraserSize.value)));
 
+/**
+ * @param {string} value
+ */
 function setBlobColor(value) {
   const color = value.trim();
   if (!parseHexColor(color)) {
@@ -1466,6 +1608,9 @@ els.eraserClear.addEventListener("click", () => {
   els.status.textContent = "Original traced result restored.";
 });
 
+/**
+ * @param {MouseEvent} event
+ */
 function cleanupPoint(event) {
   const rect = els.resultView.getBoundingClientRect();
   if (!rect.width || !rect.height) return null;
@@ -1474,6 +1619,9 @@ function cleanupPoint(event) {
   return { x, y, rect };
 }
 
+/**
+ * @param {PointerEvent} event
+ */
 function moveCleanupCursor(event) {
   if (!state.erasing && !state.blobFilling && !state.blobPicking && !state.smoothing) return;
   const point = cleanupPoint(event);

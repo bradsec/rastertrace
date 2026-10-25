@@ -6,8 +6,9 @@
  * @typedef {{ type: "rect", x: number, y: number, width: number, height: number }} RectShape
  * @typedef {{ type: "ellipse", cx: number, cy: number, rx: number, ry: number }} EllipseShape
  * @typedef {{ type: "region", seeds: NormPoint[], loops: NormPoint[][] }} RegionShape
- * @typedef {{ type: "composite", parts: { op: string, shape: CleanupShape }[] }} CompositeShape
- * @typedef {StrokeShape | PolygonShape | RectShape | EllipseShape | RegionShape | CompositeShape} CleanupShape
+ * @typedef {StrokeShape | PolygonShape | RectShape | EllipseShape | RegionShape} BasicShape
+ * @typedef {{ type: "composite", parts: { op: string, shape: BasicShape }[] }} CompositeShape
+ * @typedef {BasicShape | CompositeShape} CleanupShape
  * @typedef {CleanupShape & { mode?: string, color?: string }} CleanupAction mode "fill" or "smooth"; absent erases
  */
 const MASK_ID = "rastertrace-eraser-mask";
@@ -77,7 +78,7 @@ export function rotateCleanupAction(action, clockwise) {
       ...action,
       parts: action.parts.map((part) => ({
         ...part,
-        shape: rotateCleanupAction(part.shape, clockwise),
+        shape: /** @type {BasicShape} */ (rotateCleanupAction(part.shape, clockwise)),
       })),
     };
   }

@@ -3,7 +3,7 @@
 // artwork: a fill is traced in its color, an erase leaves a hole. Smooth
 // strokes act on the reduced colors instead, so they leave as masks for
 // the worker.
-import { cleanupMaskSvg } from "./eraser.js?v=18";
+import { cleanupMaskSvg } from "./eraser.js?v=19";
 import { parseHexColor } from "./preprocess.js?v=100";
 
 /** @typedef {import("./eraser.js").CleanupAction} CleanupAction */
