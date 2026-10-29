@@ -10,7 +10,7 @@ import {
   rotateBitmap,
   sniffImageSize,
   Tracer,
-} from "./pipeline.js?v=105";
+} from "./pipeline.js?v=108";
 import { parseAse, parseHexColor, parseSwatchText, SWATCHES_MAX, toHexColor } from "./color.js?v=2";
 import { analyzeFlatness } from "./quantize.js?v=2";
 import {

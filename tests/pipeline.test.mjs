@@ -28,16 +28,60 @@ test("decodeImage uses known intrinsic dimensions for a bounded decode", async (
   let receivedOptions;
   globalThis.createImageBitmap = async (_file, options) => {
     receivedOptions = options;
-    return { width: options.resizeWidth, height: options.resizeHeight };
+    return { width: options.resizeWidth, height: 1024 };
   };
   try {
     const result = await decodeImage(blob([]), 2048, { width: 8192, height: 4096 });
     assert.deepEqual(receivedOptions, {
       resizeWidth: 2048,
-      resizeHeight: 1024,
       resizeQuality: "high",
     });
     assert.deepEqual(result, { width: 2048, height: 1024 });
+  } finally {
+    globalThis.createImageBitmap = original;
+  }
+});
+
+test("decodeImage omits resize options when the source fits", async () => {
+  const original = globalThis.createImageBitmap;
+  let receivedOptions = "not called";
+  globalThis.createImageBitmap = async (_file, options) => {
+    receivedOptions = options;
+    return { width: 300, height: 200 };
+  };
+  try {
+    await decodeImage(blob([]), 2048, { width: 300, height: 200 });
+    assert.equal(receivedOptions, undefined);
+  } finally {
+    globalThis.createImageBitmap = original;
+  }
+});
+
+test("decodeImage lets WebP retain its oriented aspect ratio when resized", async () => {
+  const original = globalThis.createImageBitmap;
+  let receivedOptions;
+  globalThis.createImageBitmap = async (_file, options) => {
+    receivedOptions = options;
+    return { width: 2048, height: 1024 };
+  };
+  try {
+    await decodeImage(blob([], "image/webp"), 2048, { width: 8192, height: 4096 });
+    assert.deepEqual(receivedOptions, { resizeWidth: 2048, resizeQuality: "high" });
+  } finally {
+    globalThis.createImageBitmap = original;
+  }
+});
+
+test("decodeImage sets only the resize width for oversized JPEG", async () => {
+  const original = globalThis.createImageBitmap;
+  let receivedOptions;
+  globalThis.createImageBitmap = async (_file, options) => {
+    receivedOptions = options;
+    return { width: 2048, height: 1024 };
+  };
+  try {
+    await decodeImage(blob([], "image/jpeg"), 2048, { width: 8192, height: 4096 });
+    assert.deepEqual(receivedOptions, { resizeWidth: 2048, resizeQuality: "high" });
   } finally {
     globalThis.createImageBitmap = original;
   }
@@ -191,6 +235,26 @@ test("sniffImageSize reads WebP VP8X dimensions", async () => {
     0, 0, 0, 0, 0xff, 0x03, 0x00, 0xff, 0x01, 0x00,
   ];
   assert.deepEqual(await sniffImageSize(blob(bytes, "image/webp")), { width: 1024, height: 512 });
+});
+
+test("sniffImageSize reads WebP VP8L dimensions after the signature byte", async () => {
+  // Header of a 300x200 lossless file: 0x2f signature at byte 20, then
+  // 14-bit width-1 and height-1 packed little-endian from byte 21.
+  const bytes = [
+    0x52, 0x49, 0x46, 0x46, 0, 0, 0, 0, 0x57, 0x45, 0x42, 0x50, 0x56, 0x50, 0x38, 0x4c, 0x18, 0, 0,
+    0, 0x2f, 0x2b, 0xc1, 0x31, 0x00, 0, 0, 0, 0, 0,
+  ];
+  assert.deepEqual(await sniffImageSize(blob(bytes, "image/webp")), { width: 300, height: 200 });
+});
+
+test("sniffImageSize finds a JPEG frame header past 256 KB of metadata", async () => {
+  // Five full-size APP2 segments (ICC profiles, extended XMP) put SOF0
+  // beyond the first read window.
+  const app2 = [0xff, 0xe2, 0xff, 0xff, ...new Array(0xfffd).fill(0x58)];
+  const bytes = [0xff, 0xd8];
+  for (let n = 0; n < 5; n++) bytes.push(...app2);
+  bytes.push(...SOF0);
+  assert.deepEqual(await sniffImageSize(blob(bytes, "image/jpeg")), { width: 640, height: 400 });
 });
 
 test("fitDecodeSize caps the longest side", () => {

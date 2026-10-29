@@ -9,8 +9,9 @@ export const MAX_SOURCE_SIDE = 32_768;
  * @param {Blob} file
  */
 export async function sniffImageSize(file) {
-  const bytes = new Uint8Array(await file.slice(0, 256 * 1024).arrayBuffer());
-  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  const windowSize = 256 * 1024;
+  let bytes = new Uint8Array(await file.slice(0, windowSize).arrayBuffer());
+  let view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   /**
    * @param {number} offset
    * @param {number} length
@@ -33,10 +34,11 @@ export async function sniffImageSize(file) {
         width: view.getUint16(26, true) & 0x3fff,
         height: view.getUint16(28, true) & 0x3fff,
       };
+    // Byte 20 is the 0x2f signature; the packed sizes start after it.
     if (type === "VP8L")
       return {
-        width: 1 + (((bytes[25] & 0x3f) << 8) | bytes[24]),
-        height: 1 + (((bytes[27] & 0x0f) << 10) | (bytes[26] << 2) | ((bytes[25] & 0xc0) >> 6)),
+        width: 1 + (((bytes[22] & 0x3f) << 8) | bytes[21]),
+        height: 1 + (((bytes[24] & 0x0f) << 10) | (bytes[23] << 2) | ((bytes[22] & 0xc0) >> 6)),
       };
     if (type === "VP8X") {
       /**
@@ -50,9 +52,20 @@ export async function sniffImageSize(file) {
   if (bytes.length >= 4 && bytes[0] === 0xff && bytes[1] === 0xd8) {
     // EXIF orientations 5-8 are 90-degree rotations. createImageBitmap
     // applies them during decode, so the sniffed size must be the
-    // oriented one or resizeWidth/resizeHeight would distort the image.
+    // oriented one or resizeWidth would size the wrong side.
     let rotated = false;
-    for (let i = 2; i + 9 < bytes.length;) {
+    let base = 0; // file offset of bytes[0]
+    for (let i = 2; ;) {
+      // Metadata segments (ICC profiles, extended XMP) can push the frame
+      // header past the first window. Slide it so a whole segment, at most
+      // 64 KB, always fits.
+      if (bytes.length - i < 0x10004 && base + bytes.length < file.size) {
+        base += i;
+        bytes = new Uint8Array(await file.slice(base, base + windowSize).arrayBuffer());
+        view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+        i = 0;
+      }
+      if (i + 9 >= bytes.length) break;
       if (bytes[i] !== 0xff) break;
       // T.81 B.1.1.2: any marker may be preceded by any number of 0xFF fill
       // bytes. Skipping them costs one loop; not skipping them reads the
@@ -166,9 +179,15 @@ export async function decodeImage(file, maxSide = MAX_TRACE_SIDE, knownSize = nu
   }
   try {
     const resized = fitDecodeSize(size.width, size.height, maxSide);
+    // Browsers differ on which formats' EXIF orientation they apply
+    // (Chromium honors it in PNG, WebKit does not), so never force both
+    // sides: a fitting image decodes as-is, and a width alone lets the
+    // browser keep the oriented aspect. capBitmap trims any overshoot.
+    if (resized.width === size.width && resized.height === size.height) {
+      return await createImageBitmap(file);
+    }
     return await createImageBitmap(file, {
       resizeWidth: resized.width,
-      resizeHeight: resized.height,
       resizeQuality: "high",
     });
   } catch {
