@@ -2,6 +2,12 @@ import { expect, test } from "@playwright/test";
 
 const SIZE = [160, 80];
 
+// The marching ants repaint the selection overlay every frame. In CI's
+// software-rendered WebKit on 2 vCPUs that starves the wand worker, and a
+// slider rebuild took 4 to 5 s instead of 0.5 s, past the 5 s expect
+// timeout. Reduced motion stops the ants; the outline geometry is unchanged.
+test.use({ contextOptions: { reducedMotion: "reduce" } });
+
 /** Two separate red blocks on a light background. */
 async function loadTwoBlocks(page) {
   const base64 = await page.evaluate(async ([width, height]) => {
