@@ -64,8 +64,8 @@
     "sha": "c791ac290668f1933993695c39260283c51955aad4524eed259bbfb501e43f72"
   },
   "js/app.js": {
-    "v": 231,
-    "sha": "6f7369ac5e357e149bea688c5c50bbe506ca46cce7f592c692b5494f0f637a48"
+    "v": 234,
+    "sha": "2793923ce7effe9f8d18e460b1c8c8e3d11ce79184c04a9cf60794ba5e3c7c5e"
   },
   "js/background.js": {
     "v": 2,
@@ -112,8 +112,8 @@
     "sha": "4990c503e7ffce5aca43cd7ccec3fe624b7d97e65232119c5344879bab25517c"
   },
   "js/pipeline.js": {
-    "v": 105,
-    "sha": "95069f588ee6f8a0f57914c6315305ec203ad9e073d71ab5c0f3ffb55ce09bfc"
+    "v": 108,
+    "sha": "007ef1c4294aa174e9eb0c6a59e99c9de3e8fe0f77353b9b7e71308e2599b250"
   },
   "js/quantize.js": {
     "v": 2,
